@@ -1,0 +1,40 @@
+#!/usr/bin/python
+
+import compiler, sys
+import os
+import pyflakes
+
+
+def check(codeString, filename):
+    try:
+        tree = compiler.parse(codeString)
+    except (SyntaxError, IndentationError):
+        value = sys.exc_info()[1]
+        (lineno, offset, line) = value[1][1:]
+        if line.endswith("\n"):
+            line = line[:-1]
+        print >> sys.stderr, 'could not compile %r:%d:' % (filename, lineno)
+        print >> sys.stderr, line
+        print >> sys.stderr, " " * (offset-2), "^"
+    else:
+        w = pyflakes.Checker(tree, filename)
+        w.messages.sort(lambda a, b: cmp(a.lineno, b.lineno))
+        for warning in w.messages:
+            print warning
+
+
+def checkPath(filename):
+    return check(file(filename).read(), filename)
+
+args = sys.argv[1:]
+if args:
+    for arg in args:
+        if os.path.isdir(arg):
+            for dirpath, dirnames, filenames in os.walk(arg):
+                for filename in filenames:
+                    if filename.endswith('.py'):
+                        checkPath(os.path.join(dirpath, filename))
+        else:
+            checkPath(arg)
+else:
+    check(sys.stdin.read(), '<stdin>')
