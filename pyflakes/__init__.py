@@ -193,7 +193,7 @@ class Checker(object):
 
     def FUNCTION(self, node):
         if getattr(node, "decorators", None) is not None:
-            map(self.NAME, node.decorators)
+            self.handleChildren(node.decorators)
         self.addBinding(node.lineno, Assignment(node.name, node))
         self.LAMBDA(node)
 

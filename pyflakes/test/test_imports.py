@@ -256,13 +256,20 @@ class Test(test.Test):
         def f():
             return "hello"
         ''')
-        
+
+        self.run('''
+        from interior import decorate
+        @decorate('value')
+        def f():
+            return "hello"
+        ''')
+
         self.run('''
         @decorate
         def f():
             return "hello"
         ''', m.UndefinedName)
-        
+
     def test_usedInTryFinally(self):
         self.run('''
         import fu
