@@ -10,7 +10,11 @@ def check(codeString, filename):
         tree = compiler.parse(codeString)
     except (SyntaxError, IndentationError):
         value = sys.exc_info()[1]
-        (lineno, offset, line) = value[1][1:]
+        try:
+            (lineno, offset, line) = value[1][1:]
+        except IndexError:
+            print >> sys.stderr, 'could not compile %r' % (filename,)
+            return
         if line.endswith("\n"):
             line = line[:-1]
         print >> sys.stderr, 'could not compile %r:%d:' % (filename, lineno)
