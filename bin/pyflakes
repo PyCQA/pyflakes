@@ -28,7 +28,8 @@ def check(codeString, filename):
 
 
 def checkPath(filename):
-    return check(file(filename).read(), filename)
+    if os.path.exists(filename):
+        return check(file(filename).read(), filename)
 
 args = sys.argv[1:]
 if args:
