@@ -3,10 +3,10 @@ from pyflakes import messages as m, test
 class Test(test.Test):
 
     def test_duplicateArgs(self):
-        self.run('def fu(bar, bar): pass', m.DuplicateArgument)
+        self.flakes('def fu(bar, bar): pass', m.DuplicateArgument)
 
     def test_localReferencedBeforeAssignment(self):
-        self.run('''
+        self.flakes('''
         a = 1
         def f():
             a; a=1
@@ -15,7 +15,7 @@ class Test(test.Test):
     test_localReferencedBeforeAssignment.todo = 'this requires finding all assignments in the function body first'
 
     def test_redefinedFunction(self):
-        self.run('''
+        self.flakes('''
         def a(): pass
         def a(): pass
         ''', m.RedefinedFunction)
@@ -23,4 +23,4 @@ class Test(test.Test):
 
     def test_unaryPlus(self):
         '''Don't die on unary +'''
-        self.run('+1')
+        self.flakes('+1')

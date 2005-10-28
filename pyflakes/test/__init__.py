@@ -5,7 +5,7 @@ import pyflakes
 
 class Test(unittest.TestCase):
 
-    def run(self, input, *expectedOutputs):
+    def flakes(self, input, *expectedOutputs):
         w = pyflakes.Checker(compiler.parse(textwrap.dedent(input)))
         outputs = [type(o) for o in w.messages]
         expectedOutputs = list(expectedOutputs)
