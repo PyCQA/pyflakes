@@ -1,6 +1,7 @@
-from pyflakes import messages as m, test
+from pyflakes import messages as m
+from pyflakes.test import harness
 
-class Test(test.Test):
+class Test(harness.Test):
     def test_undefined(self):
         self.flakes('bar', m.UndefinedName)
 

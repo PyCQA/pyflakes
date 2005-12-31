@@ -2,8 +2,7 @@
 
 import compiler, sys
 import os
-import pyflakes
-
+from pyflakes import checker
 
 def check(codeString, filename):
     try:
@@ -21,7 +20,7 @@ def check(codeString, filename):
         print >> sys.stderr, line
         print >> sys.stderr, " " * (offset-2), "^"
     else:
-        w = pyflakes.Checker(tree, filename)
+        w = checker.Checker(tree, filename)
         w.messages.sort(lambda a, b: cmp(a.lineno, b.lineno))
         for warning in w.messages:
             print warning
