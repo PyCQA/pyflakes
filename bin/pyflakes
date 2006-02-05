@@ -19,17 +19,20 @@ def check(codeString, filename):
         print >> sys.stderr, '%s:%d: could not compile' % (filename, lineno)
         print >> sys.stderr, line
         print >> sys.stderr, " " * (offset-2), "^"
+        return 1
     else:
         w = checker.Checker(tree, filename)
         w.messages.sort(lambda a, b: cmp(a.lineno, b.lineno))
         for warning in w.messages:
             print warning
+        return len(w.messages)
 
 
 def checkPath(filename):
     if os.path.exists(filename):
         return check(file(filename).read(), filename)
 
+warnings = 0
 args = sys.argv[1:]
 if args:
     for arg in args:
@@ -37,8 +40,10 @@ if args:
             for dirpath, dirnames, filenames in os.walk(arg):
                 for filename in filenames:
                     if filename.endswith('.py'):
-                        checkPath(os.path.join(dirpath, filename))
+                        warnings += checkPath(os.path.join(dirpath, filename))
         else:
-            checkPath(arg)
+            warnings += checkPath(arg)
 else:
-    check(sys.stdin.read(), '<stdin>')
+    warnings += check(sys.stdin.read(), '<stdin>')
+
+raise SystemExit, warnings > 0
