@@ -16,7 +16,7 @@ def check(codeString, filename):
             return
         if line.endswith("\n"):
             line = line[:-1]
-        print >> sys.stderr, 'could not compile %r:%d:' % (filename, lineno)
+        print >> sys.stderr, '%s:%d: could not compile' % (filename, lineno)
         print >> sys.stderr, line
         print >> sys.stderr, " " * (offset-2), "^"
     else:
