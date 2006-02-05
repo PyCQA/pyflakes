@@ -46,4 +46,4 @@ if args:
 else:
     warnings += check(sys.stdin.read(), '<stdin>')
 
-raise SystemExit, warnings > 0
+raise SystemExit(warnings > 0)
