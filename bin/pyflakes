@@ -30,7 +30,7 @@ def check(codeString, filename):
 
 def checkPath(filename):
     if os.path.exists(filename):
-        return check(file(filename).read(), filename)
+        return check(file(filename, 'U').read(), filename)
 
 warnings = 0
 args = sys.argv[1:]
