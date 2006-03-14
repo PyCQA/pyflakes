@@ -13,7 +13,7 @@ def check(codeString, filename):
             (lineno, offset, line) = value[1][1:]
         except IndexError:
             print >> sys.stderr, 'could not compile %r' % (filename,)
-            return
+            return 1
         if line.endswith("\n"):
             line = line[:-1]
         print >> sys.stderr, '%s:%d: could not compile' % (filename, lineno)
