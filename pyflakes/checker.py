@@ -13,7 +13,10 @@ class Binding(object):
         return self.name
 
     def __repr__(self):
-        return '<Importation object %r from line %r at 0x%x>' % (self.name, self.source.lineno, id(self))
+        return '<%s object %r from line %r at 0x%x>' % (self.__class__.__name__,
+                                                        self.name,
+                                                        self.source.lineno,
+                                                        id(self))
 
 class UnBinding(Binding):
     '''Created by the 'del' operator.'''
