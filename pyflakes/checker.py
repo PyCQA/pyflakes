@@ -4,6 +4,10 @@ import __builtin__
 from pyflakes import messages
 
 class Binding(object):
+    """
+    @ivar used: pair of (L{Scope}, line-number) indicating the scope and
+                line number that this binding was last used
+    """
     def __init__(self, name, source):
         self.name = name
         self.source = source
@@ -29,6 +33,9 @@ class Importation(Binding):
 class Assignment(Binding):
     pass
 
+class FunctionDefinition(Binding):
+    pass
+
 
 class Scope(dict):
     importStarred = False       # set to True when import * is found
@@ -43,7 +50,14 @@ class ClassScope(Scope):
     pass
 
 class FunctionScope(Scope):
-    pass
+    """
+    I represent a name scope for a function.
+
+    @ivar globals: Names declared 'global' in this function.
+    """
+    def __init__(self):
+        super(FunctionScope, self).__init__()
+        self.globals = set()
 
 class ModuleScope(Scope):
     pass
@@ -120,14 +134,14 @@ class Checker(object):
         pass
 
     STMT = PRINT = PRINTNL = TUPLE = LIST = ASSTUPLE = ASSATTR = \
-    ASSLIST = GETATTR = SLICE = SLICEOBJ = IF = CALLFUNC = DISCARD = FOR = \
+    ASSLIST = GETATTR = SLICE = SLICEOBJ = IF = CALLFUNC = DISCARD = \
     RETURN = ADD = MOD = SUB = NOT = UNARYSUB = INVERT = ASSERT = COMPARE = \
     SUBSCRIPT = AND = OR = TRYEXCEPT = RAISE = YIELD = DICT = LEFTSHIFT = \
     RIGHTSHIFT = KEYWORD = TRYFINALLY = WHILE = EXEC = MUL = DIV = POWER = \
     FLOORDIV = BITAND = BITOR = BITXOR = LISTCOMPFOR = LISTCOMPIF = \
     AUGASSIGN = BACKQUOTE = UNARYADD = GENEXPR = GENEXPRFOR = GENEXPRIF = handleChildren
 
-    CONST = PASS = CONTINUE = BREAK = GLOBAL = ELLIPSIS = ignore
+    CONST = PASS = CONTINUE = BREAK = ELLIPSIS = ignore
 
     def addBinding(self, lineno, value, reportRedef=True):
         '''Called when a binding is altered.
@@ -138,12 +152,19 @@ class Checker(object):
         - if `reportRedef` is True (default), rebinding while unused will be
           reported.
         '''
-        if (isinstance(self.scope.get(value.name), Importation)
-                and not self.scope[value.name].used
-                and reportRedef):
-
-            self.report(messages.RedefinedWhileUnused,
+        if (isinstance(self.scope.get(value.name), FunctionDefinition)
+                    and isinstance(value, FunctionDefinition)):
+            self.report(messages.RedefinedFunction,
                         lineno, value.name, self.scope[value.name].source.lineno)
+
+        if not isinstance(self.scope, ClassScope):
+            for scope in self.scopeStack[::-1]:
+                if (isinstance(scope.get(value.name), Importation)
+                        and not scope[value.name].used
+                        and reportRedef):
+
+                    self.report(messages.RedefinedWhileUnused,
+                                lineno, value.name, scope[value.name].source.lineno)
 
         if isinstance(value, UnBinding):
             try:
@@ -154,6 +175,13 @@ class Checker(object):
             self.scope[value.name] = value
 
 
+    def GLOBAL(self, node):
+        """
+        Keep track of globals declarations.
+        """
+        if isinstance(self.scope, FunctionScope):
+            self.scope.globals.update(node.names)
+
     def LISTCOMP(self, node):
         for qual in node.quals:
             self.handleNode(qual)
@@ -161,11 +189,36 @@ class Checker(object):
 
     GENEXPRINNER = LISTCOMP
 
+    def FOR(self, node):
+        """
+        Process bindings for loop variables.
+        """
+        vars = []
+        def collectLoopVars(n):
+            if hasattr(n, 'name'):
+                vars.append(n.name)
+            else:
+                for c in n.getChildNodes():
+                    collectLoopVars(c)
+
+        collectLoopVars(node.assign)
+        for varn in vars:
+            if (isinstance(self.scope.get(varn), Importation)
+                    # unused ones will get an unused import warning
+                    and self.scope[varn].used):
+                self.report(messages.ImportShadowedByLoopVar,
+                            node.lineno, varn, self.scope[varn].source.lineno)
+
+        self.handleChildren(node)
+
     def NAME(self, node):
+        """
+        Locate the name in locals / function / globals scopes.
+        """
         # try local scope
         importStarred = self.scope.importStarred
         try:
-            self.scope[node.name].used = True
+            self.scope[node.name].used = (self.scope, node.lineno)
         except KeyError:
             pass
         else:
@@ -178,7 +231,7 @@ class Checker(object):
             if not isinstance(scope, FunctionScope):
                 continue
             try:
-                scope[node.name].used = True
+                scope[node.name].used = (self.scope, node.lineno)
             except KeyError:
                 pass
             else:
@@ -188,7 +241,7 @@ class Checker(object):
 
         importStarred = importStarred or self.scopeStack[0].importStarred
         try:
-            self.scopeStack[0][node.name].used = True
+            self.scopeStack[0][node.name].used = (self.scope, node.lineno)
         except KeyError:
             if ((not hasattr(__builtin__, node.name))
                     and node.name not in ['__file__']
@@ -199,7 +252,7 @@ class Checker(object):
     def FUNCTION(self, node):
         if getattr(node, "decorators", None) is not None:
             self.handleChildren(node.decorators)
-        self.addBinding(node.lineno, Assignment(node.name, node))
+        self.addBinding(node.lineno, FunctionDefinition(node.name, node))
         self.LAMBDA(node)
 
     def LAMBDA(self, node):
@@ -237,8 +290,31 @@ class Checker(object):
 
     def ASSNAME(self, node):
         if node.flags == 'OP_DELETE':
-            self.addBinding(node.lineno, UnBinding(node.name, node))
+            if isinstance(self.scope, FunctionScope) and node.name in self.scope.globals:
+                self.scope.globals.remove(node.name)
+            else:
+                self.addBinding(node.lineno, UnBinding(node.name, node))
         else:
+            # if the name hasn't already been defined in the current scope
+            if isinstance(self.scope, FunctionScope) and node.name not in self.scope:
+                # for each function or module scope above us
+                for scope in reversed(self.scopeStack[:-1]):
+                    if not isinstance(scope, (FunctionScope, ModuleScope)):
+                        continue
+                    # if the name was defined in that scope, and the name has
+                    # been accessed already in the current scope, and hasn't
+                    # been declared global
+                    if (node.name in scope
+                            and scope[node.name].used
+                            and scope[node.name].used[0] is self.scope
+                            and node.name not in self.scope.globals):
+                        # then it's probably a mistake
+                        self.report(messages.UndefinedLocal,
+                                    scope[node.name].used[1],
+                                    node.name,
+                                    scope[node.name].source.lineno)
+                        break
+
             self.addBinding(node.lineno, Assignment(node.name, node))
 
     def ASSIGN(self, node):
@@ -261,5 +337,5 @@ class Checker(object):
             name = alias or name
             importation = Importation(name, node)
             if node.modname == '__future__':
-                importation.used = True
+                importation.used = (self.scope, node.lineno)
             self.addBinding(node.lineno, importation)

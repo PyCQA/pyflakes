@@ -34,7 +34,8 @@ class Test(harness.Test):
         self.flakes('''
         def a():
             from fu import *
-        bar''', m.ImportStarUsed, m.UndefinedName)
+        bar
+        ''', m.ImportStarUsed, m.UndefinedName)
 
     def test_unpackedParameter(self):
         '''Unpacked function parameters create bindings'''
@@ -64,7 +65,6 @@ class Test(harness.Test):
             del a
         a
         ''')
-    test_delGlobal.todo = ''
 
     def test_delUndefined(self):
         '''del an undefined name'''
@@ -78,6 +78,46 @@ class Test(harness.Test):
             def c():
                 a
         ''')
+
+    def test_laterRedefinedGlobalFromNestedScope(self):
+        """
+        Test that referencing a local name that shadows a global, before it is
+        defined, generates a warning.
+        """
+        self.flakes('''
+        a = 1
+        def fun():
+            a
+            a = 2
+        ''', m.UndefinedLocal)
+
+    def test_laterRedefinedGlobalFromNestedScope2(self):
+        """
+        Test that referencing a local name in a nested scope that shadows a
+        global declared in an enclosing scope, before it is defined, generates
+        a warning.
+        """
+        self.flakes('''
+            a = 1
+            def fun():
+                global a
+                def fun2():
+                    a
+                    a = 2
+        ''', m.UndefinedLocal)
+
+    def test_laterRedefinedGlobalFromNestedScope3(self):
+        """
+        Test that referencing a local name in a nested scope that shadows a
+        global, before it is defined, generates a warning.
+        """
+        self.flakes('''
+            def fun():
+                a = 1
+                def fun2():
+                    a
+                    a = 1
+        ''', m.UndefinedLocal)
 
     def test_nestedClass(self):
         '''nested classes can access enclosing scope'''

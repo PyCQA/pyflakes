@@ -28,12 +28,37 @@ class Test(harness.Test):
             pass
         ''', m.RedefinedWhileUnused)
 
+    def test_redefinedInNestedFunction(self):
+        """
+        Test that shadowing a global name with a nested function definition
+        generates a warning.
+        """
+        self.flakes('''
+        import fu
+        def bar():
+            def baz():
+                def fu():
+                    pass
+        ''', m.RedefinedWhileUnused, m.UnusedImport)
+
     def test_redefinedByClass(self):
         self.flakes('''
         import fu
         class fu:
             pass
         ''', m.RedefinedWhileUnused)
+
+    def test_redefinedInClass(self):
+        """
+        Test that shadowing a global with a class attribute does not produce a
+        warning.
+        """
+        self.flakes('''
+        import fu
+        class bar:
+            fu = 1
+        print fu
+        ''')
 
     def test_usedInFunction(self):
         self.flakes('''
@@ -139,6 +164,30 @@ class Test(harness.Test):
         for fu in range(2):
             pass
         ''', m.RedefinedWhileUnused)
+
+    def test_shadowedByFor(self):
+        """
+        Test that shadowing a global name with a for loop variable generates a
+        warning.
+        """
+        self.flakes('''
+        import fu
+        fu.bar()
+        for fu in ():
+            pass
+        ''', m.ImportShadowedByLoopVar)
+
+    def test_shadowedByForDeep(self):
+        """
+        Test that shadowing a global name with a for loop variable nested in a
+        tuple unpack generates a warning.
+        """
+        self.flakes('''
+        import fu
+        fu.bar()
+        for (x, y, z, (a, b, c, (fu,))) in ():
+            pass
+        ''', m.ImportShadowedByLoopVar)
 
     def test_usedInReturn(self):
         self.flakes('''
