@@ -73,6 +73,7 @@ class Checker(object):
         self.messages = []
         self.filename = filename
         self.scopeStack = [ModuleScope()]
+        self.futuresAllowed = True
 
         self.handleChildren(tree)
         for handler, scope in self.deferred:
@@ -122,8 +123,11 @@ class Checker(object):
         if self.traceTree:
             print '  ' * self.nodeDepth + node.__class__.__name__
         self.nodeDepth += 1
+        nodeType = node.__class__.__name__.upper()
+        if nodeType not in ('STMT', 'FROM'):
+            self.futuresAllowed = False
         try:
-            handler = getattr(self, node.__class__.__name__.upper())
+            handler = getattr(self, nodeType)
             handler(node)
         finally:
             self.nodeDepth -= 1
@@ -329,6 +333,12 @@ class Checker(object):
             self.addBinding(node.lineno, importation)
 
     def FROM(self, node):
+        if node.modname == '__future__':
+            if not self.futuresAllowed:
+                self.report(messages.LateFutureImport, node.lineno, [n[0] for n in node.names])
+        else:
+            self.futuresAllowed = False
+
         for name, alias in node.names:
             if name == '*':
                 self.scope.importStarred = True

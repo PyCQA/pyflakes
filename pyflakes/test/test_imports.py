@@ -473,3 +473,12 @@ class Test(harness.Test):
     def test_futureImport(self):
         '''__future__ is special'''
         self.flakes('from __future__ import division')
+
+    def test_futureImportFirst(self):
+        """
+        __future__ imports must come before anything else.
+        """
+        self.flakes('''
+        x = 5
+        from __future__ import division
+        ''', m.LateFutureImport)

@@ -64,3 +64,10 @@ class RedefinedFunction(Message):
     def __init__(self, filename, lineno, name, orig_lineno):
         Message.__init__(self, filename, lineno)
         self.message_args = (name, orig_lineno)
+
+
+class LateFutureImport(Message):
+    message = 'future import(s) %r after other statements'
+    def __init__(self, filename, lineno, names):
+        Message.__init__(self, filename, lineno)
+        self.message_args = (names,)
