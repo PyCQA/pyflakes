@@ -1,7 +1,13 @@
-# (c) 2005 Divmod, Inc.  See LICENSE file for details
+# -*- test-case-name: pyflakes -*-
+# (c) 2005-2008 Divmod, Inc.
+# See LICENSE file for details
 
 import __builtin__
+from compiler import ast
+
 from pyflakes import messages
+
+
 
 class Binding(object):
     """
@@ -143,7 +149,8 @@ class Checker(object):
     SUBSCRIPT = AND = OR = TRYEXCEPT = RAISE = YIELD = DICT = LEFTSHIFT = \
     RIGHTSHIFT = KEYWORD = TRYFINALLY = WHILE = EXEC = MUL = DIV = POWER = \
     FLOORDIV = BITAND = BITOR = BITXOR = LISTCOMPFOR = LISTCOMPIF = \
-    AUGASSIGN = BACKQUOTE = UNARYADD = GENEXPR = GENEXPRFOR = GENEXPRIF = handleChildren
+    AUGASSIGN = BACKQUOTE = UNARYADD = GENEXPR = GENEXPRFOR = GENEXPRIF = \
+    IFEXP = handleChildren
 
     CONST = PASS = CONTINUE = BREAK = ELLIPSIS = ignore
 
@@ -177,6 +184,32 @@ class Checker(object):
                 self.report(messages.UndefinedName, lineno, value.name)
         else:
             self.scope[value.name] = value
+
+
+    def WITH(self, node):
+        """
+        Handle C{with} by adding bindings for the name or tuple of names it
+        puts into scope and by continuing to process the suite within the
+        statement.
+        """
+        # for "with foo as bar", there is no AssName node for "bar".
+        # Instead, there is a Name node. If the "as" expression assigns to
+        # a tuple, it will instead be a AssTuple node of Name nodes.
+        #
+        # Of course these are assignments, not references, so we have to
+        # handle them as a special case here.
+
+        self.handleNode(node.expr)
+
+        if isinstance(node.vars, ast.AssTuple):
+            varNodes = node.vars.nodes
+        else:
+            varNodes = [node.vars]
+
+        for varNode in varNodes:
+            self.addBinding(varNode.lineno, Assignment(varNode.name, varNode))
+
+        self.handleChildren(node.body)
 
 
     def GLOBAL(self, node):
