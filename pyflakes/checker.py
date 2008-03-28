@@ -8,7 +8,6 @@ from compiler import ast
 from pyflakes import messages
 
 
-
 class Binding(object):
     """
     @ivar used: pair of (L{Scope}, line-number) indicating the scope and
@@ -55,6 +54,8 @@ class Scope(dict):
 class ClassScope(Scope):
     pass
 
+
+
 class FunctionScope(Scope):
     """
     I represent a name scope for a function.
@@ -63,7 +64,9 @@ class FunctionScope(Scope):
     """
     def __init__(self):
         super(FunctionScope, self).__init__()
-        self.globals = set()
+        self.globals = {}
+
+
 
 class ModuleScope(Scope):
     pass
@@ -217,7 +220,7 @@ class Checker(object):
         Keep track of globals declarations.
         """
         if isinstance(self.scope, FunctionScope):
-            self.scope.globals.update(node.names)
+            self.scope.globals.update(dict.fromkeys(node.names))
 
     def LISTCOMP(self, node):
         for qual in node.quals:
@@ -328,14 +331,14 @@ class Checker(object):
     def ASSNAME(self, node):
         if node.flags == 'OP_DELETE':
             if isinstance(self.scope, FunctionScope) and node.name in self.scope.globals:
-                self.scope.globals.remove(node.name)
+                del self.scope.globals[node.name]
             else:
                 self.addBinding(node.lineno, UnBinding(node.name, node))
         else:
             # if the name hasn't already been defined in the current scope
             if isinstance(self.scope, FunctionScope) and node.name not in self.scope:
                 # for each function or module scope above us
-                for scope in reversed(self.scopeStack[:-1]):
+                for scope in self.scopeStack[:-1]:
                     if not isinstance(scope, (FunctionScope, ModuleScope)):
                         continue
                     # if the name was defined in that scope, and the name has

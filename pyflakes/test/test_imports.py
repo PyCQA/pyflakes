@@ -1,3 +1,6 @@
+
+from sys import version_info
+
 from pyflakes import messages as m
 from pyflakes.test import harness
 
@@ -292,33 +295,6 @@ class Test(harness.Test):
     def test_redefinedByListComp(self):
         self.flakes('import fu; [1 for fu in range(1)]', m.RedefinedWhileUnused)
 
-    def test_usedInGenExp(self):
-        self.flakes('import fu; (fu for _ in range(1))')
-        self.flakes('import fu; (1 for _ in range(1) if fu)')
-
-    def test_redefinedByGenExp(self):
-        self.flakes('import fu; (1 for fu in range(1))', m.RedefinedWhileUnused)
-
-    def test_usedAsDecorator(self):
-        self.flakes('''
-        from interior import decorate
-        @decorate
-        def f():
-            return "hello"
-        ''')
-
-        self.flakes('''
-        from interior import decorate
-        @decorate('value')
-        def f():
-            return "hello"
-        ''')
-
-        self.flakes('''
-        @decorate
-        def f():
-            return "hello"
-        ''', m.UndefinedName)
 
     def test_usedInTryFinally(self):
         self.flakes('''
@@ -482,3 +458,55 @@ class Test(harness.Test):
         x = 5
         from __future__ import division
         ''', m.LateFutureImport)
+
+
+
+class Python24Tests(harness.Test):
+    """
+    Tests for checking of syntax which is valid in Python 2.4 and newer.
+    """
+    if version_info < (2, 4):
+        skip = "Python 2.4 required for generator expression and decorator tests."
+
+
+    def test_usedInGenExp(self):
+        """
+        Using a global in a generator expression results in no warnings.
+        """
+        self.flakes('import fu; (fu for _ in range(1))')
+        self.flakes('import fu; (1 for _ in range(1) if fu)')
+
+
+    def test_redefinedByGenExp(self):
+        """
+        Re-using a global name as the loop variable for a generator
+        expression results in a redefinition warning.
+        """
+        self.flakes('import fu; (1 for fu in range(1))', m.RedefinedWhileUnused)
+
+
+    def test_usedAsDecorator(self):
+        """
+        Using a global name in a decorator statement results in no warnings,
+        but using an undefined name in a decorator statement results in an
+        undefined name warning.
+        """
+        self.flakes('''
+        from interior import decorate
+        @decorate
+        def f():
+            return "hello"
+        ''')
+
+        self.flakes('''
+        from interior import decorate
+        @decorate('value')
+        def f():
+            return "hello"
+        ''')
+
+        self.flakes('''
+        @decorate
+        def f():
+            return "hello"
+        ''', m.UndefinedName)

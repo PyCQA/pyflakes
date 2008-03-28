@@ -5,8 +5,11 @@
 Tests for various Pyflakes behavior.
 """
 
+from sys import version_info
+
 from pyflakes import messages as m
 from pyflakes.test import harness
+
 
 class Test(harness.Test):
 
@@ -76,6 +79,9 @@ class Python25Test(harness.Test):
     """
     Tests for checking of syntax only available in Python 2.5 and newer.
     """
+    if version_info < (2, 5):
+        skip = "Python 2.5 required for if-else and with tests"
+
     def test_ifexp(self):
         """
         Test C{foo if bar else baz} statements.

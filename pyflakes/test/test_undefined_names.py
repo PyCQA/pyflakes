@@ -1,5 +1,9 @@
+
+from sys import version_info
+
 from pyflakes import messages as m
 from pyflakes.test import harness
+
 
 class Test(harness.Test):
     def test_undefined(self):
@@ -8,8 +12,6 @@ class Test(harness.Test):
     def test_definedInListComp(self):
         self.flakes('[a for a in range(10) if a]')
 
-    def test_definedInGenExp(self):
-        self.flakes('(a for a in xrange(10) if a)')
 
     def test_functionsNeedGlobalScope(self):
         self.flakes('''
@@ -106,6 +108,26 @@ class Test(harness.Test):
                     a = 2
         ''', m.UndefinedLocal)
 
+
+    def test_doubleNestingReportsClosestName(self):
+        """
+        Test that referencing a local name in a nested scope that shadows a
+        variable declared in two different outer scopes before it is defined
+        in the innermost scope generates an UnboundLocal warning which
+        refers to the nearest shadowed name.
+        """
+        exc = self.flakes('''
+            def a():
+                x = 1
+                def b():
+                    x = 2 # line 5
+                    def c():
+                        x
+                        x = 3
+        ''', m.UndefinedLocal).messages[0]
+        self.assertEqual(exc.message_args, ('x', 5))
+
+
     def test_laterRedefinedGlobalFromNestedScope3(self):
         """
         Test that referencing a local name in a nested scope that shadows a
@@ -142,3 +164,19 @@ class Test(harness.Test):
 
         f()
         ''', m.UndefinedName)
+
+
+
+class Python24Test(harness.Test):
+    """
+    Tests for checking of syntax which is valid in Python 2.4 and newer.
+    """
+    if version_info < (2, 4):
+        skip = "Python 2.4 required for generator expression tests."
+
+    def test_definedInGenExp(self):
+        """
+        Using the loop variable of a generator expression results in no
+        warnings.
+        """
+        self.flakes('(a for a in xrange(10) if a)')

@@ -1,6 +1,10 @@
+
 import textwrap, compiler
+
 from twisted.trial import unittest
+
 from pyflakes import checker
+
 
 class Test(unittest.TestCase):
 
@@ -17,3 +21,4 @@ expected outputs:
 %s
 but got:
 %s''' % (input, repr(expectedOutputs), '\n'.join([str(o) for o in w.messages])))
+        return w
