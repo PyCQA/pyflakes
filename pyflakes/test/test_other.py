@@ -91,6 +91,19 @@ class Python25Test(harness.Test):
         self.flakes("a = 'moo' if True else bar", m.UndefinedName)
 
 
+    def test_withStatementNoNames(self):
+        """
+        No warnings are emitted for using inside or after a nameless C{with}
+        statement a name defined beforehand.
+        """
+        self.flakes('''
+        from __future__ import with_statement
+        bar = None
+        with open("foo"):
+            bar
+        bar
+        ''')
+
     def test_withStatementSingleName(self):
         """
         No warnings are emitted for using a name defined by a C{with} statement

@@ -206,8 +206,10 @@ class Checker(object):
 
         if isinstance(node.vars, ast.AssTuple):
             varNodes = node.vars.nodes
-        else:
+        elif node.vars is not None:
             varNodes = [node.vars]
+        else:
+            varNodes = []
 
         for varNode in varNodes:
             self.addBinding(varNode.lineno, Assignment(varNode.name, varNode))
