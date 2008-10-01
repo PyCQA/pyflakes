@@ -33,9 +33,16 @@ def check(codeString, filename):
 
 
 def checkPath(filename):
+    """
+    Check the given path, printing out any warnings detected.
+
+    @return: the number of warnings printed
+    """
     if os.path.exists(filename):
         return check(file(filename, 'U').read() + '\n', filename)
-
+    else:
+        print >> sys.stderr, '%s: no such file' % (filename,)
+        return 1
 
 def main():
     warnings = 0
