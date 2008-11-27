@@ -24,8 +24,30 @@ class Test(harness.Test):
     def test_builtins(self):
         self.flakes('range(10)')
 
-    def test_magic_globals(self):
+
+    def test_magicGlobalsFile(self):
+        """
+        Use of the C{__file__} magic global should not emit an undefined name
+        warning.
+        """
         self.flakes('__file__')
+
+
+    def test_magicGlobalsBuiltins(self):
+        """
+        Use of the C{__builtins__} magic global should not emit an undefined
+        name warning.
+        """
+        self.flakes('__builtins__')
+
+
+    def test_magicGlobalsName(self):
+        """
+        Use of the C{__name__} magic global should not emit an undefined name
+        warning.
+        """
+        self.flakes('__name__')
+
 
     def test_globalImportStar(self):
         '''Can't find undefined names with import *'''

@@ -72,6 +72,12 @@ class ModuleScope(Scope):
     pass
 
 
+
+# Globally defined names which are not attributes of the __builtin__ module.
+_MAGIC_GLOBALS = ['__file__', '__builtins__']
+
+
+
 class Checker(object):
     nodeDepth = 0
     traceTree = False
@@ -286,7 +292,7 @@ class Checker(object):
             self.scopeStack[0][node.name].used = (self.scope, node.lineno)
         except KeyError:
             if ((not hasattr(__builtin__, node.name))
-                    and node.name not in ['__file__']
+                    and node.name not in _MAGIC_GLOBALS
                     and not importStarred):
                 self.report(messages.UndefinedName, node.lineno, node.name)
 
