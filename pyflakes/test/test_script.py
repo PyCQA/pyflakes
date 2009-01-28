@@ -46,3 +46,63 @@ class CheckTests(TestCase):
         count = withStderrTo(err, lambda: checkPath('extremo'))
         self.assertEquals(err.getvalue(), 'extremo: no such file\n')
         self.assertEquals(count, 1)
+
+
+    def test_multilineSyntaxError(self):
+        """
+        Source which includes a syntax error which results in the raised
+        L{SyntaxError.text} containing multiple lines of source are reported
+        with only the last line of that source.
+        """
+        source = """\
+def foo():
+    '''
+
+def bar():
+    pass
+
+def baz():
+    '''quux'''
+"""
+
+        # Sanity check - SyntaxError.text should be multiple lines, if it
+        # isn't, something this test was unprepared for has happened.
+        def evaluate(source):
+            exec source
+        exc = self.assertRaises(SyntaxError, evaluate, source)
+        self.assertTrue(exc.text.count('\n') > 1)
+
+        sourcePath = FilePath(self.mktemp())
+        sourcePath.setContent(source)
+        err = StringIO()
+        count = withStderrTo(err, lambda: checkPath(sourcePath.path))
+        self.assertEqual(count, 1)
+
+        self.assertEqual(
+            err.getvalue(),
+            """\
+%s:8: invalid syntax
+    '''quux'''
+           ^
+""" % (sourcePath.path,))
+
+
+    def test_eofSyntaxError(self):
+        """
+        The error reported for source files which end prematurely causing a
+        syntax error reflects the cause for the syntax error.
+        """
+        source = "def foo("
+        sourcePath = FilePath(self.mktemp())
+        sourcePath.setContent(source)
+        err = StringIO()
+        count = withStderrTo(err, lambda: checkPath(sourcePath.path))
+        self.assertEqual(count, 1)
+        self.assertEqual(
+            err.getvalue(),
+            """\
+%s:1: unexpected EOF while parsing
+def foo(
+         ^
+""" % (sourcePath.path,))
+

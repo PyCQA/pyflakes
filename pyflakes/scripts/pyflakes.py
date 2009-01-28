@@ -11,18 +11,20 @@ checker = __import__('pyflakes.checker').checker
 def check(codeString, filename):
     try:
         tree = compiler.parse(codeString)
-    except (SyntaxError, IndentationError):
+    except (SyntaxError, IndentationError), e:
+        msg = e.args[0]
         value = sys.exc_info()[1]
         try:
-            (lineno, offset, line) = value[1][1:]
+            (lineno, offset, text) = value[1][1:]
         except IndexError:
             print >> sys.stderr, 'could not compile %r' % (filename,)
             return 1
-        if line.endswith("\n"):
-            line = line[:-1]
-        print >> sys.stderr, '%s:%d: could not compile' % (filename, lineno)
+        line = text.splitlines()[-1]
+        offset = offset - (len(text) - len(line))
+
+        print >> sys.stderr, '%s:%d: %s' % (filename, lineno, msg)
         print >> sys.stderr, line
-        print >> sys.stderr, " " * (offset-2), "^"
+        print >> sys.stderr, " " * offset, "^"
         return 1
     else:
         w = checker.Checker(tree, filename)
