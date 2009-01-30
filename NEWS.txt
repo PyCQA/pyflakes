@@ -1,0 +1,11 @@
+0.3.0 (2009-01-30):
+  - Display more informative SyntaxError messages.
+  - Don't hang flymake with unmatched triple quotes (only report a single
+    line of source for a multiline syntax error).
+  - Recognize __builtins__ as a defined name.
+  - Improve pyflakes support for python versions 2.3-2.5
+  - Support for if-else expressions and with statements.
+  - Warn instead of error on non-existant file paths.
+  - Check for __future__ imports after other statements.
+  - Add reporting for some types of import shadowing.
+  - Improve reporting of unbound locals

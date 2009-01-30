@@ -1,12 +1,12 @@
 #!/usr/bin/python
-# (c) 2005 Divmod, Inc.  See LICENSE file for details
+# (c) 2005-2009 Divmod, Inc.  See LICENSE file for details
 
 from distutils.core import setup
 
 setup(
     name="pyflakes",
     license="MIT",
-    version="0.2.1",
+    version="0.3.0",
     description="passive checker of Python programs",
     author="Phil Frost",
     maintainer="Moe Aboulkheir",
