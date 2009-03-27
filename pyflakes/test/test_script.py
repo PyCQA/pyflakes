@@ -106,3 +106,49 @@ def foo(
          ^
 """ % (sourcePath.path,))
 
+
+    def test_nonDefaultFollowsDefaultSyntaxError(self):
+        """
+        Source which has a non-default argument following a default argument
+        should include the line number of the syntax error.  However these
+        exceptions do not include an offset.
+        """
+
+        source = """\
+def foo(bar=baz, bax):
+    pass
+"""
+        sourcePath = FilePath(self.mktemp())
+        sourcePath.setContent(source)
+        err = StringIO()
+        count = withStderrTo(err, lambda: checkPath(sourcePath.path))
+        self.assertEqual(count, 1)
+        self.assertEqual(
+            err.getvalue(),
+            """\
+%s:1: non-default argument follows default argument
+def foo(bar=baz, bax):
+""" % (sourcePath.path,))
+
+
+    def test_nonKeywordAfterKeywordSyntaxError(self):
+        """
+        Source which has a non-keyword argument after a keyword argument should
+        include the line number of the syntax error.  However these exceptions
+        do not include an offset.
+        """
+
+        source = """\
+foo(bar=baz, bax)
+"""
+        sourcePath = FilePath(self.mktemp())
+        sourcePath.setContent(source)
+        err = StringIO()
+        count = withStderrTo(err, lambda: checkPath(sourcePath.path))
+        self.assertEqual(count, 1)
+        self.assertEqual(
+            err.getvalue(),
+            """\
+%s:1: non-keyword arg after keyword arg
+foo(bar=baz, bax)
+""" % (sourcePath.path,))
