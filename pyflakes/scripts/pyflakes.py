@@ -9,16 +9,12 @@ import os
 checker = __import__('pyflakes.checker').checker
 
 def check(codeString, filename):
+    # Since compiler.parse does not reliably report syntax errors, use the
+    # built in compiler first to detect those.
     try:
-        tree = compiler.parse(codeString)
+        compile(codeString, filename, "exec")
     except (SyntaxError, IndentationError), value:
         msg = value.args[0]
-
-        if not value.lineno:
-            try:
-                compile(codeString, filename, 'exec')
-            except SyntaxError, value:
-                pass
 
         (lineno, offset, text) = value.lineno, value.offset, value.text
 
@@ -35,6 +31,9 @@ def check(codeString, filename):
 
         return 1
     else:
+        # Okay, it's syntactically valid.  Now parse it into an ast and check
+        # it.
+        tree = compiler.parse(codeString)
         w = checker.Checker(tree, filename)
         w.messages.sort(lambda a, b: cmp(a.lineno, b.lineno))
         for warning in w.messages:
