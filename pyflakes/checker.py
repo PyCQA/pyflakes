@@ -328,13 +328,22 @@ class Checker(object):
 
         self.defer(runFunction)
 
+
     def CLASS(self, node):
+        """
+        Check names used in a class definition, including its decorators, base
+        classes, and the body of its definition.  Additionally, add its name to
+        the current scope.
+        """
+        if getattr(node, "decorators", None) is not None:
+            self.handleChildren(node.decorators)
         self.addBinding(node.lineno, Assignment(node.name, node))
         for baseNode in node.bases:
             self.handleNode(baseNode)
         self.pushClassScope()
         self.handleChildren(node.code)
         self.popScope()
+
 
     def ASSNAME(self, node):
         if node.flags == 'OP_DELETE':

@@ -510,3 +510,38 @@ class Python24Tests(harness.Test):
         def f():
             return "hello"
         ''', m.UndefinedName)
+
+
+class Python26Tests(harness.Test):
+    """
+    Tests for checking of syntax which is valid in PYthon 2.6 and newer.
+    """
+    if version_info < (2, 6):
+        skip = "Python 2.6 required for class decorator tests."
+
+
+    def test_usedAsClassDecorator(self):
+        """
+        Using an imported name as a class decorator results in no warnings,
+        but using an undefined name as a class decorator results in an
+        undefined name warning.
+        """
+        self.flakes('''
+        from interior import decorate
+        @decorate
+        class foo:
+            pass
+        ''')
+
+        self.flakes('''
+        from interior import decorate
+        @decorate("foo")
+        class bar:
+            pass
+        ''')
+
+        self.flakes('''
+        @decorate
+        class foo:
+            pass
+        ''', m.UndefinedName)
