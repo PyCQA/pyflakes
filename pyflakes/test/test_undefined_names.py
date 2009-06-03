@@ -113,6 +113,7 @@ class Test(harness.Test):
         def fun():
             a
             a = 2
+            return a
         ''', m.UndefinedLocal)
 
     def test_laterRedefinedGlobalFromNestedScope2(self):
@@ -128,6 +129,7 @@ class Test(harness.Test):
                 def fun2():
                     a
                     a = 2
+                    return a
         ''', m.UndefinedLocal)
 
 
@@ -146,6 +148,9 @@ class Test(harness.Test):
                     def c():
                         x
                         x = 3
+                        return x
+                    return x
+                return x
         ''', m.UndefinedLocal).messages[0]
         self.assertEqual(exc.message_args, ('x', 5))
 
@@ -161,6 +166,8 @@ class Test(harness.Test):
                 def fun2():
                     a
                     a = 1
+                    return a
+                return a
         ''', m.UndefinedLocal)
 
     def test_nestedClass(self):
@@ -183,7 +190,7 @@ class Test(harness.Test):
             class C:
                 bar = foo
             foo = 456
-
+            return foo
         f()
         ''', m.UndefinedName)
 

@@ -75,6 +75,148 @@ class Test(harness.Test):
 
 
 
+class TestUnusedAssignment(harness.Test):
+    """
+    Tests for warning about unused assignments.
+    """
+
+    def test_unusedVariable(self):
+        """
+        Warn when a variable in a function is assigned a value that's never
+        used.
+        """
+        self.flakes('''
+        def a():
+            b = 1
+        ''', m.UnusedVariable)
+
+
+    def test_assignToGlobal(self):
+        """
+        Assigning to a global and then not using that global is perfectly
+        acceptable. Do not mistake it for an unused local variable.
+        """
+        self.flakes('''
+        b = 0
+        def a():
+            global b
+            b = 1
+        ''')
+
+
+    def test_assignToMember(self):
+        """
+        Assigning to a member of another object and then not using that member
+        variable is perfectly acceptable. Do not mistake it for an unused
+        local variable.
+        """
+        # XXX: Adding this test didn't generate a failure. Maybe not
+        # necessary?
+        self.flakes('''
+        class b:
+            pass
+        def a():
+            b.foo = 1
+        ''')
+
+
+    def test_assignInForLoop(self):
+        """
+        Don't warn when a variable in a for loop is assigned to but not used.
+        """
+        self.flakes('''
+        def f():
+            for i in range(10):
+                pass
+        ''')
+
+
+    def test_assignInListComprehension(self):
+        """
+        Don't warn when a variable in a list comprehension is assigned to but
+        not used.
+        """
+        self.flakes('''
+        def f():
+            [None for i in range(10)]
+        ''')
+
+
+    def test_generatorExpression(self):
+        """
+        Don't warn when a variable in a generator expression is assigned to but not used.
+        """
+        self.flakes('''
+        def f():
+            (None for i in range(10))
+        ''')
+
+
+    def test_assignmentInsideLoop(self):
+        """
+        Don't warn when a variable assignment occurs lexically after its use.
+        """
+        self.flakes('''
+        def f():
+            x = None
+            for i in range(10):
+                if i > 2:
+                    return x
+                x = i * 2
+        ''')
+
+
+    def test_tupleUnpacking(self):
+        """
+        Don't warn when a variable included in tuple unpacking is unused. It's
+        very common for variables in a tuple unpacking assignment to be unused
+        in good Python code, so warning will only create false positives.
+        """
+        self.flakes('''
+        def f():
+            (x, y) = 1, 2
+        ''')
+
+
+    def test_listUnpacking(self):
+        """
+        Don't warn when a variable included in list unpacking is unused.
+        """
+        self.flakes('''
+        def f():
+            [x, y] = [1, 2]
+        ''')
+
+
+    def test_closedOver(self):
+        """
+        Don't warn when the assignment is used in an inner function.
+        """
+        self.flakes('''
+        def barMaker():
+            foo = 5
+            def bar():
+                return foo
+            return bar
+        ''')
+
+
+    def test_doubleClosedOver(self):
+        """
+        Don't warn when the assignment is used in an inner function, even if
+        that inner function itself is in an inner function.
+        """
+        self.flakes('''
+        def barMaker():
+            foo = 5
+            def bar():
+                def baz():
+                    return foo
+            return bar
+        ''')
+
+
+
 class Python25Test(harness.Test):
     """
     Tests for checking of syntax only available in Python 2.5 and newer.

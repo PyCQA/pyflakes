@@ -71,3 +71,15 @@ class LateFutureImport(Message):
     def __init__(self, filename, lineno, names):
         Message.__init__(self, filename, lineno)
         self.message_args = (names,)
+
+
+class UnusedVariable(Message):
+    """
+    Indicates that a variable has been explicity assigned to but not actually
+    used.
+    """
+
+    message = 'local variable %r is assigned to but never used'
+    def __init__(self, filename, lineno, names):
+        Message.__init__(self, filename, lineno)
+        self.message_args = (names,)

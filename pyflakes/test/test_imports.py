@@ -401,6 +401,7 @@ class Test(harness.Test):
         import fu
         def a():
             fu = 3
+            return fu
         fu
         ''')
 
