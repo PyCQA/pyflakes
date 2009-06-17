@@ -44,7 +44,7 @@ class CheckTests(TestCase):
         """
         err = StringIO()
         count = withStderrTo(err, lambda: checkPath('extremo'))
-        self.assertEquals(err.getvalue(), 'extremo: no such file\n')
+        self.assertEquals(err.getvalue(), 'extremo: No such file or directory\n')
         self.assertEquals(count, 1)
 
 
@@ -113,7 +113,6 @@ def foo(
         should include the line number of the syntax error.  However these
         exceptions do not include an offset.
         """
-
         source = """\
 def foo(bar=baz, bax):
     pass
@@ -137,7 +136,6 @@ def foo(bar=baz, bax):
         include the line number of the syntax error.  However these exceptions
         do not include an offset.
         """
-
         source = """\
 foo(bar=baz, bax)
 """
@@ -152,3 +150,18 @@ foo(bar=baz, bax)
 %s:1: non-keyword arg after keyword arg
 foo(bar=baz, bax)
 """ % (sourcePath.path,))
+
+
+    def test_permissionDenied(self):
+        """
+        If the a source file is not readable, this is reported on standard
+        error.
+        """
+        sourcePath = FilePath(self.mktemp())
+        sourcePath.setContent('')
+        sourcePath.chmod(0)
+        err = StringIO()
+        count = withStderrTo(err, lambda: checkPath(sourcePath.path))
+        self.assertEquals(count, 1)
+        self.assertEquals(
+            err.getvalue(), "%s: Permission denied\n" % (sourcePath.path,))

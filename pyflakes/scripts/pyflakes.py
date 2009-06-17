@@ -47,11 +47,12 @@ def checkPath(filename):
 
     @return: the number of warnings printed
     """
-    if os.path.exists(filename):
+    try:
         return check(file(filename, 'U').read() + '\n', filename)
-    else:
-        print >> sys.stderr, '%s: no such file' % (filename,)
+    except IOError, msg:
+        print >> sys.stderr, "%s: %s" % (filename, msg.args[1])
         return 1
+
 
 def main():
     warnings = 0
