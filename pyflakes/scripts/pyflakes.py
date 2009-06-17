@@ -9,6 +9,19 @@ import os
 checker = __import__('pyflakes.checker').checker
 
 def check(codeString, filename):
+    """
+    Check the Python source given by C{codeString} for flakes.
+
+    @param codeString: The Python source to check.
+    @type codeString: C{str}
+
+    @param filename: The name of the file the source came from, used to report
+        errors.
+    @type filename: C{str}
+
+    @return: The number of warnings emitted.
+    @rtype: C{int}
+    """
     # Since compiler.parse does not reliably report syntax errors, use the
     # built in compiler first to detect those.
     try:
@@ -18,16 +31,23 @@ def check(codeString, filename):
 
         (lineno, offset, text) = value.lineno, value.offset, value.text
 
-        line = text.splitlines()[-1]
+        # If there's an encoding problem with the file, the text is None.
+        if text is None:
+            # Avoid using msg, since for the only known case, it contains a
+            # bogus message that claims the encoding the file declared was
+            # unknown.
+            print >> sys.stderr, "%s: problem decoding source" % (filename, )
+        else:
+            line = text.splitlines()[-1]
 
-        if offset is not None:
-            offset = offset - (len(text) - len(line))
+            if offset is not None:
+                offset = offset - (len(text) - len(line))
 
-        print >> sys.stderr, '%s:%d: %s' % (filename, lineno, msg)
-        print >> sys.stderr, line
+            print >> sys.stderr, '%s:%d: %s' % (filename, lineno, msg)
+            print >> sys.stderr, line
 
-        if offset is not None:
-            print >> sys.stderr, " " * offset, "^"
+            if offset is not None:
+                print >> sys.stderr, " " * offset, "^"
 
         return 1
     else:

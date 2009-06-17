@@ -165,3 +165,21 @@ foo(bar=baz, bax)
         self.assertEquals(count, 1)
         self.assertEquals(
             err.getvalue(), "%s: Permission denied\n" % (sourcePath.path,))
+
+
+    def test_misencodedFile(self):
+        """
+        If a source file contains bytes which cannot be decoded, this is
+        reported on stderr.
+        """
+        source = u"""\
+# coding: ascii
+x = "\N{SNOWMAN}"
+""".encode('utf-8')
+        sourcePath = FilePath(self.mktemp())
+        sourcePath.setContent(source)
+        err = StringIO()
+        count = withStderrTo(err, lambda: checkPath(sourcePath.path))
+        self.assertEquals(count, 1)
+        self.assertEquals(
+            err.getvalue(), "%s: problem decoding source\n" % (sourcePath.path,))
