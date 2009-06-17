@@ -42,8 +42,18 @@ class Binding(object):
 class UnBinding(Binding):
     '''Created by the 'del' operator.'''
 
+
+
 class Importation(Binding):
+    """
+    A binding created by an import statement.
+
+    @ivar fullName: The complete name given to the import statement,
+        possibly including multiple dotted components.
+    @type fullName: C{str}
+    """
     def __init__(self, name, source):
+        self.fullName = name
         name = name.split('.')[0]
         super(Importation, self).__init__(name, source)
 
@@ -250,8 +260,10 @@ class Checker(object):
 
         if not isinstance(self.scope, ClassScope):
             for scope in self.scopeStack[::-1]:
-                if (isinstance(scope.get(value.name), Importation)
-                        and not scope[value.name].used
+                existing = scope.get(value.name)
+                if (isinstance(existing, Importation)
+                        and not existing.used
+                        and (not isinstance(value, Importation) or value.fullName == existing.fullName)
                         and reportRedef):
 
                     self.report(messages.RedefinedWhileUnused,

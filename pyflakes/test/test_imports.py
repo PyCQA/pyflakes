@@ -377,9 +377,55 @@ class Test(harness.Test):
     def test_importStar(self):
         self.flakes('from fu import *', m.ImportStarUsed)
 
+
     def test_packageImport(self):
-        self.flakes('import fu.bar; fu.bar')
-    test_packageImport.todo = "this has been hacked to treat 'import fu.bar' as just 'import fu'"
+        """
+        If a dotted name is imported and used, no warning is reported.
+        """
+        self.flakes('''
+        import fu.bar
+        fu.bar
+        ''')
+
+
+    def test_unusedPackageImport(self):
+        """
+        If a dotted name is imported and not used, an unused import warning is
+        reported.
+        """
+        self.flakes('import fu.bar', m.UnusedImport)
+
+
+    def test_duplicateSubmoduleImport(self):
+        """
+        If a submodule of a package is imported twice, an unused import warning
+        and a redefined while unused warning are reported.
+        """
+        self.flakes('''
+        import fu.bar, fu.bar
+        fu.bar
+        ''', m.RedefinedWhileUnused)
+        self.flakes('''
+        import fu.bar
+        import fu.bar
+        fu.bar
+        ''', m.RedefinedWhileUnused)
+
+
+    def test_differentSubmoduleImport(self):
+        """
+        If two different submodules of a package are imported, no duplicate
+        import warning is reported for the package.
+        """
+        self.flakes('''
+        import fu.bar, fu.baz
+        fu.bar, fu.baz
+        ''')
+        self.flakes('''
+        import fu.bar
+        import fu.baz
+        fu.bar, fu.baz
+        ''')
 
     def test_assignRHSFirst(self):
         self.flakes('import fu; fu = fu')
