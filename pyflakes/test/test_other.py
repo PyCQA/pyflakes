@@ -259,6 +259,45 @@ class Python25Test(harness.Test):
         ''')
 
 
+    def test_withStatementAttributeName(self):
+        """
+        No warnings are emitted for using an attribute as the target of a
+        C{with} statement.
+        """
+        self.flakes('''
+        from __future__ import with_statement
+        import foo
+        with open('foo') as foo.bar:
+            pass
+        ''')
+
+
+    def test_withStatementSubscript(self):
+        """
+        No warnings are emitted for using a subscript as the target of a
+        C{with} statement.
+        """
+        self.flakes('''
+        from __future__ import with_statement
+        import foo
+        with open('foo') as foo[0]:
+            pass
+        ''')
+
+
+    def test_withStatementSubscriptUndefined(self):
+        """
+        An undefined name warning is emitted if the subscript used as the
+        target of a C{with} statement is not defined.
+        """
+        self.flakes('''
+        from __future__ import with_statement
+        import foo
+        with open('foo') as foo[bar]:
+            pass
+        ''', m.UndefinedName)
+
+
     def test_withStatementTupleNames(self):
         """
         No warnings are emitted for using any of the tuple of names defined by
@@ -269,6 +308,36 @@ class Python25Test(harness.Test):
         with open('foo') as (bar, baz):
             bar, baz
         bar, baz
+        ''')
+
+
+    def test_withStatementListNames(self):
+        """
+        No warnings are emitted for using any of the list of names defined by a
+        C{with} statement within the suite or afterwards.
+        """
+        self.flakes('''
+        from __future__ import with_statement
+        with open('foo') as [bar, baz]:
+            bar, baz
+        bar, baz
+        ''')
+
+
+    def test_withStatementComplicatedTarget(self):
+        """
+        If the target of a C{with} statement uses any or all of the valid forms
+        for that part of the grammar (See
+        U{http://docs.python.org/reference/compound_stmts.html#the-with-statement}),
+        the names involved are checked both for definedness and any bindings
+        created are respected in the suite of the statement and afterwards.
+        """
+        self.flakes('''
+        from __future__ import with_statement
+        c = d = e = g = h = i = None
+        with open('foo') as [(a, b), c[d], e.f, g[h:i]]:
+            a, b, c, d, e, g, h, i
+        a, b, c, d, e, g, h, i
         ''')
 
 

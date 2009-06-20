@@ -280,28 +280,17 @@ class Checker(object):
 
     def WITH(self, node):
         """
-        Handle C{with} by adding bindings for the name or tuple of names it
-        puts into scope and by continuing to process the suite within the
-        statement.
+        Handle C{with} by checking the target of the statement (which can be an
+        identifier, a list or tuple of targets, an attribute, etc) for
+        undefined names and defining any it adds to the scope and by continuing
+        to process the suite within the statement.
         """
-        # for "with foo as bar", there is no AssName node for "bar".
-        # Instead, there is a Name node. If the "as" expression assigns to
-        # a tuple, it will instead be a AssTuple node of Name nodes.
-        #
-        # Of course these are assignments, not references, so we have to
-        # handle them as a special case here.
-
+        # Check the "foo" part of a "with foo as bar" statement.  Do this no
+        # matter what, since there's always a "foo" part.
         self.handleNode(node.expr, node)
 
-        if isinstance(node.vars, ast.AssTuple):
-            varNodes = node.vars.nodes
-        elif node.vars is not None:
-            varNodes = [node.vars]
-        else:
-            varNodes = []
-
-        for varNode in varNodes:
-            self.addBinding(varNode.lineno, Assignment(varNode.name, varNode))
+        if node.vars is not None:
+            self.handleNode(node.vars, node)
 
         self.handleChildren(node.body)
 
