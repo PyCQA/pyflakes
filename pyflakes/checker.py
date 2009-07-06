@@ -472,9 +472,9 @@ class Checker(object):
         """
         if getattr(node, "decorators", None) is not None:
             self.handleChildren(node.decorators)
-        self.addBinding(node.lineno, Binding(node.name, node))
         for baseNode in node.bases:
             self.handleNode(baseNode, node)
+        self.addBinding(node.lineno, Binding(node.name, node))
         self.pushClassScope()
         self.handleChildren(node.code)
         self.popScope()

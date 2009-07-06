@@ -74,6 +74,17 @@ class Test(harness.Test):
         self.flakes('+1')
 
 
+    def test_undefinedBaseClass(self):
+        """
+        If a name in the base list of a class definition is undefined, a
+        warning is emitted.
+        """
+        self.flakes('''
+        class foo(foo):
+            pass
+        ''', m.UndefinedName)
+
+
 
 class TestUnusedAssignment(harness.Test):
     """

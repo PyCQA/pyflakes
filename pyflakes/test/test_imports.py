@@ -51,6 +51,19 @@ class Test(harness.Test):
             pass
         ''', m.RedefinedWhileUnused)
 
+
+    def test_redefinedBySubclass(self):
+        """
+        If an imported name is redefined by a class statement which also uses
+        that name in the bases list, no warning is emitted.
+        """
+        self.flakes('''
+        from fu import bar
+        class bar(bar):
+            pass
+        ''')
+
+
     def test_redefinedInClass(self):
         """
         Test that shadowing a global with a class attribute does not produce a
