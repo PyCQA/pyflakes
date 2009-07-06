@@ -45,6 +45,15 @@ class UndefinedName(Message):
         self.message_args = (name,)
 
 
+
+class UndefinedExport(Message):
+    message = 'undefined name %r in __all__'
+    def __init__(self, filename, lineno, name):
+        Message.__init__(self, filename, lineno)
+        self.message_args = (name,)
+
+
+
 class UndefinedLocal(Message):
     message = "local variable %r (defined in enclosing scope on line %r) referenced before assignment"
     def __init__(self, filename, lineno, name, orig_lineno):

@@ -3,6 +3,7 @@
 # See LICENSE file for details
 
 import __builtin__
+import os.path
 from compiler import ast
 
 from pyflakes import messages
@@ -79,6 +80,33 @@ class Assignment(Binding):
 
 class FunctionDefinition(Binding):
     pass
+
+
+
+class ExportBinding(Binding):
+    """
+    A binding created by an C{__all__} assignment.  If the names in the list
+    can be determined statically, they will be treated as names for export and
+    additional checking applied to them.
+
+    The only C{__all__} assignment that can be recognized is one which takes
+    the value of a literal list containing literal strings.  For example::
+
+        __all__ = ["foo", "bar"]
+
+    Names which are imported and not otherwise used but appear in the value of
+    C{__all__} will not have an unused import warning reported for them.
+    """
+    def names(self):
+        """
+        Return a list of the names referenced by this binding.
+        """
+        names = []
+        if isinstance(self.source, ast.List):
+            for node in self.source.nodes:
+                if isinstance(node, ast.Const):
+                    names.append(node.value)
+        return names
 
 
 
@@ -195,11 +223,36 @@ class Checker(object):
     def popScope(self):
         self.dead_scopes.append(self.scopeStack.pop())
 
+
     def check_dead_scopes(self):
+        """
+        Look at scopes which have been fully examined and report names in them
+        which were imported but unused.
+        """
         for scope in self.dead_scopes:
+            export = isinstance(scope.get('__all__'), ExportBinding)
+            if export:
+                all = scope['__all__'].names()
+                if os.path.split(self.filename)[1] != '__init__.py':
+                    # Look for possible mistakes in the export list
+                    undefined = set(all) - set(scope)
+                    for name in undefined:
+                        self.report(
+                            messages.UndefinedExport,
+                            scope['__all__'].source.lineno,
+                            name)
+            else:
+                all = []
+
+            # Look for imported names that aren't used.
             for importation in scope.itervalues():
-                if isinstance(importation, Importation) and not importation.used:
-                    self.report(messages.UnusedImport, importation.source.lineno, importation.name)
+                if isinstance(importation, Importation):
+                    if not importation.used and importation.name not in all:
+                        self.report(
+                            messages.UnusedImport,
+                            importation.source.lineno,
+                            importation.name)
+
 
     def pushFunctionScope(self):
         self.scopeStack.append(FunctionScope())
@@ -458,6 +511,10 @@ class Checker(object):
                           (ast.For, ast.ListCompFor, ast.GenExprFor,
                            ast.AssTuple, ast.AssList)):
                 binding = Binding(node.name, node)
+            elif (node.name == '__all__' and
+                  isinstance(self.scope, ModuleScope) and
+                  isinstance(node.parent, ast.Assign)):
+                binding = ExportBinding(node.name, node.parent.expr)
             else:
                 binding = Assignment(node.name, node)
             if node.name in self.scope:

@@ -478,11 +478,6 @@ class Test(harness.Test):
         ''')
     test_importingForImportError.todo = ''
 
-    def test_explicitlyPublic(self):
-        '''imports mentioned in __all__ are not unused'''
-        self.flakes('import fu; __all__ = ["fu"]')
-    test_explicitlyPublic.todo = "this would require importing the module or doing smarter parsing"
-
     def test_importedInClass(self):
         '''Imports in class scope can be used through self'''
         self.flakes('''
@@ -505,6 +500,77 @@ class Test(harness.Test):
         x = 5
         from __future__ import division
         ''', m.LateFutureImport)
+
+
+
+class TestSpecialAll(harness.Test):
+    """
+    Tests for suppression of unused import warnings by C{__all__}.
+    """
+    def test_ignoredInFunction(self):
+        """
+        An C{__all__} definition does not suppress unused import warnings in a
+        function scope.
+        """
+        self.flakes('''
+        def foo():
+            import bar
+            __all__ = ["bar"]
+        ''', m.UnusedImport, m.UnusedVariable)
+
+
+    def test_ignoredInClass(self):
+        """
+        An C{__all__} definition does not suppress unused import warnings in a
+        class scope.
+        """
+        self.flakes('''
+        class foo:
+            import bar
+            __all__ = ["bar"]
+        ''', m.UnusedImport)
+
+
+    def test_warningSuppressed(self):
+        """
+        If a name is imported and unused but is named in C{__all__}, no warning
+        is reported.
+        """
+        self.flakes('''
+        import foo
+        __all__ = ["foo"]
+        ''')
+
+
+    def test_unrecognizable(self):
+        """
+        If C{__all__} is defined in a way that can't be recognized statically,
+        it is ignored.
+        """
+        self.flakes('''
+        import foo
+        __all__ = ["f" + "oo"]
+        ''', m.UnusedImport)
+        self.flakes('''
+        import foo
+        __all__ = [] + ["foo"]
+        ''', m.UnusedImport)
+
+
+    def test_unboundExported(self):
+        """
+        If C{__all__} includes a name which is not bound, a warning is emitted.
+        """
+        self.flakes('''
+        __all__ = ["foo"]
+        ''', m.UndefinedExport)
+
+        # Skip this in __init__.py though, since the rules there are a little
+        # different.
+        for filename in ["foo/__init__.py", "__init__.py"]:
+            self.flakes('''
+            __all__ = ["foo"]
+            ''', filename=filename)
 
 
 
