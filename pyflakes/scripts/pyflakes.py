@@ -25,7 +25,14 @@ def check(codeString, filename):
     # Since compiler.parse does not reliably report syntax errors, use the
     # built in compiler first to detect those.
     try:
-        compile(codeString, filename, "exec")
+        try:
+            compile(codeString, filename, "exec")
+        except MemoryError:
+            # Python 2.4 will raise MemoryError if the source can't be
+            # decoded.
+            if sys.version_info[:2] == (2, 4):
+                raise SyntaxError(None)
+            raise
     except (SyntaxError, IndentationError), value:
         msg = value.args[0]
 
