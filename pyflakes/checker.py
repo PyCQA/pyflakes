@@ -419,7 +419,12 @@ class Checker(object):
             if ((not hasattr(__builtin__, node.name))
                     and node.name not in _MAGIC_GLOBALS
                     and not importStarred):
-                self.report(messages.UndefinedName, node.lineno, node.name)
+                if (os.path.basename(self.filename) == '__init__.py' and
+                    node.name == '__path__'):
+                    # the special name __path__ is valid only in packages
+                    pass
+                else:
+                    self.report(messages.UndefinedName, node.lineno, node.name)
 
 
     def FUNCTION(self, node):

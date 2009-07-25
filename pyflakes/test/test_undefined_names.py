@@ -49,6 +49,15 @@ class Test(harness.Test):
         self.flakes('__name__')
 
 
+    def test_magicGlobalsPath(self):
+        """
+        Use of the C{__path__} magic global should not emit an undefined name
+        warning, if you refer to it from a file called __init__.py.
+        """
+        self.flakes('__path__', m.UndefinedName)
+        self.flakes('__path__', filename='package/__init__.py')
+
+
     def test_globalImportStar(self):
         '''Can't find undefined names with import *'''
         self.flakes('from fu import *; bar', m.ImportStarUsed)
