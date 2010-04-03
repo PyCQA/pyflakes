@@ -1,4 +1,4 @@
-# (c) 2005-2008 Divmod, Inc.
+# (c) 2005-2010 Divmod, Inc.
 # See LICENSE file for details
 
 """
@@ -83,6 +83,30 @@ class Test(harness.Test):
         class foo(foo):
             pass
         ''', m.UndefinedName)
+
+
+    def test_classNameUndefinedInClassBody(self):
+        """
+        If a class name is used in the body of that class's definition and
+        the name is not already defined, a warning is emitted.
+        """
+        self.flakes('''
+        class foo:
+            foo
+        ''', m.UndefinedName)
+
+
+    def test_classNameDefinedPreviously(self):
+        """
+        If a class name is used in the body of that class's definition and
+        the name was previously defined in some other way, no warning is
+        emitted.
+        """
+        self.flakes('''
+        foo = None
+        class foo:
+            foo
+        ''')
 
 
 

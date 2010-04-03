@@ -1,5 +1,5 @@
 # -*- test-case-name: pyflakes -*-
-# (c) 2005-2008 Divmod, Inc.
+# (c) 2005-2010 Divmod, Inc.
 # See LICENSE file for details
 
 import __builtin__
@@ -479,10 +479,10 @@ class Checker(object):
             self.handleChildren(node.decorators)
         for baseNode in node.bases:
             self.handleNode(baseNode, node)
-        self.addBinding(node.lineno, Binding(node.name, node))
         self.pushClassScope()
         self.handleChildren(node.code)
         self.popScope()
+        self.addBinding(node.lineno, Binding(node.name, node))
 
 
     def ASSNAME(self, node):
