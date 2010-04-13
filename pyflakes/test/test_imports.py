@@ -504,6 +504,10 @@ class Test(harness.Test):
     def test_futureImport(self):
         '''__future__ is special'''
         self.flakes('from __future__ import division')
+        self.flakes('''
+        "docstring is allowed before future import"
+        from __future__ import division
+        ''')
 
     def test_futureImportFirst(self):
         """
@@ -512,6 +516,11 @@ class Test(harness.Test):
         self.flakes('''
         x = 5
         from __future__ import division
+        ''', m.LateFutureImport)
+        self.flakes('''
+        from foo import bar
+        from __future__ import division
+        bar
         ''', m.LateFutureImport)
 
 
@@ -584,15 +593,6 @@ class TestSpecialAll(harness.Test):
             self.flakes('''
             __all__ = ["foo"]
             ''', filename=filename)
-
-
-
-class Python24Tests(harness.Test):
-    """
-    Tests for checking of syntax which is valid in Python 2.4 and newer.
-    """
-    if version_info < (2, 4):
-        skip = "Python 2.4 required for generator expression and decorator tests."
 
 
     def test_usedInGenExp(self):

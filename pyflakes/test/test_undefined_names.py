@@ -1,7 +1,9 @@
 
-from sys import version_info
+from _ast import PyCF_ONLY_AST
 
-from pyflakes import messages as m
+from twisted.trial.unittest import TestCase
+
+from pyflakes import messages as m, checker
 from pyflakes.test import harness
 
 
@@ -85,6 +87,16 @@ class Test(harness.Test):
         ''')
     test_definedByGlobal.todo = ''
 
+    def test_globalInGlobalScope(self):
+        """
+        A global statement in the global scope is ignored.
+        """
+        self.flakes('''
+        global x
+        def foo():
+            print x
+        ''', m.UndefinedName)
+
     def test_del(self):
         '''del deletes bindings'''
         self.flakes('a = 1; del a; a', m.UndefinedName)
@@ -139,6 +151,25 @@ class Test(harness.Test):
                     a
                     a = 2
                     return a
+        ''', m.UndefinedLocal)
+
+
+    def test_intermediateClassScopeIgnored(self):
+        """
+        If a name defined in an enclosing scope is shadowed by a local variable
+        and the name is used locally before it is bound, an unbound local
+        warning is emitted, even if there is a class scope between the enclosing
+        scope and the local scope.
+        """
+        self.flakes('''
+        def f():
+            x = 1
+            class g:
+                def h(self):
+                    a = x
+                    x = None
+                    print x, a
+            print x
         ''', m.UndefinedLocal)
 
 
@@ -203,14 +234,12 @@ class Test(harness.Test):
         f()
         ''', m.UndefinedName)
 
-
-
-class Python24Test(harness.Test):
-    """
-    Tests for checking of syntax which is valid in Python 2.4 and newer.
-    """
-    if version_info < (2, 4):
-        skip = "Python 2.4 required for generator expression tests."
+    def test_definedAsStarArgs(self):
+        '''star and double-star arg names are defined'''
+        self.flakes('''
+        def f(a, *b, **c):
+            print a, b, c
+        ''')
 
     def test_definedInGenExp(self):
         """
@@ -218,3 +247,19 @@ class Python24Test(harness.Test):
         warnings.
         """
         self.flakes('(a for a in xrange(10) if a)')
+
+
+
+class NameTests(TestCase):
+    """
+    Tests for some extra cases of name handling.
+    """
+    def test_impossibleContext(self):
+        """
+        A Name node with an unrecognized context results in a RuntimeError being
+        raised.
+        """
+        tree = compile("x = 10", "<test>", "exec", PyCF_ONLY_AST)
+        # Make it into something unrecognizable.
+        tree.body[0].targets[0].ctx = object()
+        self.assertRaises(RuntimeError, checker.Checker, tree)
