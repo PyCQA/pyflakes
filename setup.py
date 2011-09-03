@@ -10,7 +10,7 @@ setup(
     description="passive checker of Python programs",
     author="Phil Frost",
     author_email="indigo@bitglue.com",
-    maintainer="Tristan Seligmann",
+    maintainer="Divmod developers",
     maintainer_email="divmod-dev@lists.launchpad.net",
     url="https://launchpad.net/pyflakes",
     packages=["pyflakes", "pyflakes.scripts", "pyflakes.test"],
