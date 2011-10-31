@@ -68,8 +68,8 @@ class DuplicateArgument(Message):
         self.message_args = (name,)
 
 
-class RedefinedFunction(Message):
-    message = 'redefinition of function %r from line %r'
+class Redefined(Message):
+    message = 'redefinition of %r from line %r'
     def __init__(self, filename, lineno, name, orig_lineno):
         Message.__init__(self, filename, lineno)
         self.message_args = (name, orig_lineno)

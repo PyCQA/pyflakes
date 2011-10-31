@@ -479,9 +479,6 @@ class Test(harness.Test):
         fu
         ''', m.RedefinedWhileUnused)
 
-    def test_ignoreNonImportRedefinitions(self):
-        self.flakes('a = 1; a = 2')
-
     def test_importingForImportError(self):
         self.flakes('''
         try:
