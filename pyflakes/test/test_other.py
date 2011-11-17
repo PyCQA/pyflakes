@@ -122,8 +122,6 @@ class Test(harness.Test):
         ''', m.RedefinedWhileUnused)
 
 
-
-
     def test_functionRedefinedAsClass(self):
         """
         If a function is redefined as a class, a warning is emitted.

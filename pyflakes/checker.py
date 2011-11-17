@@ -87,7 +87,7 @@ class Argument(Binding):
 
 class Definition(Binding):
     """
-    A binding that that defines a function or class.
+    A binding that defines a function or class.
     """
 
 
