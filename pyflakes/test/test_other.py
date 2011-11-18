@@ -33,7 +33,7 @@ class Test(harness.Test):
         self.flakes('''
         def a(): pass
         def a(): pass
-        ''', m.RedefinedFunction)
+        ''', m.RedefinedWhileUnused)
 
     def test_redefinedClassFunction(self):
         """
@@ -44,7 +44,7 @@ class Test(harness.Test):
         class A:
             def a(): pass
             def a(): pass
-        ''', m.RedefinedFunction)
+        ''', m.RedefinedWhileUnused)
 
     def test_functionDecorator(self):
         """
@@ -109,6 +109,85 @@ class Test(harness.Test):
         ''')
 
 
+    def test_classRedefinition(self):
+        """
+        If a class is defined twice in the same module, a warning is emitted.
+        """
+        self.flakes(
+        '''
+        class Foo:
+            pass
+        class Foo:
+            pass
+        ''', m.RedefinedWhileUnused)
+
+
+    def test_functionRedefinedAsClass(self):
+        """
+        If a function is redefined as a class, a warning is emitted.
+        """
+        self.flakes(
+        '''
+        def Foo():
+            pass
+        class Foo:
+            pass
+        ''', m.RedefinedWhileUnused)
+
+
+    def test_classRedefinedAsFunction(self):
+        """
+        If a class is redefined as a function, a warning is emitted.
+        """
+        self.flakes(
+        '''
+        class Foo:
+            pass
+        def Foo():
+            pass
+        ''', m.RedefinedWhileUnused)
+
+
+    def test_doubleAssignment(self):
+        """
+        If a variable is re-assigned to without being used, no warning is
+        emitted.
+        """
+        self.flakes(
+        '''
+        x = 10
+        x = 20
+        ''', m.RedefinedWhileUnused)
+    test_doubleAssignment.todo = (
+        "Too hard to make this warn but other cases stay silent")
+
+
+    def test_doubleAssignmentConditionally(self):
+        """
+        If a variable is re-assigned within a conditional, no warning is
+        emitted.
+        """
+        self.flakes(
+        '''
+        x = 10
+        if True:
+            x = 20
+        ''')
+
+
+    def test_doubleAssignmentWithUse(self):
+        """
+        If a variable is re-assigned to after being used, no warning is
+        emitted.
+        """
+        self.flakes(
+        '''
+        x = 10
+        y = x * 2
+        x = 20
+        ''')
+
+
     def test_comparison(self):
         """
         If a defined name is used on either side of any of the six comparison
@@ -128,7 +207,7 @@ class Test(harness.Test):
 
     def test_identity(self):
         """
-        If a deefined name is used on either side of an identity test, no
+        If a defined name is used on either side of an identity test, no
         warning is emitted.
         """
         self.flakes('''

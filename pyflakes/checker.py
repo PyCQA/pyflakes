@@ -85,6 +85,11 @@ class Argument(Binding):
     """
 
 
+class Definition(Binding):
+    """
+    A binding that defines a function or class.
+    """
+
 
 class Assignment(Binding):
     """
@@ -97,7 +102,12 @@ class Assignment(Binding):
 
 
 
-class FunctionDefinition(Binding):
+class FunctionDefinition(Definition):
+    pass
+
+
+
+class ClassDefinition(Definition):
     pass
 
 
@@ -350,11 +360,6 @@ class Checker(object):
         - if `reportRedef` is True (default), rebinding while unused will be
           reported.
         '''
-        if (isinstance(self.scope.get(value.name), FunctionDefinition)
-                    and isinstance(value, FunctionDefinition)):
-            self.report(messages.RedefinedFunction,
-                        lineno, value.name, self.scope[value.name].source.lineno)
-
         if not isinstance(self.scope, ClassScope):
             for scope in self.scopeStack[::-1]:
                 existing = scope.get(value.name)
@@ -366,11 +371,15 @@ class Checker(object):
                     self.report(messages.RedefinedWhileUnused,
                                 lineno, value.name, scope[value.name].source.lineno)
 
+        existing = self.scope.get(value.name)
         if isinstance(value, UnBinding):
             try:
                 del self.scope[value.name]
             except KeyError:
                 self.report(messages.UndefinedName, lineno, value.name)
+        elif isinstance(existing, Definition) and not existing.used:
+            self.report(messages.RedefinedWhileUnused,
+                        lineno, value.name, existing.source.lineno)
         else:
             self.scope[value.name] = value
 
@@ -582,7 +591,7 @@ class Checker(object):
         for stmt in node.body:
             self.handleNode(stmt, node)
         self.popScope()
-        self.addBinding(node.lineno, Binding(node.name, node))
+        self.addBinding(node.lineno, ClassDefinition(node.name, node))
 
     def ASSIGN(self, node):
         self.handleNode(node.value, node)
