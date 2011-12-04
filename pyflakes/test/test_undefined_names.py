@@ -27,6 +27,14 @@ class Test(harness.Test):
         self.flakes('range(10)')
 
 
+    def test_builtinWindowsError(self):
+        """
+        C{WindowsError} is sometimes a builtin name, so no warning is emitted
+        for using it.
+        """
+        self.flakes('WindowsError')
+
+
     def test_magicGlobalsFile(self):
         """
         Use of the C{__file__} magic global should not emit an undefined name
