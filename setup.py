@@ -1,17 +1,18 @@
 #!/usr/bin/python
-# (c) 2005-2009 Divmod, Inc.  See LICENSE file for details
+# Copyright 2005-2011 Divmod, Inc.  See LICENSE file for details
 
 from distutils.core import setup
 
 setup(
     name="pyflakes",
     license="MIT",
-    version="0.4.0",
+    version="0.5.0",
     description="passive checker of Python programs",
     author="Phil Frost",
-    maintainer="Moe Aboulkheir",
-    maintainer_email="moe@divmod.com",
-    url="http://www.divmod.org/trac/wiki/DivmodPyflakes",
+    author_email="indigo@bitglue.com",
+    maintainer="Divmod developers",
+    maintainer_email="divmod-dev@lists.launchpad.net",
+    url="https://launchpad.net/pyflakes",
     packages=["pyflakes", "pyflakes.scripts", "pyflakes.test"],
     scripts=["bin/pyflakes"],
     long_description="""Pyflakes is program to analyze Python programs and detect various errors. It
