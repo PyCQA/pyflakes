@@ -173,8 +173,9 @@ class ModuleScope(Scope):
     pass
 
 
-# Globally defined names which are not attributes of the __builtin__ module.
-_MAGIC_GLOBALS = ['__file__', '__builtins__']
+# Globally defined names which are not attributes of the __builtin__ module, or
+# are only present on some platforms.
+_MAGIC_GLOBALS = ['__file__', '__builtins__', 'WindowsError']
 
 
 
