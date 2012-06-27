@@ -46,6 +46,7 @@ class Reporter(object):
         self._stdout.write('\n')
 
 
+
 def check(codeString, filename, reporter=None):
     """
     Check the Python source given by C{codeString} for flakes.
@@ -91,6 +92,7 @@ def check(codeString, filename, reporter=None):
         return len(w.messages)
 
 
+
 def checkPath(filename, reporter=None):
     """
     Check the given path, printing out any warnings detected.
@@ -104,6 +106,22 @@ def checkPath(filename, reporter=None):
         return 1
 
 
+
+def iterSourceFiles(paths):
+    """
+    Iterate over source files listed in C{paths}.
+    """
+    for path in paths:
+        if os.path.isdir(path):
+            for dirpath, dirnames, filenames in os.walk(path):
+                for filename in filenames:
+                    if filename.endswith('.py'):
+                        yield os.path.join(dirpath, filename)
+        else:
+            yield path
+
+
+
 def checkRecursive(paths, reporter=None):
     """
     Check the given files and look recursively under any directories, looking
@@ -113,16 +131,10 @@ def checkRecursive(paths, reporter=None):
     @return: the number of warnings printed
     """
     warnings = 0
-    for path in paths:
-        if os.path.isdir(path):
-            for dirpath, dirnames, filenames in os.walk(path):
-                for filename in filenames:
-                    if filename.endswith('.py'):
-                        warnings += checkPath(os.path.join(dirpath, filename),
-                                              reporter)
-        else:
-            warnings += checkPath(path, reporter)
+    for sourcePath in iterSourceFiles(paths):
+        warnings += checkPath(sourcePath, reporter)
     return warnings
+
 
 
 def main():
