@@ -9,7 +9,39 @@ import _ast
 
 checker = __import__('pyflakes.checker').checker
 
-def check(codeString, filename):
+
+class Reporter(object):
+
+    def __init__(self, stdout=None, stderr=None):
+        if stdout is None:
+            stdout = sys.stdout
+        self._stdout = stdout
+        if stderr is None:
+            stderr = sys.stderr
+        self._stderr = stderr
+
+    def _print_error(self, msg):
+        self._stderr.write(msg)
+        self._stderr.write('\n')
+
+    def ioError(self, filename, msg):
+        self._print_error("%s: %s" % (filename, msg.args[1]))
+
+    def problemDecodingSource(self, filename):
+        self._print_error("%s: problem decoding source\n" % (filename,))
+
+    def syntaxError(self, filename, msg, lineno, offset, line):
+        self._print_error('%s:%d: %s' % (filename, lineno, msg))
+        self._print_error(line)
+        if offset is not None:
+            self._print_error(" " * offset, "^")
+
+    def flake(self, warning):
+        self._stdout.write(warning)
+        self._stdout.write('\n')
+
+
+def check(codeString, filename, reporter=None):
     """
     Check the Python source given by C{codeString} for flakes.
 
@@ -23,6 +55,8 @@ def check(codeString, filename):
     @return: The number of warnings emitted.
     @rtype: C{int}
     """
+    if reporter is None:
+        reporter = Reporter()
     # First, compile into an AST and handle syntax errors.
     try:
         tree = compile(codeString, filename, "exec", _ast.PyCF_ONLY_AST)
@@ -36,43 +70,36 @@ def check(codeString, filename):
             # Avoid using msg, since for the only known case, it contains a
             # bogus message that claims the encoding the file declared was
             # unknown.
-            print >> sys.stderr, "%s: problem decoding source" % (filename, )
+            reporter.problem_decoding_source(filename)
         else:
             line = text.splitlines()[-1]
-
             if offset is not None:
                 offset = offset - (len(text) - len(line))
-
-            print >> sys.stderr, '%s:%d: %s' % (filename, lineno, msg)
-            print >> sys.stderr, line
-
-            if offset is not None:
-                print >> sys.stderr, " " * offset, "^"
-
+            reporter.syntax_error(filename, msg, lineno, offset, line)
         return 1
     else:
         # Okay, it's syntactically valid.  Now check it.
         w = checker.Checker(tree, filename)
         w.messages.sort(lambda a, b: cmp(a.lineno, b.lineno))
         for warning in w.messages:
-            print warning
+            reporter.flake(warning)
         return len(w.messages)
 
 
-def checkPath(filename):
+def checkPath(filename, reporter=None):
     """
     Check the given path, printing out any warnings detected.
 
     @return: the number of warnings printed
     """
     try:
-        return check(file(filename, 'U').read() + '\n', filename)
+        return check(file(filename, 'U').read() + '\n', filename, reporter)
     except IOError, msg:
-        print >> sys.stderr, "%s: %s" % (filename, msg.args[1])
+        reporter.ioError(filename, msg)
         return 1
 
 
-def checkRecursive(paths):
+def checkRecursive(paths, reporter=None):
     """
     Check the given files and look recursively under any directories, looking
     for Python files and checking them, printing out any warnings detected.
@@ -86,9 +113,10 @@ def checkRecursive(paths):
             for dirpath, dirnames, filenames in os.walk(path):
                 for filename in filenames:
                     if filename.endswith('.py'):
-                        warnings += checkPath(os.path.join(dirpath, filename))
+                        warnings += checkPath(os.path.join(dirpath, filename),
+                                              reporter)
         else:
-            warnings += checkPath(path)
+            warnings += checkPath(path, reporter)
     return warnings
 
 
