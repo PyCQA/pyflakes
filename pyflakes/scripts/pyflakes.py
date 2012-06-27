@@ -72,18 +72,31 @@ def checkPath(filename):
         return 1
 
 
+def checkRecursive(paths):
+    """
+    Check the given files and look recursively under any directories, looking
+    for Python files and checking them, printing out any warnings detected.
+
+    @param paths: A list of file and directory names.
+    @return: the number of warnings printed
+    """
+    warnings = 0
+    for path in paths:
+        if os.path.isdir(path):
+            for dirpath, dirnames, filenames in os.walk(path):
+                for filename in filenames:
+                    if filename.endswith('.py'):
+                        warnings += checkPath(os.path.join(dirpath, filename))
+        else:
+            warnings += checkPath(path)
+    return warnings
+
+
 def main():
     warnings = 0
     args = sys.argv[1:]
     if args:
-        for arg in args:
-            if os.path.isdir(arg):
-                for dirpath, dirnames, filenames in os.walk(arg):
-                    for filename in filenames:
-                        if filename.endswith('.py'):
-                            warnings += checkPath(os.path.join(dirpath, filename))
-            else:
-                warnings += checkPath(arg)
+        warnings += checkRecursive(args)
     else:
         warnings += check(sys.stdin.read(), '<stdin>')
 
