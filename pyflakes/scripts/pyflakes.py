@@ -20,21 +20,26 @@ class Reporter(object):
             stderr = sys.stderr
         self._stderr = stderr
 
-    def _print_error(self, msg):
+
+    def _printError(self, msg):
         self._stderr.write(msg)
         self._stderr.write('\n')
 
+
     def ioError(self, filename, msg):
-        self._print_error("%s: %s" % (filename, msg.args[1]))
+        self._printError("%s: %s" % (filename, msg.args[1]))
+
 
     def problemDecodingSource(self, filename):
-        self._print_error("%s: problem decoding source\n" % (filename,))
+        self._printError("%s: problem decoding source\n" % (filename,))
+
 
     def syntaxError(self, filename, msg, lineno, offset, line):
-        self._print_error('%s:%d: %s' % (filename, lineno, msg))
-        self._print_error(line)
+        self._printError('%s:%d: %s' % (filename, lineno, msg))
+        self._printError(line)
         if offset is not None:
-            self._print_error(" " * offset, "^")
+            self._printError(" " * offset, "^")
+
 
     def flake(self, warning):
         self._stdout.write(warning)
