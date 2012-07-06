@@ -11,43 +11,47 @@ checker = __import__('pyflakes.checker').checker
 
 
 class Reporter(object):
+    """
+    Formats the results of pyflakes checks to users.
+    """
 
-    def __init__(self, stdout=None, stderr=None):
-        if stdout is None:
-            stdout = sys.stdout
-        self._stdout = stdout
-        if stderr is None:
-            stderr = sys.stderr
-        self._stderr = stderr
+    def __init__(self, errorStream):
+        """
+        Construct a L{Reporter}.
 
-
-    def _printError(self, msg):
-        self._stderr.write(msg)
-        self._stderr.write('\n')
-
-
-    def ioError(self, filename, msg):
-        self._printError("%s: %s" % (filename, msg.args[1]))
+        @param errorStream: A file-like object where error output will be
+            written to.  C{sys.stderr} is a good value.
+        """
+        self._stderr = errorStream
 
 
     def problemDecodingSource(self, filename):
-        self._printError("%s: problem decoding source\n" % (filename,))
+        """
+        There was a problem decoding the source code in C{filename}.
+        """
+        self._stderr.write(filename)
+        self._stderr.write(': problem decoding source\n')
 
 
     def syntaxError(self, filename, msg, lineno, offset, line):
-        self._printError('%s:%d: %s' % (filename, lineno, msg))
-        self._printError(line)
+        """
+        There was a syntax errror in C{filename}.
+
+        @param filename: The path to the file with the syntax error.
+        @param msg: An explanation of the syntax error.
+        @param lineno: The line number where the syntax error occurred.
+        @param offset: The column on which the syntax error occurred.
+        @param line: The line of source code containing the syntax errr.
+        """
+        self._stderr.write('%s:%d: %s\n' % (filename, lineno, msg))
+        self._stderr.write(line)
+        self._stderr.write('\n')
         if offset is not None:
-            self._printError(" " * offset, "^")
-
-
-    def flake(self, warning):
-        self._stdout.write(warning)
-        self._stdout.write('\n')
+            self._stderr.write(" " * (offset + 1) + "^\n")
 
 
 
-def check(codeString, filename, reporter=None):
+def check(codeString, filename):
     """
     Check the Python source given by C{codeString} for flakes.
 
@@ -61,9 +65,8 @@ def check(codeString, filename, reporter=None):
     @return: The number of warnings emitted.
     @rtype: C{int}
     """
-    if reporter is None:
-        reporter = Reporter()
     # First, compile into an AST and handle syntax errors.
+    reporter = Reporter(sys.stderr)
     try:
         tree = compile(codeString, filename, "exec", _ast.PyCF_ONLY_AST)
     except SyntaxError, value:
@@ -76,72 +79,47 @@ def check(codeString, filename, reporter=None):
             # Avoid using msg, since for the only known case, it contains a
             # bogus message that claims the encoding the file declared was
             # unknown.
-            reporter.problem_decoding_source(filename)
+            reporter.problemDecodingSource(filename)
         else:
             line = text.splitlines()[-1]
             if offset is not None:
                 offset = offset - (len(text) - len(line))
-            reporter.syntax_error(filename, msg, lineno, offset, line)
+            reporter.syntaxError(filename, msg, lineno, offset, line)
         return 1
     else:
         # Okay, it's syntactically valid.  Now check it.
         w = checker.Checker(tree, filename)
         w.messages.sort(lambda a, b: cmp(a.lineno, b.lineno))
         for warning in w.messages:
-            reporter.flake(warning)
+            print warning
         return len(w.messages)
 
 
-
-def checkPath(filename, reporter=None):
+def checkPath(filename):
     """
     Check the given path, printing out any warnings detected.
 
     @return: the number of warnings printed
     """
     try:
-        return check(file(filename, 'U').read() + '\n', filename, reporter)
+        return check(file(filename, 'U').read() + '\n', filename)
     except IOError, msg:
-        reporter.ioError(filename, msg)
+        print >> sys.stderr, "%s: %s" % (filename, msg.args[1])
         return 1
-
-
-
-def iterSourceFiles(paths):
-    """
-    Iterate over source files listed in C{paths}.
-    """
-    for path in paths:
-        if os.path.isdir(path):
-            for dirpath, dirnames, filenames in os.walk(path):
-                for filename in filenames:
-                    if filename.endswith('.py'):
-                        yield os.path.join(dirpath, filename)
-        else:
-            yield path
-
-
-
-def checkRecursive(paths, reporter=None):
-    """
-    Check the given files and look recursively under any directories, looking
-    for Python files and checking them, printing out any warnings detected.
-
-    @param paths: A list of file and directory names.
-    @return: the number of warnings printed
-    """
-    warnings = 0
-    for sourcePath in iterSourceFiles(paths):
-        warnings += checkPath(sourcePath, reporter)
-    return warnings
-
 
 
 def main():
     warnings = 0
     args = sys.argv[1:]
     if args:
-        warnings += checkRecursive(args)
+        for arg in args:
+            if os.path.isdir(arg):
+                for dirpath, dirnames, filenames in os.walk(arg):
+                    for filename in filenames:
+                        if filename.endswith('.py'):
+                            warnings += checkPath(os.path.join(dirpath, filename))
+            else:
+                warnings += checkPath(arg)
     else:
         warnings += check(sys.stdin.read(), '<stdin>')
 

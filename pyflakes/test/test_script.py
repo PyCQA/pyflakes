@@ -9,17 +9,70 @@ from StringIO import StringIO
 from twisted.python.filepath import FilePath
 from twisted.trial.unittest import TestCase
 
-from pyflakes.scripts.pyflakes import checkPath
+from pyflakes.scripts.pyflakes import (
+    checkPath,
+    Reporter,
+    )
 
-def withStderrTo(stderr, f):
+
+def withStderrTo(stderr, f, *args, **kwargs):
     """
     Call C{f} with C{sys.stderr} redirected to C{stderr}.
     """
     (outer, sys.stderr) = (sys.stderr, stderr)
     try:
-        return f()
+        return f(*args, **kwargs)
     finally:
         sys.stderr = outer
+
+
+class TestReporter(TestCase):
+    """
+    Tests for L{Reporter}.
+    """
+
+    def test_problemDecodingSource(self):
+        """
+        C{problemDecodingSource} reports that there was a problem decoding the
+        source to the error stream.  It includes the filename that it couldn't
+        decode.
+        """
+        err = StringIO()
+        reporter = Reporter(err)
+        reporter.problemDecodingSource('foo.py')
+        self.assertEquals("foo.py: problem decoding source\n", err.getvalue())
+
+
+    def test_syntaxError(self):
+        """
+        C{syntaxError} reports that there was a syntax error in the source
+        file.  It reports to the error stream and includes the filename, line
+        number, error message, actual line of source and a caret pointing to
+        where the error is.
+        """
+        err = StringIO()
+        reporter = Reporter(err)
+        reporter.syntaxError('foo.py', 'a problem', 3, 4, 'bad line of source')
+        self.assertEquals(
+            ("foo.py:3: a problem\n"
+             "bad line of source\n"
+             "     ^\n"),
+            err.getvalue())
+
+
+    def test_syntaxErrorNoOffset(self):
+        """
+        C{syntaxError} doesn't include a caret pointing to the error if
+        C{offset} is passed as C{None}.
+        """
+        err = StringIO()
+        reporter = Reporter(err)
+        reporter.syntaxError('foo.py', 'a problem', 3, None,
+                             'bad line of source')
+        self.assertEquals(
+            ("foo.py:3: a problem\n"
+             "bad line of source\n"),
+            err.getvalue())
 
 
 
@@ -27,25 +80,44 @@ class CheckTests(TestCase):
     """
     Tests for L{check} and L{checkPath} which check a file for flakes.
     """
+
+    def makeTempFile(self, content):
+        """
+        Make a temporary file containing C{content} and return a path to it.
+        """
+        path = FilePath(self.mktemp())
+        path.setContent(content)
+        return path.path
+
+
+    def assertHasErrors(self, path, errorList):
+        """
+        Assert that C{path} causes errors.
+
+        @param path: A path to a file to check.
+        @param errorList: A list of errors expected to be printed to stderr.
+        """
+        err = StringIO()
+        count = withStderrTo(err, checkPath, path)
+        self.assertEquals(count, len(errorList))
+        self.assertEquals(err.getvalue(), ''.join(errorList))
+
+
     def test_missingTrailingNewline(self):
         """
         Source which doesn't end with a newline shouldn't cause any
         exception to be raised nor an error indicator to be returned by
         L{check}.
         """
-        fName = self.mktemp()
-        FilePath(fName).setContent("def foo():\n\tpass\n\t")
-        self.assertFalse(checkPath(fName))
+        fName = self.makeTempFile("def foo():\n\tpass\n\t")
+        self.assertHasErrors(fName, [])
 
 
     def test_checkPathNonExisting(self):
         """
         L{checkPath} handles non-existing files.
         """
-        err = StringIO()
-        count = withStderrTo(err, lambda: checkPath('extremo'))
-        self.assertEquals(err.getvalue(), 'extremo: No such file or directory\n')
-        self.assertEquals(count, 1)
+        self.assertHasErrors('extremo', ['extremo: No such file or directory\n'])
 
 
     def test_multilineSyntaxError(self):
@@ -72,19 +144,12 @@ def baz():
         exc = self.assertRaises(SyntaxError, evaluate, source)
         self.assertTrue(exc.text.count('\n') > 1)
 
-        sourcePath = FilePath(self.mktemp())
-        sourcePath.setContent(source)
-        err = StringIO()
-        count = withStderrTo(err, lambda: checkPath(sourcePath.path))
-        self.assertEqual(count, 1)
-
-        self.assertEqual(
-            err.getvalue(),
-            """\
+        sourcePath = self.makeTempFile(source)
+        self.assertHasErrors(sourcePath, ["""\
 %s:8: invalid syntax
     '''quux'''
            ^
-""" % (sourcePath.path,))
+""" % (sourcePath,)])
 
 
     def test_eofSyntaxError(self):
@@ -92,19 +157,14 @@ def baz():
         The error reported for source files which end prematurely causing a
         syntax error reflects the cause for the syntax error.
         """
-        source = "def foo("
-        sourcePath = FilePath(self.mktemp())
-        sourcePath.setContent(source)
-        err = StringIO()
-        count = withStderrTo(err, lambda: checkPath(sourcePath.path))
-        self.assertEqual(count, 1)
-        self.assertEqual(
-            err.getvalue(),
-            """\
+        sourcePath = self.makeTempFile("def foo(")
+        self.assertHasErrors(
+            sourcePath,
+            ["""\
 %s:1: unexpected EOF while parsing
 def foo(
          ^
-""" % (sourcePath.path,))
+""" % (sourcePath,)])
 
 
     def test_nonDefaultFollowsDefaultSyntaxError(self):
@@ -117,17 +177,13 @@ def foo(
 def foo(bar=baz, bax):
     pass
 """
-        sourcePath = FilePath(self.mktemp())
-        sourcePath.setContent(source)
-        err = StringIO()
-        count = withStderrTo(err, lambda: checkPath(sourcePath.path))
-        self.assertEqual(count, 1)
-        self.assertEqual(
-            err.getvalue(),
-            """\
+        sourcePath = self.makeTempFile(source)
+        self.assertHasErrors(
+            sourcePath,
+            ["""\
 %s:1: non-default argument follows default argument
 def foo(bar=baz, bax):
-""" % (sourcePath.path,))
+""" % (sourcePath,)])
 
 
     def test_nonKeywordAfterKeywordSyntaxError(self):
@@ -139,17 +195,13 @@ def foo(bar=baz, bax):
         source = """\
 foo(bar=baz, bax)
 """
-        sourcePath = FilePath(self.mktemp())
-        sourcePath.setContent(source)
-        err = StringIO()
-        count = withStderrTo(err, lambda: checkPath(sourcePath.path))
-        self.assertEqual(count, 1)
-        self.assertEqual(
-            err.getvalue(),
-            """\
+        sourcePath = self.makeTempFile(source)
+        self.assertHasErrors(
+            sourcePath,
+            ["""\
 %s:1: non-keyword arg after keyword arg
 foo(bar=baz, bax)
-""" % (sourcePath.path,))
+""" % (sourcePath,)])
 
 
     def test_permissionDenied(self):
@@ -160,11 +212,8 @@ foo(bar=baz, bax)
         sourcePath = FilePath(self.mktemp())
         sourcePath.setContent('')
         sourcePath.chmod(0)
-        err = StringIO()
-        count = withStderrTo(err, lambda: checkPath(sourcePath.path))
-        self.assertEquals(count, 1)
-        self.assertEquals(
-            err.getvalue(), "%s: Permission denied\n" % (sourcePath.path,))
+        self.assertHasErrors(
+            sourcePath.path, ["%s: Permission denied\n" % (sourcePath.path,)])
 
 
     def test_misencodedFile(self):
@@ -176,10 +225,6 @@ foo(bar=baz, bax)
 # coding: ascii
 x = "\N{SNOWMAN}"
 """.encode('utf-8')
-        sourcePath = FilePath(self.mktemp())
-        sourcePath.setContent(source)
-        err = StringIO()
-        count = withStderrTo(err, lambda: checkPath(sourcePath.path))
-        self.assertEquals(count, 1)
-        self.assertEquals(
-            err.getvalue(), "%s: problem decoding source\n" % (sourcePath.path,))
+        sourcePath = self.makeTempFile(source)
+        self.assertHasErrors(
+            sourcePath, ["%s: problem decoding source\n" % (sourcePath,)])
