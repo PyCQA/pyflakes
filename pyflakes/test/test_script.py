@@ -38,7 +38,7 @@ class LoggingReporter(object):
         self.log.append(('problemDecodingSource', filename))
 
     def syntaxError(self, filename, msg, lineno, offset, line):
-        self.log.append(('syntaxError', filename, msg, line, offset, line))
+        self.log.append(('syntaxError', filename, msg, lineno, offset, line))
 
 
 class TestReporter(TestCase):
@@ -155,7 +155,10 @@ class CheckTests(TestCase):
         """
         L{checkPath} handles non-existing files.
         """
-        self.assertHasErrors('extremo', ['extremo: No such file or directory\n'])
+        count, errors = self.getErrors('extremo')
+        self.assertEquals(count, 1)
+        self.assertEquals(
+            errors, [('ioError', 'extremo', 'No such file or directory')])
 
 
     def test_multilineSyntaxError(self):
@@ -183,11 +186,12 @@ def baz():
         self.assertTrue(exc.text.count('\n') > 1)
 
         sourcePath = self.makeTempFile(source)
-        self.assertHasErrors(sourcePath, ["""\
-%s:8: invalid syntax
-    '''quux'''
-           ^
-""" % (sourcePath,)])
+        count, errors = self.getErrors(sourcePath)
+        self.assertEquals(count, 1)
+        self.assertEquals(
+            errors,
+            [('syntaxError', sourcePath, 'invalid syntax', 8, 10,
+              "    '''quux'''")])
 
 
     def test_eofSyntaxError(self):
