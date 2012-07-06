@@ -26,6 +26,21 @@ def withStderrTo(stderr, f, *args, **kwargs):
         sys.stderr = outer
 
 
+class LoggingReporter(object):
+
+    def __init__(self, log):
+        self.log = log
+
+    def ioError(self, filename, exception):
+        self.log.append(('ioError', filename, exception.args[1]))
+
+    def problemDecodingSource(self, filename):
+        self.log.append(('problemDecodingSource', filename))
+
+    def syntaxError(self, filename, msg, lineno, offset, line):
+        self.log.append(('syntaxError', filename, msg, line, offset, line))
+
+
 class TestReporter(TestCase):
     """
     Tests for L{Reporter}.
@@ -117,6 +132,13 @@ class CheckTests(TestCase):
         count = withStderrTo(err, checkPath, path)
         self.assertEquals(count, len(errorList))
         self.assertEquals(err.getvalue(), ''.join(errorList))
+
+
+    def getErrors(self, path):
+        log = []
+        reporter = LoggingReporter(log)
+        count = checkPath(path, reporter)
+        return count, log
 
 
     def test_missingTrailingNewline(self):
@@ -228,8 +250,10 @@ foo(bar=baz, bax)
         sourcePath = FilePath(self.mktemp())
         sourcePath.setContent('')
         sourcePath.chmod(0)
-        self.assertHasErrors(
-            sourcePath.path, ["%s: Permission denied\n" % (sourcePath.path,)])
+        count, errors = self.getErrors(sourcePath.path)
+        self.assertEquals(count, 1)
+        self.assertEquals(
+            errors, [('ioError', sourcePath.path, "Permission denied")])
 
 
     def test_misencodedFile(self):
