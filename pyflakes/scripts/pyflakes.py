@@ -58,7 +58,7 @@ class Reporter(object):
 
 
 
-def check(codeString, filename):
+def check(codeString, filename, reporter=None):
     """
     Check the Python source given by C{codeString} for flakes.
 
@@ -69,11 +69,15 @@ def check(codeString, filename):
         errors.
     @type filename: C{str}
 
+    @param reporter: A L{Reporter} instance, where errors and warnings will be
+        reported.
+
     @return: The number of warnings emitted.
     @rtype: C{int}
     """
+    if reporter is None:
+        reporter = Reporter(sys.stderr)
     # First, compile into an AST and handle syntax errors.
-    reporter = Reporter(sys.stderr)
     try:
         tree = compile(codeString, filename, "exec", _ast.PyCF_ONLY_AST)
     except SyntaxError, value:
@@ -102,15 +106,19 @@ def check(codeString, filename):
         return len(w.messages)
 
 
-def checkPath(filename):
+def checkPath(filename, reporter=None):
     """
     Check the given path, printing out any warnings detected.
 
+    @param reporter: A L{Reporter} instance, where errors and warnings will be
+        reported.
+
     @return: the number of warnings printed
     """
-    reporter = Reporter(sys.stderr)
+    if reporter is None:
+        reporter = Reporter(sys.stderr)
     try:
-        return check(file(filename, 'U').read() + '\n', filename)
+        return check(file(filename, 'U').read() + '\n', filename, reporter)
     except IOError, msg:
         reporter.ioError(filename, msg)
         return 1
@@ -119,15 +127,17 @@ def checkPath(filename):
 def main():
     warnings = 0
     args = sys.argv[1:]
+    reporter = Reporter(sys.stderr)
     if args:
         for arg in args:
             if os.path.isdir(arg):
                 for dirpath, dirnames, filenames in os.walk(arg):
                     for filename in filenames:
                         if filename.endswith('.py'):
-                            warnings += checkPath(os.path.join(dirpath, filename))
+                            warnings += checkPath(
+                                os.path.join(dirpath, filename), reporter)
             else:
-                warnings += checkPath(arg)
+                warnings += checkPath(arg, reporter)
     else:
         warnings += check(sys.stdin.read(), '<stdin>')
 
