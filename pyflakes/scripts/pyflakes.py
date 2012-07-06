@@ -25,6 +25,13 @@ class Reporter(object):
         self._stderr = errorStream
 
 
+    def ioError(self, filename, msg):
+        """
+        There was an C{IOError} while reading C{filename}.
+        """
+        self._stderr.write("%s: %s\n" % (filename, msg.args[1]))
+
+
     def problemDecodingSource(self, filename):
         """
         There was a problem decoding the source code in C{filename}.
@@ -101,10 +108,11 @@ def checkPath(filename):
 
     @return: the number of warnings printed
     """
+    reporter = Reporter(sys.stderr)
     try:
         return check(file(filename, 'U').read() + '\n', filename)
     except IOError, msg:
-        print >> sys.stderr, "%s: %s" % (filename, msg.args[1])
+        reporter.ioError(filename, msg)
         return 1
 
 

@@ -75,6 +75,22 @@ class TestReporter(TestCase):
             err.getvalue())
 
 
+    def test_ioError(self):
+        """
+        C{ioError} reports an error reading a source file.  It only includes
+        the human-readable bit of the error message, and excludes the errno.
+        """
+        err = StringIO()
+        reporter = Reporter(err)
+        exception = IOError(42, 'bar')
+        try:
+            raise exception
+        except IOError, e:
+            pass
+        reporter.ioError('source.py', e)
+        self.assertEquals('source.py: bar\n', err.getvalue())
+
+
 
 class CheckTests(TestCase):
     """
