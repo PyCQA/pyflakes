@@ -40,7 +40,7 @@ class Reporter(object):
         self._stderr.write(': problem decoding source\n')
 
 
-    def syntaxError(self, filename, msg, lineno, offset, line):
+    def syntaxError(self, filename, msg, lineno, offset, text):
         """
         There was a syntax errror in C{filename}.
 
@@ -48,8 +48,11 @@ class Reporter(object):
         @param msg: An explanation of the syntax error.
         @param lineno: The line number where the syntax error occurred.
         @param offset: The column on which the syntax error occurred.
-        @param line: The line of source code containing the syntax errr.
+        @param text: The source code containing the syntax error.
         """
+        line = text.splitlines()[-1]
+        if offset is not None:
+            offset = offset - (len(text) - len(line))
         self._stderr.write('%s:%d: %s\n' % (filename, lineno, msg))
         self._stderr.write(line)
         self._stderr.write('\n')
@@ -92,10 +95,7 @@ def check(codeString, filename, reporter=None):
             # unknown.
             reporter.problemDecodingSource(filename)
         else:
-            line = text.splitlines()[-1]
-            if offset is not None:
-                offset = offset - (len(text) - len(line))
-            reporter.syntaxError(filename, msg, lineno, offset, line)
+            reporter.syntaxError(filename, msg, lineno, offset, text)
         return 1
     else:
         # Okay, it's syntactically valid.  Now check it.

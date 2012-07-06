@@ -90,6 +90,27 @@ class TestReporter(TestCase):
             err.getvalue())
 
 
+    def test_multiLineSyntaxError(self):
+        """
+        If there's a multi-line syntax error, then we only report the last
+        line.  The offset is adjusted so that it is relative to the start of
+        the last line.
+        """
+        err = StringIO()
+        lines = [
+            'bad line of source',
+            'more bad lines of source',
+            ]
+        reporter = Reporter(err)
+        reporter.syntaxError('foo.py', 'a problem', 3, len(lines[0]) + 5,
+                             '\n'.join(lines))
+        self.assertEquals(
+            ("foo.py:3: a problem\n" +
+             lines[-1] + "\n" +
+             "     ^\n"),
+            err.getvalue())
+
+
     def test_ioError(self):
         """
         C{ioError} reports an error reading a source file.  It only includes
@@ -130,8 +151,8 @@ class CheckTests(TestCase):
         """
         err = StringIO()
         count = withStderrTo(err, checkPath, path)
-        self.assertEquals(count, len(errorList))
-        self.assertEquals(err.getvalue(), ''.join(errorList))
+        self.assertEquals(
+            (count, err.getvalue()), (len(errorList), ''.join(errorList)))
 
 
     def getErrors(self, path):
@@ -186,12 +207,13 @@ def baz():
         self.assertTrue(exc.text.count('\n') > 1)
 
         sourcePath = self.makeTempFile(source)
-        count, errors = self.getErrors(sourcePath)
-        self.assertEquals(count, 1)
-        self.assertEquals(
-            errors,
-            [('syntaxError', sourcePath, 'invalid syntax', 8, 10,
-              "    '''quux'''")])
+        self.assertHasErrors(
+            sourcePath, ["""\
+%s:8: invalid syntax
+    '''quux'''
+           ^
+"""
+                % (sourcePath,)])
 
 
     def test_eofSyntaxError(self):
