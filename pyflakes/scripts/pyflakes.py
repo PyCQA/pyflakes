@@ -114,7 +114,7 @@ def check(codeString, filename, reporter=None):
         w = checker.Checker(tree, filename)
         w.messages.sort(lambda a, b: cmp(a.lineno, b.lineno))
         for warning in w.messages:
-            print warning
+            reporter.flake(warning)
         return len(w.messages)
 
 

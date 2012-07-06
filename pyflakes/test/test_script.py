@@ -32,6 +32,9 @@ class LoggingReporter(object):
     def __init__(self, log):
         self.log = log
 
+    def flake(self, message):
+        self.log.append(('flake', str(message)))
+
     def ioError(self, filename, exception):
         self.log.append(('ioError', filename, exception.args[1]))
 
@@ -280,7 +283,7 @@ foo(bar=baz, bax)
 
     def test_permissionDenied(self):
         """
-        If the a source file is not readable, this is reported on standard
+        If the source file is not readable, this is reported on standard
         error.
         """
         sourcePath = FilePath(self.mktemp())
@@ -290,6 +293,18 @@ foo(bar=baz, bax)
         self.assertEquals(count, 1)
         self.assertEquals(
             errors, [('ioError', sourcePath.path, "Permission denied")])
+
+
+    def test_pyflakesWarning(self):
+        """
+        If the source file has a pyflakes warning, this is reported as a
+        'flake'.
+        """
+        sourcePath = self.makeTempFile("import foo")
+        count, errors = self.getErrors(sourcePath)
+        self.assertEquals(count, 1)
+        self.assertEquals(
+            errors, [('flake', str(UnusedImport(sourcePath, 1, 'foo')))])
 
 
     def test_misencodedFile(self):
