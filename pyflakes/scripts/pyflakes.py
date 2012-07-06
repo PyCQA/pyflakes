@@ -15,13 +15,16 @@ class Reporter(object):
     Formats the results of pyflakes checks to users.
     """
 
-    def __init__(self, errorStream):
+    def __init__(self, warningStream, errorStream):
         """
         Construct a L{Reporter}.
 
+        @param warningStream: A file-like object where warnings will be
+            written to.  C{sys.stdout} is a good value.
         @param errorStream: A file-like object where error output will be
             written to.  C{sys.stderr} is a good value.
         """
+        self._stdout = warningStream
         self._stderr = errorStream
 
 
@@ -60,6 +63,15 @@ class Reporter(object):
             self._stderr.write(" " * (offset + 1) + "^\n")
 
 
+    def flake(self, message):
+        """
+        pyflakes found something wrong with the code.
+
+        @param: A L{pyflakes.messages.Message}.
+        """
+        self._stdout.write(message)
+        self._stdout.write('\n')
+
 
 def check(codeString, filename, reporter=None):
     """
@@ -79,7 +91,7 @@ def check(codeString, filename, reporter=None):
     @rtype: C{int}
     """
     if reporter is None:
-        reporter = Reporter(sys.stderr)
+        reporter = Reporter(None, sys.stderr)
     # First, compile into an AST and handle syntax errors.
     try:
         tree = compile(codeString, filename, "exec", _ast.PyCF_ONLY_AST)
@@ -116,7 +128,7 @@ def checkPath(filename, reporter=None):
     @return: the number of warnings printed
     """
     if reporter is None:
-        reporter = Reporter(sys.stderr)
+        reporter = Reporter(None, sys.stderr)
     try:
         return check(file(filename, 'U').read() + '\n', filename, reporter)
     except IOError, msg:
@@ -127,7 +139,7 @@ def checkPath(filename, reporter=None):
 def main():
     warnings = 0
     args = sys.argv[1:]
-    reporter = Reporter(sys.stderr)
+    reporter = Reporter(None, sys.stderr)
     if args:
         for arg in args:
             if os.path.isdir(arg):

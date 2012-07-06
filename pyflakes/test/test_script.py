@@ -9,6 +9,7 @@ from StringIO import StringIO
 from twisted.python.filepath import FilePath
 from twisted.trial.unittest import TestCase
 
+from pyflakes.messages import UnusedImport
 from pyflakes.scripts.pyflakes import (
     checkPath,
     Reporter,
@@ -41,6 +42,7 @@ class LoggingReporter(object):
         self.log.append(('syntaxError', filename, msg, lineno, offset, line))
 
 
+
 class TestReporter(TestCase):
     """
     Tests for L{Reporter}.
@@ -53,7 +55,7 @@ class TestReporter(TestCase):
         decode.
         """
         err = StringIO()
-        reporter = Reporter(err)
+        reporter = Reporter(None, err)
         reporter.problemDecodingSource('foo.py')
         self.assertEquals("foo.py: problem decoding source\n", err.getvalue())
 
@@ -66,7 +68,7 @@ class TestReporter(TestCase):
         where the error is.
         """
         err = StringIO()
-        reporter = Reporter(err)
+        reporter = Reporter(None, err)
         reporter.syntaxError('foo.py', 'a problem', 3, 4, 'bad line of source')
         self.assertEquals(
             ("foo.py:3: a problem\n"
@@ -81,7 +83,7 @@ class TestReporter(TestCase):
         C{offset} is passed as C{None}.
         """
         err = StringIO()
-        reporter = Reporter(err)
+        reporter = Reporter(None, err)
         reporter.syntaxError('foo.py', 'a problem', 3, None,
                              'bad line of source')
         self.assertEquals(
@@ -101,7 +103,7 @@ class TestReporter(TestCase):
             'bad line of source',
             'more bad lines of source',
             ]
-        reporter = Reporter(err)
+        reporter = Reporter(None, err)
         reporter.syntaxError('foo.py', 'a problem', 3, len(lines[0]) + 5,
                              '\n'.join(lines))
         self.assertEquals(
@@ -117,7 +119,7 @@ class TestReporter(TestCase):
         the human-readable bit of the error message, and excludes the errno.
         """
         err = StringIO()
-        reporter = Reporter(err)
+        reporter = Reporter(None, err)
         exception = IOError(42, 'bar')
         try:
             raise exception
@@ -125,6 +127,14 @@ class TestReporter(TestCase):
             pass
         reporter.ioError('source.py', e)
         self.assertEquals('source.py: bar\n', err.getvalue())
+
+
+    def test_flake(self):
+        out = StringIO()
+        reporter = Reporter(out, None)
+        message = UnusedImport('foo.py', 42, 'bar')
+        reporter.flake(message)
+        self.assertEquals(out.getvalue(), "%s\n" % (message,))
 
 
 
