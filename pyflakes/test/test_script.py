@@ -27,19 +27,24 @@ def withStderrTo(stderr, f, *args, **kwargs):
         sys.stderr = outer
 
 
+
 class LoggingReporter(object):
 
     def __init__(self, log):
         self.log = log
 
+
     def flake(self, message):
         self.log.append(('flake', str(message)))
+
 
     def ioError(self, filename, exception):
         self.log.append(('ioError', filename, exception.args[1]))
 
+
     def problemDecodingSource(self, filename):
         self.log.append(('problemDecodingSource', filename))
+
 
     def syntaxError(self, filename, msg, lineno, offset, line):
         self.log.append(('syntaxError', filename, msg, lineno, offset, line))
