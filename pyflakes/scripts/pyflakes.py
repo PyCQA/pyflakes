@@ -69,7 +69,7 @@ class Reporter(object):
 
         @param: A L{pyflakes.messages.Message}.
         """
-        self._stdout.write(message)
+        self._stdout.write(str(message))
         self._stdout.write('\n')
 
 
@@ -175,10 +175,9 @@ def checkRecursive(paths, reporter):
 
 def main():
     args = sys.argv[1:]
-    reporter = Reporter(None, sys.stderr)
+    reporter = Reporter(sys.stdout, sys.stderr)
     if args:
         warnings = checkRecursive(args, reporter)
     else:
-        warnings = check(sys.stdin.read(), '<stdin>')
-
+        warnings = check(sys.stdin.read(), '<stdin>', reporter)
     raise SystemExit(warnings > 0)

@@ -3,6 +3,7 @@ Tests for L{pyflakes.scripts.pyflakes}.
 """
 
 import os
+import subprocess
 import sys
 from StringIO import StringIO
 
@@ -436,3 +437,83 @@ x = "\N{SNOWMAN}"
             sorted([('flake', str(UnusedImport(file1.path, 1, 'baz'))),
                     ('flake',
                      str(UnusedImport(file2.path, 1, 'contraband')))]))
+
+
+
+class IntegrationTests(TestCase):
+    """
+    Tests of the pyflakes script that actually spawn the script.
+    """
+
+    def getPyflakesBinary(self):
+        """
+        Return the path to the pyflakes binary.
+        """
+        import pyflakes
+        return os.path.join(
+            os.path.dirname(os.path.dirname(pyflakes.__file__)),
+            'bin', 'pyflakes')
+
+
+    def popenPyflakes(self, *args, **kwargs):
+        """
+        Launch a subprocess running C{pyflakes}.
+        """
+        env = dict(os.environ)
+        env['PYTHONPATH'] = os.pathsep.join(sys.path)
+        p = subprocess.Popen(
+            [sys.executable, self.getPyflakesBinary()] + list(args),
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            env=env, **kwargs)
+        return p
+
+
+    def test_goodFile(self):
+        """
+        When a Python source file is all good, the return code is zero and no
+        messages are printed to either stdout or stderr.
+        """
+        tempfile = FilePath(self.mktemp())
+        tempfile.touch()
+        p = self.popenPyflakes(tempfile.path)
+        out, err = p.communicate()
+        self.assertEqual((0, '', ''), (p.returncode, out, err))
+
+
+    def test_fileWithFlakes(self):
+        """
+        When a Python source file has warnings, the return code is non-zero
+        and the warnings are printed to stdout.
+        """
+        tempfile = FilePath(self.mktemp())
+        tempfile.setContent("import contraband\n")
+        p = self.popenPyflakes(tempfile.path)
+        out, err = p.communicate()
+        self.assertEqual(
+            (1, "%s\n" % UnusedImport(tempfile.path, 1, 'contraband'), ''),
+            (p.returncode, out, err))
+
+
+    def test_errors(self):
+        """
+        When pyflakes finds errors with the files it's given, (if they don't
+        exist, say), then the return code is non-zero and the errors are
+        printed to stderr.
+        """
+        tempfile = FilePath(self.mktemp())
+        p = self.popenPyflakes(tempfile.path)
+        out, err = p.communicate()
+        self.assertEqual(
+            (1, '', '%s: No such file or directory\n' % (tempfile.path,)),
+            (p.returncode, out, err))
+
+
+    def test_readFromStdin(self):
+        """
+        If no arguments are passed to C{pyflakes} then it reads from stdin.
+        """
+        p = self.popenPyflakes(stdin=subprocess.PIPE)
+        out, err = p.communicate('import contraband')
+        self.assertEqual(
+            (1, "%s\n" % UnusedImport('<stdin>', 1, 'contraband'), ''),
+            (p.returncode, out, err))
