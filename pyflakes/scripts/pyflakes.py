@@ -161,15 +161,8 @@ def main():
     args = sys.argv[1:]
     reporter = Reporter(None, sys.stderr)
     if args:
-        for arg in args:
-            if os.path.isdir(arg):
-                for dirpath, dirnames, filenames in os.walk(arg):
-                    for filename in filenames:
-                        if filename.endswith('.py'):
-                            warnings += checkPath(
-                                os.path.join(dirpath, filename), reporter)
-            else:
-                warnings += checkPath(arg, reporter)
+        for sourcePath in iterSourceCode(args):
+            warnings += checkPath(sourcePath, reporter)
     else:
         warnings += check(sys.stdin.read(), '<stdin>')
 
