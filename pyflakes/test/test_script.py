@@ -63,7 +63,7 @@ class TestIterSourceCode(TestCase):
         """
         tempdir = FilePath(self.mktemp())
         tempdir.createDirectory()
-        self.assertEqual(list(iterSourceCode(tempdir.path)), [])
+        self.assertEqual(list(iterSourceCode([tempdir.path])), [])
 
 
     def test_singleFile(self):
@@ -75,7 +75,7 @@ class TestIterSourceCode(TestCase):
         tempdir.createDirectory()
         tempdir.child('foo.py').touch()
         self.assertEqual(
-            list(iterSourceCode(tempdir.path)),
+            list(iterSourceCode([tempdir.path])),
             [os.path.join(tempdir.path, 'foo.py')])
 
 
@@ -86,7 +86,7 @@ class TestIterSourceCode(TestCase):
         tempdir = FilePath(self.mktemp())
         tempdir.createDirectory()
         tempdir.child('foo.pyc').touch()
-        self.assertEqual(list(iterSourceCode(tempdir.path)), [])
+        self.assertEqual(list(iterSourceCode([tempdir.path])), [])
 
 
     def test_recurses(self):
@@ -102,10 +102,41 @@ class TestIterSourceCode(TestCase):
         tempdir.child('bar').child('b.py').touch()
         tempdir.child('c.py').touch()
         self.assertEqual(
-            sorted(iterSourceCode(tempdir.path)),
+            sorted(iterSourceCode([tempdir.path])),
             sorted([os.path.join(tempdir.path, 'foo/a.py'),
                     os.path.join(tempdir.path, 'bar/b.py'),
                     os.path.join(tempdir.path, 'c.py')]))
+
+
+    def test_multipleDirectories(self):
+        """
+        L{iterSourceCode} can be given multiple directories.  It will recurse
+        into each of them.
+        """
+        tempdir = FilePath(self.mktemp())
+        tempdir.createDirectory()
+        foo = tempdir.child('foo')
+        foo.createDirectory()
+        foo.child('a.py').touch()
+        bar = tempdir.child('bar')
+        bar.createDirectory()
+        bar.child('b.py').touch()
+        self.assertEqual(
+            sorted(iterSourceCode([foo.path, bar.path])),
+            sorted([os.path.join(foo.path, 'a.py'),
+                    os.path.join(bar.path, 'b.py')]))
+
+
+    def test_explicitFiles(self):
+        """
+        If one of the paths given to L{iterSourceCode} is not a directory but
+        a file, it will include that in its output.
+        """
+        tempfile = FilePath(self.mktemp())
+        tempfile.touch()
+        self.assertEqual(list(iterSourceCode([tempfile.path])),
+                         [tempfile.path])
+
 
 
 class TestReporter(TestCase):
