@@ -73,6 +73,15 @@ class Reporter(object):
         self._stdout.write('\n')
 
 
+
+def _makeDefaultReporter():
+    """
+    Make a reporter that can be used when no reporter is specified.
+    """
+    return Reporter(sys.stdout, sys.stderr)
+
+
+
 def check(codeString, filename, reporter=None):
     """
     Check the Python source given by C{codeString} for flakes.
@@ -91,7 +100,7 @@ def check(codeString, filename, reporter=None):
     @rtype: C{int}
     """
     if reporter is None:
-        reporter = Reporter(None, sys.stderr)
+        reporter = _makeDefaultReporter()
     # First, compile into an AST and handle syntax errors.
     try:
         tree = compile(codeString, filename, "exec", _ast.PyCF_ONLY_AST)
@@ -128,7 +137,7 @@ def checkPath(filename, reporter=None):
     @return: the number of warnings printed
     """
     if reporter is None:
-        reporter = Reporter(None, sys.stderr)
+        reporter = _makeDefaultReporter()
     try:
         return check(file(filename, 'U').read() + '\n', filename, reporter)
     except IOError, msg:
@@ -175,7 +184,7 @@ def checkRecursive(paths, reporter):
 
 def main():
     args = sys.argv[1:]
-    reporter = Reporter(sys.stdout, sys.stderr)
+    reporter = _makeDefaultReporter()
     if args:
         warnings = checkRecursive(args, reporter)
     else:
