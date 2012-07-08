@@ -156,14 +156,29 @@ def iterSourceCode(paths):
 
 
 
-def main():
+def checkRecursive(paths, reporter):
+    """
+    Recursively check all source files in C{paths}.
+
+    @param paths: A list of paths to Python source files and directories
+        containing Python source files.
+    @param reporter: A L{Reporter} where all of the warnings and errors
+        will be reported to.
+    @return: The number of warnings found.
+    """
     warnings = 0
+    for sourcePath in iterSourceCode(paths):
+        warnings += checkPath(sourcePath, reporter)
+    return warnings
+
+
+
+def main():
     args = sys.argv[1:]
     reporter = Reporter(None, sys.stderr)
     if args:
-        for sourcePath in iterSourceCode(args):
-            warnings += checkPath(sourcePath, reporter)
+        warnings = checkRecursive(args, reporter)
     else:
-        warnings += check(sys.stdin.read(), '<stdin>')
+        warnings = check(sys.stdin.read(), '<stdin>')
 
     raise SystemExit(warnings > 0)

@@ -12,6 +12,7 @@ from twisted.trial.unittest import TestCase
 from pyflakes.messages import UnusedImport
 from pyflakes.scripts.pyflakes import (
     checkPath,
+    checkRecursive,
     iterSourceCode,
     Reporter,
     )
@@ -412,3 +413,26 @@ x = "\N{SNOWMAN}"
         sourcePath = self.makeTempFile(source)
         self.assertHasErrors(
             sourcePath, ["%s: problem decoding source\n" % (sourcePath,)])
+
+
+    def test_checkRecursive(self):
+        """
+        L{checkRecursive} descends into each directory, finding Python files
+        and reporting problems.
+        """
+        tempdir = FilePath(self.mktemp())
+        tempdir.createDirectory()
+        tempdir.child('foo').createDirectory()
+        file1 = tempdir.child('foo').child('bar.py')
+        file1.setContent("import baz\n")
+        file2 = tempdir.child('baz.py')
+        file2.setContent("import contraband")
+        log = []
+        reporter = LoggingReporter(log)
+        warnings = checkRecursive([tempdir.path], reporter)
+        self.assertEqual(warnings, 2)
+        self.assertEqual(
+            sorted(log),
+            sorted([('flake', str(UnusedImport(file1.path, 1, 'baz'))),
+                    ('flake',
+                     str(UnusedImport(file2.path, 1, 'contraband')))]))
