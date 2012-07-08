@@ -136,6 +136,20 @@ def checkPath(filename, reporter=None):
         return 1
 
 
+
+def iterSourceCode(directory):
+    """
+    Iterate over all Python source files in C{directory}.
+
+    @param directory: A path to a directory.
+    """
+    for dirpath, dirnames, filenames in os.walk(directory):
+        for filename in filenames:
+            if filename.endswith('.py'):
+                yield os.path.join(dirpath, filename)
+
+
+
 def main():
     warnings = 0
     args = sys.argv[1:]

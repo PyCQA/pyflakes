@@ -1,8 +1,8 @@
-
 """
 Tests for L{pyflakes.scripts.pyflakes}.
 """
 
+import os
 import sys
 from StringIO import StringIO
 
@@ -12,6 +12,7 @@ from twisted.trial.unittest import TestCase
 from pyflakes.messages import UnusedImport
 from pyflakes.scripts.pyflakes import (
     checkPath,
+    iterSourceCode,
     Reporter,
     )
 
@@ -49,6 +50,62 @@ class LoggingReporter(object):
     def syntaxError(self, filename, msg, lineno, offset, line):
         self.log.append(('syntaxError', filename, msg, lineno, offset, line))
 
+
+
+class TestIterSourceCode(TestCase):
+    """
+    Tests for L{iterSourceCode}.
+    """
+
+    def test_emptyDirectory(self):
+        """
+        There are no Python files in an empty directory.
+        """
+        tempdir = FilePath(self.mktemp())
+        tempdir.createDirectory()
+        self.assertEqual(list(iterSourceCode(tempdir.path)), [])
+
+
+    def test_singleFile(self):
+        """
+        If the directory contains one Python file, C{iterSourceCode} will find
+        it.
+        """
+        tempdir = FilePath(self.mktemp())
+        tempdir.createDirectory()
+        tempdir.child('foo.py').touch()
+        self.assertEqual(
+            list(iterSourceCode(tempdir.path)),
+            [os.path.join(tempdir.path, 'foo.py')])
+
+
+    def test_onlyPythonSource(self):
+        """
+        Files that are not Python source files are not included.
+        """
+        tempdir = FilePath(self.mktemp())
+        tempdir.createDirectory()
+        tempdir.child('foo.pyc').touch()
+        self.assertEqual(list(iterSourceCode(tempdir.path)), [])
+
+
+    def test_recurses(self):
+        """
+        If the Python files are hidden deep down in child directories, we will
+        find them.
+        """
+        tempdir = FilePath(self.mktemp())
+        tempdir.createDirectory()
+        tempdir.child('foo').createDirectory()
+        tempdir.child('foo').child('a.py').touch()
+        tempdir.child('bar').createDirectory()
+        tempdir.child('bar').child('b.py').touch()
+        tempdir.child('c.py').touch()
+        self.assertEqual(
+            sorted(iterSourceCode(tempdir.path)),
+            sorted([os.path.join(tempdir.path, 'foo/a.py'),
+                    os.path.join(tempdir.path, 'bar/b.py'),
+                    os.path.join(tempdir.path, 'c.py')]))
 
 
 class TestReporter(TestCase):
