@@ -78,7 +78,7 @@ class TestIterSourceCode(TestCase):
         tempdir.child('foo.py').touch()
         self.assertEqual(
             list(iterSourceCode([tempdir.path])),
-            [os.path.join(tempdir.path, 'foo.py')])
+            [tempdir.child('foo.py').path])
 
 
     def test_onlyPythonSource(self):
@@ -105,9 +105,9 @@ class TestIterSourceCode(TestCase):
         tempdir.child('c.py').touch()
         self.assertEqual(
             sorted(iterSourceCode([tempdir.path])),
-            sorted([os.path.join(tempdir.path, 'foo/a.py'),
-                    os.path.join(tempdir.path, 'bar/b.py'),
-                    os.path.join(tempdir.path, 'c.py')]))
+            sorted([tempdir.child('foo').child('a.py').path,
+                    tempdir.child('bar').child('b.py').path,
+                    tempdir.child('c.py').path]))
 
 
     def test_multipleDirectories(self):
@@ -125,8 +125,8 @@ class TestIterSourceCode(TestCase):
         bar.child('b.py').touch()
         self.assertEqual(
             sorted(iterSourceCode([foo.path, bar.path])),
-            sorted([os.path.join(foo.path, 'a.py'),
-                    os.path.join(bar.path, 'b.py')]))
+            sorted([foo.child('a.py').path,
+                    bar.child('b.py').path]))
 
 
     def test_explicitFiles(self):
@@ -450,9 +450,8 @@ class IntegrationTests(TestCase):
         Return the path to the pyflakes binary.
         """
         import pyflakes
-        return os.path.join(
-            os.path.dirname(os.path.dirname(pyflakes.__file__)),
-            'bin', 'pyflakes')
+        package_dir = FilePath(pyflakes.__file__).parent()
+        return package_dir.sibling('bin').child('pyflakes').path
 
 
     def popenPyflakes(self, *args, **kwargs):
