@@ -32,8 +32,16 @@ def withStderrTo(stderr, f, *args, **kwargs):
 
 
 class LoggingReporter(object):
+    """
+    Implementation of Reporter that just appends any errors to a list.
+    """
 
     def __init__(self, log):
+        """
+        Construct a C{LoggingReporter}.
+
+        @param log: A list to append log messages to.
+        """
         self.log = log
 
 
@@ -228,6 +236,10 @@ class TestReporter(TestCase):
 
 
     def test_flake(self):
+        """
+        C{flake} reports a code warning from Pyflakes.  It is exactly the
+        str() of a L{pyflakes.messages.Message}.
+        """
         out = StringIO()
         reporter = Reporter(out, None)
         message = UnusedImport('foo.py', 42, 'bar')
@@ -264,6 +276,14 @@ class CheckTests(TestCase):
 
 
     def getErrors(self, path):
+        """
+        Get any warnings or errors reported by pyflakes for the file at C{path}.
+
+        @param path: The path to a Python file on disk that pyflakes will check.
+        @return: C{(count, log)}, where C{count} is the number of warnings or
+            errors generated, and log is a list of those warnings, presented
+            as structured data.  See L{LoggingReporter} for more details.
+        """
         log = []
         reporter = LoggingReporter(log)
         count = checkPath(path, reporter)
