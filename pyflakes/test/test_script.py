@@ -474,9 +474,13 @@ class IntegrationTests(TestCase):
         return package_dir.sibling('bin').child('pyflakes').path
 
 
-    def popenPyflakes(self, *args, **kwargs):
+    def runPyflakes(self, *args, **kwargs):
         """
         Launch a subprocess running C{pyflakes}.
+
+        @param args: Command-line arguments to pass to pyflakes.
+        @param kwargs: Options passed on to C{subprocess.Popen}.
+        @return: A C{subprocess.Popen} instance.
         """
         env = dict(os.environ)
         env['PYTHONPATH'] = os.pathsep.join(sys.path)
@@ -494,7 +498,7 @@ class IntegrationTests(TestCase):
         """
         tempfile = FilePath(self.mktemp())
         tempfile.touch()
-        p = self.popenPyflakes(tempfile.path)
+        p = self.runPyflakes(tempfile.path)
         out, err = p.communicate()
         self.assertEqual((0, '', ''), (p.returncode, out, err))
 
@@ -506,7 +510,7 @@ class IntegrationTests(TestCase):
         """
         tempfile = FilePath(self.mktemp())
         tempfile.setContent("import contraband\n")
-        p = self.popenPyflakes(tempfile.path)
+        p = self.runPyflakes(tempfile.path)
         out, err = p.communicate()
         self.assertEqual(
             (1, "%s\n" % UnusedImport(tempfile.path, 1, 'contraband'), ''),
@@ -520,7 +524,7 @@ class IntegrationTests(TestCase):
         printed to stderr.
         """
         tempfile = FilePath(self.mktemp())
-        p = self.popenPyflakes(tempfile.path)
+        p = self.runPyflakes(tempfile.path)
         out, err = p.communicate()
         self.assertEqual(
             (1, '', '%s: No such file or directory\n' % (tempfile.path,)),
@@ -531,7 +535,7 @@ class IntegrationTests(TestCase):
         """
         If no arguments are passed to C{pyflakes} then it reads from stdin.
         """
-        p = self.popenPyflakes(stdin=subprocess.PIPE)
+        p = self.runPyflakes(stdin=subprocess.PIPE)
         out, err = p.communicate('import contraband')
         self.assertEqual(
             (1, "%s\n" % UnusedImport('<stdin>', 1, 'contraband'), ''),
