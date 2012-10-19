@@ -7,6 +7,7 @@ import subprocess
 import sys
 from StringIO import StringIO
 
+from twisted.internet import defer
 from twisted.python.filepath import FilePath
 from twisted.trial.unittest import TestCase
 
@@ -491,7 +492,7 @@ class IntegrationTests(TestCase):
             command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             stdin=subprocess.PIPE, env=env)
         out, err = p.communicate(stdin)
-        return p.returncode, out, err
+        return defer.succeed((p.returncode, out, err))
 
 
     def test_goodFile(self):
@@ -501,8 +502,8 @@ class IntegrationTests(TestCase):
         """
         tempfile = FilePath(self.mktemp())
         tempfile.touch()
-        returncode, out, err = self.runPyflakes([tempfile.path])
-        self.assertEqual((0, '', ''), (returncode, out, err))
+        d = self.runPyflakes([tempfile.path])
+        return d.addCallback(self.assertEqual, (0, '', ''))
 
 
     def test_fileWithFlakes(self):
@@ -512,10 +513,10 @@ class IntegrationTests(TestCase):
         """
         tempfile = FilePath(self.mktemp())
         tempfile.setContent("import contraband\n")
-        returncode, out, err = self.runPyflakes([tempfile.path])
-        self.assertEqual(
-            (1, "%s\n" % UnusedImport(tempfile.path, 1, 'contraband'), ''),
-            (returncode, out, err))
+        d = self.runPyflakes([tempfile.path])
+        return d.addCallback(
+            self.assertEqual,
+            (1, "%s\n" % UnusedImport(tempfile.path, 1, 'contraband'), ''))
 
 
     def test_errors(self):
@@ -525,17 +526,17 @@ class IntegrationTests(TestCase):
         printed to stderr.
         """
         tempfile = FilePath(self.mktemp())
-        returncode, out, err = self.runPyflakes([tempfile.path])
-        self.assertEqual(
-            (1, '', '%s: No such file or directory\n' % (tempfile.path,)),
-            (returncode, out, err))
+        d = self.runPyflakes([tempfile.path])
+        return d.addCallback(
+            self.assertEqual,
+            (1, '', '%s: No such file or directory\n' % (tempfile.path,)))
 
 
     def test_readFromStdin(self):
         """
         If no arguments are passed to C{pyflakes} then it reads from stdin.
         """
-        returncode, out, err = self.runPyflakes([], stdin='import contraband')
-        self.assertEqual(
-            (1, "%s\n" % UnusedImport('<stdin>', 1, 'contraband'), ''),
-            (returncode, out, err))
+        d = self.runPyflakes([], stdin='import contraband')
+        return d.addCallback(
+            self.assertEqual,
+            (1, "%s\n" % UnusedImport('<stdin>', 1, 'contraband'), ''))
