@@ -513,7 +513,6 @@ class IntegrationTests(TestCase):
                 sys.executable, command, env=env, path=None)
         else:
             d = getProcessOutputAndValue(sys.executable, command, env=env)
-        d.addCallback(lambda (o, e, r): (r, o, e))
         return d
 
 
@@ -525,7 +524,7 @@ class IntegrationTests(TestCase):
         tempfile = FilePath(self.mktemp())
         tempfile.touch()
         d = self.runPyflakes([tempfile.path])
-        return d.addCallback(self.assertEqual, (0, '', ''))
+        return d.addCallback(self.assertEqual, ('', '', 0))
 
 
     def test_fileWithFlakes(self):
@@ -538,7 +537,7 @@ class IntegrationTests(TestCase):
         d = self.runPyflakes([tempfile.path])
         return d.addCallback(
             self.assertEqual,
-            (1, "%s\n" % UnusedImport(tempfile.path, 1, 'contraband'), ''))
+            ("%s\n" % UnusedImport(tempfile.path, 1, 'contraband'), '', 1))
 
 
     def test_errors(self):
@@ -551,7 +550,7 @@ class IntegrationTests(TestCase):
         d = self.runPyflakes([tempfile.path])
         return d.addCallback(
             self.assertEqual,
-            (1, '', '%s: No such file or directory\n' % (tempfile.path,)))
+            ('', '%s: No such file or directory\n' % (tempfile.path,), 1))
 
 
     def test_readFromStdin(self):
@@ -561,4 +560,4 @@ class IntegrationTests(TestCase):
         d = self.runPyflakes([], stdin='import contraband')
         return d.addCallback(
             self.assertEqual,
-            (1, "%s\n" % UnusedImport('<stdin>', 1, 'contraband'), ''))
+            ("%s\n" % UnusedImport('<stdin>', 1, 'contraband'), '', 1))
