@@ -3,11 +3,14 @@ Tests for L{pyflakes.scripts.pyflakes}.
 """
 
 import os
-import subprocess
 import sys
 from StringIO import StringIO
 
-from twisted.internet import defer
+from twisted.internet.utils import (
+    _callProtocolWithDeferred,
+    _EverythingGetter,
+    getProcessOutputAndValue,
+    )
 from twisted.python.filepath import FilePath
 from twisted.trial.unittest import TestCase
 
@@ -461,6 +464,22 @@ x = "\N{SNOWMAN}"
 
 
 
+class _EverythingGetterWithStdin(_EverythingGetter):
+    """
+    C{ProcessProtocol} that writes to stdin and gathers exit code, stdout and
+    stderr.
+    """
+
+    def __init__(self, deferred, stdin):
+        _EverythingGetter.__init__(self, deferred)
+        self.stdin = stdin
+
+    def connectionMade(self):
+        self.transport.write(self.stdin)
+        self.transport.closeStdin()
+
+
+
 class IntegrationTests(TestCase):
     """
     Tests of the pyflakes script that actually spawn the script.
@@ -486,13 +505,16 @@ class IntegrationTests(TestCase):
         """
         env = dict(os.environ)
         env['PYTHONPATH'] = os.pathsep.join(sys.path)
-        command = [sys.executable, self.getPyflakesBinary()]
+        command = [self.getPyflakesBinary()]
         command.extend(paths)
-        p = subprocess.Popen(
-            command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            stdin=subprocess.PIPE, env=env)
-        out, err = p.communicate(stdin)
-        return defer.succeed((p.returncode, out, err))
+        if stdin:
+            d = _callProtocolWithDeferred(
+                (lambda d: _EverythingGetterWithStdin(d, stdin)),
+                sys.executable, command, env=env, path=None)
+        else:
+            d = getProcessOutputAndValue(sys.executable, command, env=env)
+        d.addCallback(lambda (o, e, r): (r, o, e))
+        return d
 
 
     def test_goodFile(self):
