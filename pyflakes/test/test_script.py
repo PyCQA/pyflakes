@@ -474,21 +474,24 @@ class IntegrationTests(TestCase):
         return package_dir.sibling('bin').child('pyflakes').path
 
 
-    def runPyflakes(self, *args, **kwargs):
+    def runPyflakes(self, paths, stdin=None):
         """
         Launch a subprocess running C{pyflakes}.
 
         @param args: Command-line arguments to pass to pyflakes.
         @param kwargs: Options passed on to C{subprocess.Popen}.
-        @return: A C{subprocess.Popen} instance.
+        @return: C{(returncode, stdout, stderr)} of the completed pyflakes
+            process.
         """
         env = dict(os.environ)
         env['PYTHONPATH'] = os.pathsep.join(sys.path)
+        command = [sys.executable, self.getPyflakesBinary()]
+        command.extend(paths)
         p = subprocess.Popen(
-            [sys.executable, self.getPyflakesBinary()] + list(args),
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            env=env, **kwargs)
-        return p
+            command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            stdin=subprocess.PIPE, env=env)
+        out, err = p.communicate(stdin)
+        return p.returncode, out, err
 
 
     def test_goodFile(self):
@@ -498,9 +501,8 @@ class IntegrationTests(TestCase):
         """
         tempfile = FilePath(self.mktemp())
         tempfile.touch()
-        p = self.runPyflakes(tempfile.path)
-        out, err = p.communicate()
-        self.assertEqual((0, '', ''), (p.returncode, out, err))
+        returncode, out, err = self.runPyflakes([tempfile.path])
+        self.assertEqual((0, '', ''), (returncode, out, err))
 
 
     def test_fileWithFlakes(self):
@@ -510,11 +512,10 @@ class IntegrationTests(TestCase):
         """
         tempfile = FilePath(self.mktemp())
         tempfile.setContent("import contraband\n")
-        p = self.runPyflakes(tempfile.path)
-        out, err = p.communicate()
+        returncode, out, err = self.runPyflakes([tempfile.path])
         self.assertEqual(
             (1, "%s\n" % UnusedImport(tempfile.path, 1, 'contraband'), ''),
-            (p.returncode, out, err))
+            (returncode, out, err))
 
 
     def test_errors(self):
@@ -524,19 +525,17 @@ class IntegrationTests(TestCase):
         printed to stderr.
         """
         tempfile = FilePath(self.mktemp())
-        p = self.runPyflakes(tempfile.path)
-        out, err = p.communicate()
+        returncode, out, err = self.runPyflakes([tempfile.path])
         self.assertEqual(
             (1, '', '%s: No such file or directory\n' % (tempfile.path,)),
-            (p.returncode, out, err))
+            (returncode, out, err))
 
 
     def test_readFromStdin(self):
         """
         If no arguments are passed to C{pyflakes} then it reads from stdin.
         """
-        p = self.runPyflakes(stdin=subprocess.PIPE)
-        out, err = p.communicate('import contraband')
+        returncode, out, err = self.runPyflakes([], stdin='import contraband')
         self.assertEqual(
             (1, "%s\n" % UnusedImport('<stdin>', 1, 'contraband'), ''),
-            (p.returncode, out, err))
+            (returncode, out, err))
