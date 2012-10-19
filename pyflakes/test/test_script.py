@@ -470,6 +470,14 @@ class _EverythingGetterWithStdin(_EverythingGetter):
     stderr.
     """
 
+    # Although Twisted provides a helper that spawns a subprocess, gathers its
+    # exit code, standard output and standard error
+    # (i.e. getProcessOutputAndValue), it does *not* provide one that data to
+    # be written to stdin first.
+    #
+    # Rather than write such a helper from scratch, we extend the internal
+    # classes & methods that Twisted uses to provide getProcessOutputAndValue.
+
     def __init__(self, deferred, stdin):
         _EverythingGetter.__init__(self, deferred)
         self.stdin = stdin
