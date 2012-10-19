@@ -509,7 +509,7 @@ class IntegrationTests(TestCase):
         command.extend(paths)
         if stdin:
             d = _callProtocolWithDeferred(
-                (lambda d: _EverythingGetterWithStdin(d, stdin)),
+                lambda d: _EverythingGetterWithStdin(d, stdin),
                 sys.executable, command, env=env, path=None)
         else:
             d = getProcessOutputAndValue(sys.executable, command, env=env)
