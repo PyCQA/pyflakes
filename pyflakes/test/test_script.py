@@ -11,11 +11,11 @@ from twisted.python.filepath import FilePath
 from twisted.trial.unittest import TestCase
 
 from pyflakes.messages import UnusedImport
+from pyflakes.reporter import Reporter
 from pyflakes.scripts.pyflakes import (
     checkPath,
     checkRecursive,
     iterSourceCode,
-    Reporter,
     )
 
 
