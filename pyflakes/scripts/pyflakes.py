@@ -43,7 +43,7 @@ def check(codeString, filename, reporter=None):
             # Avoid using msg, since for the only known case, it contains a
             # bogus message that claims the encoding the file declared was
             # unknown.
-            reporter.unexpectedError(filename, 'problem decoding source')
+            reporter.unexpectedError(filename, u'problem decoding source')
         else:
             reporter.syntaxError(filename, msg, lineno, offset, text)
         return 1
