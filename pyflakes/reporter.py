@@ -29,9 +29,9 @@ class Reporter(object):
         An unexpected error occurred trying to process C{filename}.
 
         @param filename: The path to a file that we could not process.
-        @ptype filename: unicode
+        @ptype filename: C{unicode}
         @param msg: A message explaining the problem.
-        @ptype msg: unicode
+        @ptype msg: C{unicode}
         """
         self._stderr.write(u"%s: %s\n" % (filename, msg))
 
@@ -41,15 +41,15 @@ class Reporter(object):
         There was a syntax errror in C{filename}.
 
         @param filename: The path to the file with the syntax error.
-        @ptype filename: unicode
+        @ptype filename: C{unicode}
         @param msg: An explanation of the syntax error.
-        @ptype msg: unicode
+        @ptype msg: C{unicode}
         @param lineno: The line number where the syntax error occurred.
-        @ptype lineno: int
+        @ptype lineno: C{int}
         @param offset: The column on which the syntax error occurred.
-        @ptype offset: int
+        @ptype offset: C{int}
         @param text: The source code containing the syntax error.
-        @ptype text: unicode
+        @ptype text: C{unicode}
         """
         line = text.splitlines()[-1]
         if offset is not None:
