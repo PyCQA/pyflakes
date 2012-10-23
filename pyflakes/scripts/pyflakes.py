@@ -8,7 +8,7 @@ import os
 import _ast
 
 checker = __import__('pyflakes.checker').checker
-mod_reporter = __import__('pyflakes.reporter').reporter
+modReporter = __import__('pyflakes.reporter').reporter
 
 
 def check(codeString, filename, reporter=None):
@@ -29,7 +29,7 @@ def check(codeString, filename, reporter=None):
     @rtype: C{int}
     """
     if reporter is None:
-        reporter = mod_reporter._makeDefaultReporter()
+        reporter = modReporter._makeDefaultReporter()
     # First, compile into an AST and handle syntax errors.
     try:
         tree = compile(codeString, filename, "exec", _ast.PyCF_ONLY_AST)
@@ -66,7 +66,7 @@ def checkPath(filename, reporter=None):
     @return: the number of warnings printed
     """
     if reporter is None:
-        reporter = mod_reporter._makeDefaultReporter()
+        reporter = modReporter._makeDefaultReporter()
     try:
         return check(file(filename, 'U').read() + '\n', filename, reporter)
     except IOError, msg:
@@ -113,7 +113,7 @@ def checkRecursive(paths, reporter):
 
 def main():
     args = sys.argv[1:]
-    reporter = mod_reporter._makeDefaultReporter()
+    reporter = modReporter._makeDefaultReporter()
     if args:
         warnings = checkRecursive(args, reporter)
     else:
