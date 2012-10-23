@@ -14,9 +14,11 @@ class Reporter(object):
         Construct a L{Reporter}.
 
         @param warningStream: A file-like object where warnings will be
-            written to.  C{sys.stdout} is a good value.
+            written to.  The stream's C{write} method must accept unicode.
+            C{sys.stdout} is a good value.
         @param errorStream: A file-like object where error output will be
-            written to.  C{sys.stderr} is a good value.
+            written to.  The stream's C{write} method must accept unicode.
+            C{sys.stderr} is a good value.
         """
         self._stdout = warningStream
         self._stderr = errorStream
@@ -31,7 +33,7 @@ class Reporter(object):
         @param msg: A message explaining the problem.
         @ptype msg: text
         """
-        self._stderr.write("%s: %s\n" % (filename, msg))
+        self._stderr.write(u"%s: %s\n" % (filename, msg))
 
 
     def syntaxError(self, filename, msg, lineno, offset, text):
@@ -39,19 +41,24 @@ class Reporter(object):
         There was a syntax errror in C{filename}.
 
         @param filename: The path to the file with the syntax error.
+        @ptype filename: text
         @param msg: An explanation of the syntax error.
+        @ptype msg: text
         @param lineno: The line number where the syntax error occurred.
+        @ptype lineno: int
         @param offset: The column on which the syntax error occurred.
+        @ptype offset: int
         @param text: The source code containing the syntax error.
+        @ptype text: text
         """
         line = text.splitlines()[-1]
         if offset is not None:
             offset = offset - (len(text) - len(line))
-        self._stderr.write('%s:%d: %s\n' % (filename, lineno, msg))
+        self._stderr.write(u'%s:%d: %s\n' % (filename, lineno, msg))
         self._stderr.write(line)
-        self._stderr.write('\n')
+        self._stderr.write(u'\n')
         if offset is not None:
-            self._stderr.write(" " * (offset + 1) + "^\n")
+            self._stderr.write(u" " * (offset + 1) + u"^\n")
 
 
     def flake(self, message):
@@ -60,8 +67,8 @@ class Reporter(object):
 
         @param: A L{pyflakes.messages.Message}.
         """
-        self._stdout.write(str(message))
-        self._stdout.write('\n')
+        self._stdout.write(unicode(message))
+        self._stdout.write(u'\n')
 
 
 
