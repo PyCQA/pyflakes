@@ -34,20 +34,6 @@ class Reporter(object):
         self._stderr.write("%s: %s\n" % (filename, msg))
 
 
-    def ioError(self, filename, msg):
-        """
-        There was an C{IOError} while reading C{filename}.
-        """
-        self.unexpectedError(filename, msg.args[1])
-
-
-    def problemDecodingSource(self, filename):
-        """
-        There was a problem decoding the source code in C{filename}.
-        """
-        self.unexpectedError(filename, 'problem decoding source')
-
-
     def syntaxError(self, filename, msg, lineno, offset, text):
         """
         There was a syntax errror in C{filename}.

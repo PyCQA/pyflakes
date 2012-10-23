@@ -53,12 +53,8 @@ class LoggingReporter(object):
         self.log.append(('flake', str(message)))
 
 
-    def ioError(self, filename, exception):
-        self.log.append(('ioError', filename, exception.args[1]))
-
-
-    def problemDecodingSource(self, filename):
-        self.log.append(('problemDecodingSource', filename))
+    def unexpectedError(self, filename, message):
+        self.log.append(('unexpectedError', filename, message))
 
 
     def syntaxError(self, filename, msg, lineno, offset, line):
@@ -158,18 +154,6 @@ class TestReporter(TestCase):
     Tests for L{Reporter}.
     """
 
-    def test_problemDecodingSource(self):
-        """
-        C{problemDecodingSource} reports that there was a problem decoding the
-        source to the error stream.  It includes the filename that it couldn't
-        decode.
-        """
-        err = StringIO()
-        reporter = Reporter(None, err)
-        reporter.problemDecodingSource('foo.py')
-        self.assertEquals("foo.py: problem decoding source\n", err.getvalue())
-
-
     def test_syntaxError(self):
         """
         C{syntaxError} reports that there was a syntax error in the source
@@ -223,20 +207,14 @@ class TestReporter(TestCase):
             err.getvalue())
 
 
-    def test_ioError(self):
+    def test_unexpectedError(self):
         """
-        C{ioError} reports an error reading a source file.  It only includes
-        the human-readable bit of the error message, and excludes the errno.
+        C{unexpectedError} reports an error processing a source file.
         """
         err = StringIO()
         reporter = Reporter(None, err)
-        exception = IOError(42, 'bar')
-        try:
-            raise exception
-        except IOError, e:
-            pass
-        reporter.ioError('source.py', e)
-        self.assertEquals('source.py: bar\n', err.getvalue())
+        reporter.unexpectedError(u'source.py', u'error message')
+        self.assertEquals(u'source.py: error message\n', err.getvalue())
 
 
     def test_flake(self):
@@ -311,7 +289,8 @@ class CheckTests(TestCase):
         count, errors = self.getErrors('extremo')
         self.assertEquals(count, 1)
         self.assertEquals(
-            errors, [('ioError', 'extremo', 'No such file or directory')])
+            errors,
+            [('unexpectedError', 'extremo', 'No such file or directory')])
 
 
     def test_multilineSyntaxError(self):
@@ -411,7 +390,8 @@ foo(bar=baz, bax)
         count, errors = self.getErrors(sourcePath.path)
         self.assertEquals(count, 1)
         self.assertEquals(
-            errors, [('ioError', sourcePath.path, "Permission denied")])
+            errors,
+            [('unexpectedError', sourcePath.path, "Permission denied")])
 
 
     def test_pyflakesWarning(self):

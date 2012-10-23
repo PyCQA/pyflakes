@@ -43,7 +43,7 @@ def check(codeString, filename, reporter=None):
             # Avoid using msg, since for the only known case, it contains a
             # bogus message that claims the encoding the file declared was
             # unknown.
-            reporter.problemDecodingSource(filename)
+            reporter.unexpectedError(filename, 'problem decoding source')
         else:
             reporter.syntaxError(filename, msg, lineno, offset, text)
         return 1
@@ -70,7 +70,7 @@ def checkPath(filename, reporter=None):
     try:
         return check(file(filename, 'U').read() + '\n', filename, reporter)
     except IOError, msg:
-        reporter.ioError(filename, msg)
+        reporter.unexpectedError(filename, msg.args[1])
         return 1
 
 
