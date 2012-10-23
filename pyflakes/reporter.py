@@ -22,19 +22,30 @@ class Reporter(object):
         self._stderr = errorStream
 
 
+    def unexpectedError(self, filename, msg):
+        """
+        An unexpected error occurred trying to process C{filename}.
+
+        @param filename: The path to a file that we could not process.
+        @ptype filename: text
+        @param msg: A message explaining the problem.
+        @ptype msg: text
+        """
+        self._stderr.write("%s: %s\n" % (filename, msg))
+
+
     def ioError(self, filename, msg):
         """
         There was an C{IOError} while reading C{filename}.
         """
-        self._stderr.write("%s: %s\n" % (filename, msg.args[1]))
+        self.unexpectedError(filename, msg.args[1])
 
 
     def problemDecodingSource(self, filename):
         """
         There was a problem decoding the source code in C{filename}.
         """
-        self._stderr.write(filename)
-        self._stderr.write(': problem decoding source\n')
+        self.unexpectedError(filename, 'problem decoding source')
 
 
     def syntaxError(self, filename, msg, lineno, offset, text):
