@@ -1,14 +1,15 @@
-
 """
 Implementation of the command-line I{pyflakes} tool.
 """
+
+from __future__ import absolute_import
 
 import sys
 import os
 import _ast
 
-checker = __import__('pyflakes.checker').checker
-modReporter = __import__('pyflakes.reporter').reporter
+from pyflakes import checker
+from pyflakes import reporter as modReporter
 
 
 def check(codeString, filename, reporter=None):
