@@ -6,9 +6,9 @@ import os
 import sys
 from StringIO import StringIO
 
+from twisted.internet import protocol
 from twisted.internet.utils import (
     _callProtocolWithDeferred,
-    _EverythingGetter,
     getProcessOutputAndValue,
     )
 from twisted.python.filepath import FilePath
@@ -444,7 +444,7 @@ x = "\N{SNOWMAN}"
 
 
 
-class _EverythingGetterWithStdin(_EverythingGetter):
+class _EverythingGetterWithStdin(protocol.ProcessProtocol):
     """
     C{ProcessProtocol} that writes to stdin and gathers exit code, stdout and
     stderr.
@@ -454,17 +454,29 @@ class _EverythingGetterWithStdin(_EverythingGetter):
     # exit code, standard output and standard error
     # (i.e. getProcessOutputAndValue), it does *not* provide one that data to
     # be written to stdin first.
-    #
-    # Rather than write such a helper from scratch, we extend the internal
-    # classes & methods that Twisted uses to provide getProcessOutputAndValue.
 
     def __init__(self, deferred, stdin):
-        _EverythingGetter.__init__(self, deferred)
+        self.deferred = deferred
+        self.outBuf = StringIO()
+        self.errBuf = StringIO()
+        self.outReceived = self.outBuf.write
+        self.errReceived = self.errBuf.write
         self.stdin = stdin
+
 
     def connectionMade(self):
         self.transport.write(self.stdin)
         self.transport.closeStdin()
+
+
+    def processEnded(self, reason):
+        out = self.outBuf.getvalue()
+        err = self.errBuf.getvalue()
+        e = reason.value
+        code = e.exitCode
+        if e.signal:
+            code = -e.signal
+        self.deferred.callback((out, err, code))
 
 
 
