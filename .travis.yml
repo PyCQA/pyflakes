@@ -1,0 +1,13 @@
+language: python
+python:
+  - 2.6
+  - 2.7
+  - pypy
+install:
+  - python setup.py install
+  - pip install Twisted
+script:
+  - trial pyflakes/test
+matrix:
+  allow_failures:
+    - python: pypy
