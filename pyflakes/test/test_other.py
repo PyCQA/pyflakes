@@ -6,6 +6,7 @@ Tests for various Pyflakes behavior.
 """
 
 from sys import version_info
+from unittest2 import skip, skipIf
 
 from pyflakes import messages as m
 from pyflakes.test import harness
@@ -16,6 +17,7 @@ class Test(harness.Test):
     def test_duplicateArgs(self):
         self.flakes('def fu(bar, bar): pass', m.DuplicateArgument)
 
+    @skip("todo: this requires finding all assignments in the function body first")
     def test_localReferencedBeforeAssignment(self):
         self.flakes('''
         a = 1
@@ -23,7 +25,6 @@ class Test(harness.Test):
             a; a=1
         f()
         ''', m.UndefinedName)
-    test_localReferencedBeforeAssignment.todo = 'this requires finding all assignments in the function body first'
 
     def test_redefinedFunction(self):
         """
@@ -148,6 +149,7 @@ class Test(harness.Test):
         ''', m.RedefinedWhileUnused)
 
 
+    @skip("todo: Too hard to make this warn but other cases stay silent")
     def test_doubleAssignment(self):
         """
         If a variable is re-assigned to without being used, no warning is
@@ -158,8 +160,6 @@ class Test(harness.Test):
         x = 10
         x = 20
         ''', m.RedefinedWhileUnused)
-    test_doubleAssignment.todo = (
-        "Too hard to make this warn but other cases stay silent")
 
 
     def test_doubleAssignmentConditionally(self):
@@ -406,14 +406,6 @@ class TestUnusedAssignment(harness.Test):
         ''')
 
 
-
-class Python25Test(harness.Test):
-    """
-    Tests for checking of syntax only available in Python 2.5 and newer.
-    """
-    if version_info < (2, 5):
-        skip = "Python 2.5 required for if-else and with tests"
-
     def test_ifexp(self):
         """
         Test C{foo if bar else baz} statements.
@@ -627,15 +619,7 @@ class Python25Test(harness.Test):
             pass
         ''', m.UndefinedName)
 
-
-
-class Python27Test(harness.Test):
-    """
-    Tests for checking of syntax only available in Python 2.7 and newer.
-    """
-    if version_info < (2, 7):
-        skip = "Python 2.7 required for dict/set comprehension tests"
-
+    @skipIf(version_info < (2, 7), "Python >= 2.7 only")
     def test_dictComprehension(self):
         """
         Dict comprehensions are properly handled.
@@ -644,6 +628,7 @@ class Python27Test(harness.Test):
         a = {1: x for x in range(10)}
         ''')
 
+    @skipIf(version_info < (2, 7), "Python >= 2.7 only")
     def test_setComprehensionAndLiteral(self):
         """
         Set comprehensions are properly handled.

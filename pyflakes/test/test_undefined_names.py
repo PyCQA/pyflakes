@@ -1,7 +1,7 @@
 
 from _ast import PyCF_ONLY_AST
 
-from twisted.trial.unittest import TestCase
+from unittest2 import skip, TestCase
 
 from pyflakes import messages as m, checker
 from pyflakes.test import harness
@@ -87,13 +87,13 @@ class Test(harness.Test):
             bar; baz
         ''')
 
+    @skip("todo")
     def test_definedByGlobal(self):
         '''"global" can make an otherwise undefined name in another function defined'''
         self.flakes('''
         def a(): global fu; fu = 1
         def b(): fu
         ''')
-    test_definedByGlobal.todo = ''
 
     def test_globalInGlobalScope(self):
         """

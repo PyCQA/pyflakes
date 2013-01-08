@@ -4,15 +4,12 @@ Tests for L{pyflakes.scripts.pyflakes}.
 
 import os
 import sys
+import shutil
+import subprocess
+import tempfile
 from StringIO import StringIO
 
-from twisted.internet import protocol
-from twisted.internet.utils import (
-    _callProtocolWithDeferred,
-    getProcessOutputAndValue,
-    )
-from twisted.python.filepath import FilePath
-from twisted.trial.unittest import TestCase
+from unittest2 import TestCase
 
 from pyflakes.messages import UnusedImport
 from pyflakes.reporter import Reporter
@@ -20,7 +17,7 @@ from pyflakes.scripts.pyflakes import (
     checkPath,
     checkRecursive,
     iterSourceCode,
-    )
+)
 
 
 def withStderrTo(stderr, f, *args, **kwargs):
@@ -32,7 +29,6 @@ def withStderrTo(stderr, f, *args, **kwargs):
         return f(*args, **kwargs)
     finally:
         sys.stderr = outer
-
 
 
 class LoggingReporter(object):
@@ -67,13 +63,25 @@ class TestIterSourceCode(TestCase):
     Tests for L{iterSourceCode}.
     """
 
+    def setUp(self):
+        self.tempdir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.tempdir)
+
+    def makeEmptyFile(self, *parts):
+        assert parts
+        fpath = os.path.join(self.tempdir, *parts)
+        fd = open(fpath, 'a')
+        fd.close()
+        return fpath
+
+
     def test_emptyDirectory(self):
         """
         There are no Python files in an empty directory.
         """
-        tempdir = FilePath(self.mktemp())
-        tempdir.createDirectory()
-        self.assertEqual(list(iterSourceCode([tempdir.path])), [])
+        self.assertEqual(list(iterSourceCode([self.tempdir])), [])
 
 
     def test_singleFile(self):
@@ -81,22 +89,16 @@ class TestIterSourceCode(TestCase):
         If the directory contains one Python file, C{iterSourceCode} will find
         it.
         """
-        tempdir = FilePath(self.mktemp())
-        tempdir.createDirectory()
-        tempdir.child('foo.py').touch()
-        self.assertEqual(
-            list(iterSourceCode([tempdir.path])),
-            [tempdir.child('foo.py').path])
+        childpath = self.makeEmptyFile('foo.py')
+        self.assertEqual(list(iterSourceCode([self.tempdir])), [childpath])
 
 
     def test_onlyPythonSource(self):
         """
         Files that are not Python source files are not included.
         """
-        tempdir = FilePath(self.mktemp())
-        tempdir.createDirectory()
-        tempdir.child('foo.pyc').touch()
-        self.assertEqual(list(iterSourceCode([tempdir.path])), [])
+        self.makeEmptyFile('foo.pyc')
+        self.assertEqual(list(iterSourceCode([self.tempdir])), [])
 
 
     def test_recurses(self):
@@ -104,18 +106,14 @@ class TestIterSourceCode(TestCase):
         If the Python files are hidden deep down in child directories, we will
         find them.
         """
-        tempdir = FilePath(self.mktemp())
-        tempdir.createDirectory()
-        tempdir.child('foo').createDirectory()
-        tempdir.child('foo').child('a.py').touch()
-        tempdir.child('bar').createDirectory()
-        tempdir.child('bar').child('b.py').touch()
-        tempdir.child('c.py').touch()
+        os.mkdir(os.path.join(self.tempdir, 'foo'))
+        apath = self.makeEmptyFile('foo', 'a.py')
+        os.mkdir(os.path.join(self.tempdir, 'bar'))
+        bpath = self.makeEmptyFile('bar', 'b.py')
+        cpath = self.makeEmptyFile('c.py')
         self.assertEqual(
-            sorted(iterSourceCode([tempdir.path])),
-            sorted([tempdir.child('foo').child('a.py').path,
-                    tempdir.child('bar').child('b.py').path,
-                    tempdir.child('c.py').path]))
+            sorted(iterSourceCode([self.tempdir])),
+            sorted([apath, bpath, cpath]))
 
 
     def test_multipleDirectories(self):
@@ -123,18 +121,15 @@ class TestIterSourceCode(TestCase):
         L{iterSourceCode} can be given multiple directories.  It will recurse
         into each of them.
         """
-        tempdir = FilePath(self.mktemp())
-        tempdir.createDirectory()
-        foo = tempdir.child('foo')
-        foo.createDirectory()
-        foo.child('a.py').touch()
-        bar = tempdir.child('bar')
-        bar.createDirectory()
-        bar.child('b.py').touch()
+        foopath = os.path.join(self.tempdir, 'foo')
+        barpath = os.path.join(self.tempdir, 'bar')
+        os.mkdir(foopath)
+        apath = self.makeEmptyFile('foo', 'a.py')
+        os.mkdir(barpath)
+        bpath = self.makeEmptyFile('bar', 'b.py')
         self.assertEqual(
-            sorted(iterSourceCode([foo.path, bar.path])),
-            sorted([foo.child('a.py').path,
-                    bar.child('b.py').path]))
+            sorted(iterSourceCode([foopath, barpath])),
+            sorted([apath, bpath]))
 
 
     def test_explicitFiles(self):
@@ -142,10 +137,9 @@ class TestIterSourceCode(TestCase):
         If one of the paths given to L{iterSourceCode} is not a directory but
         a file, it will include that in its output.
         """
-        tempfile = FilePath(self.mktemp())
-        tempfile.touch()
-        self.assertEqual(list(iterSourceCode([tempfile.path])),
-                         [tempfile.path])
+        epath = self.makeEmptyFile('e.py')
+        self.assertEqual(list(iterSourceCode([epath])),
+                         [epath])
 
 
 
@@ -239,9 +233,11 @@ class CheckTests(TestCase):
         """
         Make a temporary file containing C{content} and return a path to it.
         """
-        path = FilePath(self.mktemp())
-        path.setContent(content)
-        return path.path
+        _, fpath = tempfile.mkstemp()
+        fd = open(fpath, 'wb')
+        fd.write(content)
+        fd.close()
+        return fpath
 
 
     def assertHasErrors(self, path, errorList):
@@ -314,8 +310,12 @@ def baz():
         # isn't, something this test was unprepared for has happened.
         def evaluate(source):
             exec source
-        exc = self.assertRaises(SyntaxError, evaluate, source)
-        self.assertTrue(exc.text.count('\n') > 1)
+        try:
+            evaluate(source)
+        except SyntaxError, e:
+            self.assertTrue(e.text.count('\n') > 1)
+        else:
+            self.fail()
 
         sourcePath = self.makeTempFile(source)
         self.assertHasErrors(
@@ -384,14 +384,13 @@ foo(bar=baz, bax)
         If the source file is not readable, this is reported on standard
         error.
         """
-        sourcePath = FilePath(self.mktemp())
-        sourcePath.setContent('')
-        sourcePath.chmod(0)
-        count, errors = self.getErrors(sourcePath.path)
+        sourcePath = self.makeTempFile('')
+        os.chmod(sourcePath, 0)
+        count, errors = self.getErrors(sourcePath)
         self.assertEquals(count, 1)
         self.assertEquals(
             errors,
-            [('unexpectedError', sourcePath.path, "Permission denied")])
+            [('unexpectedError', sourcePath, "Permission denied")])
 
 
     def test_pyflakesWarning(self):
@@ -425,59 +424,25 @@ x = "\N{SNOWMAN}"
         L{checkRecursive} descends into each directory, finding Python files
         and reporting problems.
         """
-        tempdir = FilePath(self.mktemp())
-        tempdir.createDirectory()
-        tempdir.child('foo').createDirectory()
-        file1 = tempdir.child('foo').child('bar.py')
-        file1.setContent("import baz\n")
-        file2 = tempdir.child('baz.py')
-        file2.setContent("import contraband")
+        tempdir = tempfile.mkdtemp()
+        os.mkdir(os.path.join(tempdir, 'foo'))
+        file1 = os.path.join(tempdir, 'foo', 'bar.py')
+        fd = open(file1, 'wb')
+        fd.write("import baz\n")
+        fd.close()
+        file2 = os.path.join(tempdir, 'baz.py')
+        fd = open(file2, 'wb')
+        fd.write("import contraband")
+        fd.close()
         log = []
         reporter = LoggingReporter(log)
-        warnings = checkRecursive([tempdir.path], reporter)
+        warnings = checkRecursive([tempdir], reporter)
         self.assertEqual(warnings, 2)
         self.assertEqual(
             sorted(log),
-            sorted([('flake', str(UnusedImport(file1.path, 1, 'baz'))),
+            sorted([('flake', str(UnusedImport(file1, 1, 'baz'))),
                     ('flake',
-                     str(UnusedImport(file2.path, 1, 'contraband')))]))
-
-
-
-class _EverythingGetterWithStdin(protocol.ProcessProtocol):
-    """
-    C{ProcessProtocol} that writes to stdin and gathers exit code, stdout and
-    stderr.
-    """
-
-    # Although Twisted provides a helper that spawns a subprocess, gathers its
-    # exit code, standard output and standard error
-    # (i.e. getProcessOutputAndValue), it does *not* provide one that data to
-    # be written to stdin first.
-
-    def __init__(self, deferred, stdin):
-        self.deferred = deferred
-        self.outBuf = StringIO()
-        self.errBuf = StringIO()
-        self.outReceived = self.outBuf.write
-        self.errReceived = self.errBuf.write
-        self.stdin = stdin
-
-
-    def connectionMade(self):
-        self.transport.write(self.stdin)
-        self.transport.closeStdin()
-
-
-    def processEnded(self, reason):
-        out = self.outBuf.getvalue()
-        err = self.errBuf.getvalue()
-        e = reason.value
-        code = e.exitCode
-        if e.signal:
-            code = -e.signal
-        self.deferred.callback((out, err, code))
-
+                     str(UnusedImport(file2, 1, 'contraband')))]))
 
 
 class IntegrationTests(TestCase):
@@ -485,13 +450,20 @@ class IntegrationTests(TestCase):
     Tests of the pyflakes script that actually spawn the script.
     """
 
+    def setUp(self):
+        self.tempdir = tempfile.mkdtemp()
+        self.tempfilepath = os.path.join(self.tempdir, 'temp')
+
+    def tearDown(self):
+        shutil.rmtree(self.tempdir)
+
     def getPyflakesBinary(self):
         """
         Return the path to the pyflakes binary.
         """
         import pyflakes
-        package_dir = FilePath(pyflakes.__file__).parent()
-        return package_dir.sibling('bin').child('pyflakes').path
+        package_dir = os.path.dirname(pyflakes.__file__)
+        return os.path.join(package_dir, '..', 'bin', 'pyflakes')
 
 
     def runPyflakes(self, paths, stdin=None):
@@ -505,15 +477,18 @@ class IntegrationTests(TestCase):
         """
         env = dict(os.environ)
         env['PYTHONPATH'] = os.pathsep.join(sys.path)
-        command = [self.getPyflakesBinary()]
+        command = [sys.executable, self.getPyflakesBinary()]
         command.extend(paths)
         if stdin:
-            d = _callProtocolWithDeferred(
-                lambda d: _EverythingGetterWithStdin(d, stdin),
-                sys.executable, command, env=env, path=None)
+            p = subprocess.Popen(command, env=env, stdin=subprocess.PIPE,
+                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            (stdout, stderr) = p.communicate(stdin)
         else:
-            d = getProcessOutputAndValue(sys.executable, command, env=env)
-        return d
+            p = subprocess.Popen(command, env=env,
+                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            (stdout, stderr) = p.communicate()
+        rv = p.wait()
+        return (stdout, stderr, rv)
 
 
     def test_goodFile(self):
@@ -521,10 +496,10 @@ class IntegrationTests(TestCase):
         When a Python source file is all good, the return code is zero and no
         messages are printed to either stdout or stderr.
         """
-        tempfile = FilePath(self.mktemp())
-        tempfile.touch()
-        d = self.runPyflakes([tempfile.path])
-        return d.addCallback(self.assertEqual, ('', '', 0))
+        fd = open(self.tempfilepath, 'a')
+        fd.close()
+        d = self.runPyflakes([self.tempfilepath])
+        self.assertEqual(d, ('', '', 0))
 
 
     def test_fileWithFlakes(self):
@@ -532,12 +507,11 @@ class IntegrationTests(TestCase):
         When a Python source file has warnings, the return code is non-zero
         and the warnings are printed to stdout.
         """
-        tempfile = FilePath(self.mktemp())
-        tempfile.setContent("import contraband\n")
-        d = self.runPyflakes([tempfile.path])
-        return d.addCallback(
-            self.assertEqual,
-            ("%s\n" % UnusedImport(tempfile.path, 1, 'contraband'), '', 1))
+        fd = open(self.tempfilepath, 'wb')
+        fd.write("import contraband\n")
+        fd.close()
+        d = self.runPyflakes([self.tempfilepath])
+        self.assertEqual(d, ("%s\n" % UnusedImport(self.tempfilepath, 1, 'contraband'), '', 1))
 
 
     def test_errors(self):
@@ -546,11 +520,8 @@ class IntegrationTests(TestCase):
         exist, say), then the return code is non-zero and the errors are
         printed to stderr.
         """
-        tempfile = FilePath(self.mktemp())
-        d = self.runPyflakes([tempfile.path])
-        return d.addCallback(
-            self.assertEqual,
-            ('', '%s: No such file or directory\n' % (tempfile.path,), 1))
+        d = self.runPyflakes([self.tempfilepath])
+        self.assertEqual(d, ('', '%s: No such file or directory\n' % (self.tempfilepath,), 1))
 
 
     def test_readFromStdin(self):
@@ -558,6 +529,4 @@ class IntegrationTests(TestCase):
         If no arguments are passed to C{pyflakes} then it reads from stdin.
         """
         d = self.runPyflakes([], stdin='import contraband')
-        return d.addCallback(
-            self.assertEqual,
-            ("%s\n" % UnusedImport('<stdin>', 1, 'contraband'), '', 1))
+        self.assertEqual(d, ("%s\n" % UnusedImport('<stdin>', 1, 'contraband'), '', 1))

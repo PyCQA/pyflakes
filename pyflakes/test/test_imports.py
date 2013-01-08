@@ -1,5 +1,6 @@
 
 from sys import version_info
+from unittest2 import skip, skipIf
 
 from pyflakes import messages as m
 from pyflakes.test import harness
@@ -446,6 +447,7 @@ class Test(harness.Test):
         self.flakes('import fu; [fu, bar] = fu')
         self.flakes('import fu; fu += fu')
 
+    @skip("todo")
     def test_tryingMultipleImports(self):
         self.flakes('''
         try:
@@ -453,7 +455,6 @@ class Test(harness.Test):
         except ImportError:
             import bar as fu
         ''')
-    test_tryingMultipleImports.todo = ''
 
     def test_nonGlobalDoesNotRedefine(self):
         self.flakes('''
@@ -479,6 +480,7 @@ class Test(harness.Test):
         fu
         ''', m.RedefinedWhileUnused)
 
+    @skip("todo")
     def test_importingForImportError(self):
         self.flakes('''
         try:
@@ -486,8 +488,8 @@ class Test(harness.Test):
         except ImportError:
             pass
         ''')
-    test_importingForImportError.todo = ''
 
+    @skip("todo: requires evaluating attribute access")
     def test_importedInClass(self):
         '''Imports in class scope can be used through self'''
         self.flakes('''
@@ -496,7 +498,6 @@ class Test(harness.Test):
             def __init__(self):
                 self.i
         ''')
-    test_importedInClass.todo = 'requires evaluating attribute access'
 
     def test_futureImport(self):
         '''__future__ is special'''
@@ -639,10 +640,8 @@ class Python26Tests(harness.Test):
     """
     Tests for checking of syntax which is valid in PYthon 2.6 and newer.
     """
-    if version_info < (2, 6):
-        skip = "Python 2.6 required for class decorator tests."
 
-
+    @skipIf(version_info < (2, 6), "Python >= 2.6 only")
     def test_usedAsClassDecorator(self):
         """
         Using an imported name as a class decorator results in no warnings,
