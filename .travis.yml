@@ -8,7 +8,7 @@ install:
   - python setup.py install
   - pip install unittest2
 script:
-  - python -m unittest2 discover
+  - unit2 discover
 matrix:
   allow_failures:
     - python: pypy
