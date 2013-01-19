@@ -7,9 +7,12 @@ import sys
 import shutil
 import subprocess
 import tempfile
-from StringIO import StringIO
+try:
+    from io import StringIO
+except ImportError:
+    from StringIO import StringIO
 
-from unittest2 import TestCase
+from unittest2 import skipIf, TestCase
 
 from pyflakes.messages import UnusedImport
 from pyflakes.reporter import Reporter
@@ -207,8 +210,8 @@ class TestReporter(TestCase):
         """
         err = StringIO()
         reporter = Reporter(None, err)
-        reporter.unexpectedError(u'source.py', u'error message')
-        self.assertEquals(u'source.py: error message\n', err.getvalue())
+        reporter.unexpectedError('source.py', 'error message')
+        self.assertEquals('source.py: error message\n', err.getvalue())
 
 
     def test_flake(self):
@@ -234,6 +237,8 @@ class CheckTests(TestCase):
         Make a temporary file containing C{content} and return a path to it.
         """
         _, fpath = tempfile.mkstemp()
+        if not hasattr(content, 'decode'):
+            content = content.encode('ascii')
         fd = open(fpath, 'wb')
         fd.write(content)
         fd.close()
@@ -309,10 +314,11 @@ def baz():
         # Sanity check - SyntaxError.text should be multiple lines, if it
         # isn't, something this test was unprepared for has happened.
         def evaluate(source):
-            exec source
+            exec(source)
         try:
             evaluate(source)
-        except SyntaxError, e:
+        except SyntaxError:
+            e = sys.exc_info()[1]
             self.assertTrue(e.text.count('\n') > 1)
         else:
             self.fail()
@@ -353,12 +359,13 @@ def foo(bar=baz, bax):
     pass
 """
         sourcePath = self.makeTempFile(source)
+        last_line = '        ^\n' if sys.version_info >= (3, 2) else ''
         self.assertHasErrors(
             sourcePath,
             ["""\
 %s:1: non-default argument follows default argument
 def foo(bar=baz, bax):
-""" % (sourcePath,)])
+%s""" % (sourcePath, last_line)])
 
 
     def test_nonKeywordAfterKeywordSyntaxError(self):
@@ -371,12 +378,13 @@ def foo(bar=baz, bax):
 foo(bar=baz, bax)
 """
         sourcePath = self.makeTempFile(source)
+        last_line = '             ^\n' if sys.version_info >= (3, 2) else ''
         self.assertHasErrors(
             sourcePath,
             ["""\
 %s:1: non-keyword arg after keyword arg
 foo(bar=baz, bax)
-""" % (sourcePath,)])
+%s""" % (sourcePath, last_line)])
 
 
     def test_permissionDenied(self):
@@ -405,15 +413,17 @@ foo(bar=baz, bax)
             errors, [('flake', str(UnusedImport(sourcePath, 1, 'foo')))])
 
 
+    @skipIf(sys.version_info >= (3,), "need adaptation for Python 3")
     def test_misencodedFile(self):
         """
         If a source file contains bytes which cannot be decoded, this is
         reported on stderr.
         """
-        source = u"""\
+        SNOWMAN = unichr(0x2603)
+        source = ("""\
 # coding: ascii
-x = "\N{SNOWMAN}"
-""".encode('utf-8')
+x = "%s"
+""" % SNOWMAN).encode('utf-8')
         sourcePath = self.makeTempFile(source)
         self.assertHasErrors(
             sourcePath, ["%s: problem decoding source\n" % (sourcePath,)])
@@ -428,11 +438,11 @@ x = "\N{SNOWMAN}"
         os.mkdir(os.path.join(tempdir, 'foo'))
         file1 = os.path.join(tempdir, 'foo', 'bar.py')
         fd = open(file1, 'wb')
-        fd.write("import baz\n")
+        fd.write("import baz\n".encode('ascii'))
         fd.close()
         file2 = os.path.join(tempdir, 'baz.py')
         fd = open(file2, 'wb')
-        fd.write("import contraband")
+        fd.write("import contraband".encode('ascii'))
         fd.close()
         log = []
         reporter = LoggingReporter(log)
@@ -488,6 +498,9 @@ class IntegrationTests(TestCase):
                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             (stdout, stderr) = p.communicate()
         rv = p.wait()
+        if sys.version_info >= (3,):
+            stdout = stdout.decode('utf-8')
+            stderr = stderr.decode('utf-8')
         return (stdout, stderr, rv)
 
 
@@ -508,7 +521,7 @@ class IntegrationTests(TestCase):
         and the warnings are printed to stdout.
         """
         fd = open(self.tempfilepath, 'wb')
-        fd.write("import contraband\n")
+        fd.write("import contraband\n".encode('ascii'))
         fd.close()
         d = self.runPyflakes([self.tempfilepath])
         self.assertEqual(d, ("%s\n" % UnusedImport(self.tempfilepath, 1, 'contraband'), '', 1))
@@ -528,5 +541,5 @@ class IntegrationTests(TestCase):
         """
         If no arguments are passed to C{pyflakes} then it reads from stdin.
         """
-        d = self.runPyflakes([], stdin='import contraband')
+        d = self.runPyflakes([], stdin='import contraband'.encode('ascii'))
         self.assertEqual(d, ("%s\n" % UnusedImport('<stdin>', 1, 'contraband'), '', 1))

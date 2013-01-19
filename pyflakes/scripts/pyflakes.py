@@ -34,7 +34,8 @@ def check(codeString, filename, reporter=None):
     # First, compile into an AST and handle syntax errors.
     try:
         tree = compile(codeString, filename, "exec", _ast.PyCF_ONLY_AST)
-    except SyntaxError, value:
+    except SyntaxError:
+        value = sys.exc_info()[1]
         msg = value.args[0]
 
         (lineno, offset, text) = value.lineno, value.offset, value.text
@@ -44,14 +45,14 @@ def check(codeString, filename, reporter=None):
             # Avoid using msg, since for the only known case, it contains a
             # bogus message that claims the encoding the file declared was
             # unknown.
-            reporter.unexpectedError(filename, u'problem decoding source')
+            reporter.unexpectedError(filename, 'problem decoding source')
         else:
             reporter.syntaxError(filename, msg, lineno, offset, text)
         return 1
     else:
         # Okay, it's syntactically valid.  Now check it.
         w = checker.Checker(tree, filename)
-        w.messages.sort(lambda a, b: cmp(a.lineno, b.lineno))
+        w.messages.sort(key=lambda m: m.lineno)
         for warning in w.messages:
             reporter.flake(warning)
         return len(w.messages)
@@ -69,8 +70,9 @@ def checkPath(filename, reporter=None):
     if reporter is None:
         reporter = modReporter._makeDefaultReporter()
     try:
-        return check(file(filename, 'U').read() + '\n', filename, reporter)
-    except IOError, msg:
+        return check(open(filename, 'U').read() + '\n', filename, reporter)
+    except IOError:
+        msg = sys.exc_info()[1]
         reporter.unexpectedError(filename, msg.args[1])
         return 1
 

@@ -15,8 +15,8 @@ class Test(unittest2.TestCase):
         w = checker.Checker(ast, **kw)
         outputs = [type(o) for o in w.messages]
         expectedOutputs = list(expectedOutputs)
-        outputs.sort()
-        expectedOutputs.sort()
+        outputs.sort(key=lambda t: t.__name__)
+        expectedOutputs.sort(key=lambda t: t.__name__)
         self.assertEqual(outputs, expectedOutputs, '''\
 for input:
 %s
