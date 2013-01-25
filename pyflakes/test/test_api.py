@@ -394,6 +394,23 @@ foo(bar=baz, bax)
 %s""" % (sourcePath, last_line)])
 
 
+    def test_invalidEscape(self):
+        """
+        The invalid escape syntax raises ValueError in Python 2
+        """
+        # ValueError: invalid \x escape
+        sourcePath = self.makeTempFile(r"foo = '\xyz'")
+        if sys.version_info < (3,):
+            decoding_error = "%s: problem decoding source\n" % (sourcePath,)
+        else:
+            decoding_error = """\
+%s:1: (unicode error) 'unicodeescape' codec can't decode bytes in position 0-2: truncated \\xXX escape
+foo = '\\xyz'
+%s""" % (sourcePath, '       ^\n' if sys.version_info >= (3, 2) else '')
+        self.assertHasErrors(
+            sourcePath, [decoding_error])
+
+
     def test_permissionDenied(self):
         """
         If the source file is not readable, this is reported on standard

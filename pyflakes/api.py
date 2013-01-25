@@ -49,7 +49,7 @@ def check(codeString, filename, reporter=None):
         else:
             reporter.syntaxError(filename, msg, lineno, offset, text)
         return 1
-    except TypeError:
+    except Exception:
         reporter.unexpectedError(filename, 'problem decoding source')
         return 1
     else:
