@@ -525,13 +525,10 @@ class Checker(object):
             raise RuntimeError("Got impossible expression context: %r" % (node.ctx,))
 
     def FUNCTIONDEF(self, node):
-        # the decorators attribute is called decorator_list as of Python 2.6
-        if hasattr(node, 'decorators'):
-            for deco in node.decorators:
-                self.handleNode(deco, node)
-        else:
-            for deco in node.decorator_list:
-                self.handleNode(deco, node)
+        if not hasattr(node, 'decorator_list'):   # Python 2.5
+            node.decorator_list = node.decorators
+        for deco in node.decorator_list:
+            self.handleNode(deco, node)
         self.addBinding(node.lineno, FunctionDefinition(node.name, node))
         self.LAMBDA(node)
 
@@ -599,8 +596,8 @@ class Checker(object):
         classes, and the body of its definition.  Additionally, add its name to
         the current scope.
         """
-        # decorator_list is present as of Python 2.6
-        for deco in getattr(node, 'decorator_list', []):
+        # no class decorator in Python 2.5
+        for deco in getattr(node, 'decorator_list', ''):
             self.handleNode(deco, node)
         for baseNode in node.bases:
             self.handleNode(baseNode, node)
