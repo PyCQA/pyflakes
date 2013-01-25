@@ -29,6 +29,14 @@ class RedefinedWhileUnused(Message):
         self.message_args = (name, orig_lineno)
 
 
+class RedefinedInListComp(Message):
+    message = 'list comprehension redefines %r from line %r'
+
+    def __init__(self, filename, lineno, name, orig_lineno):
+        Message.__init__(self, filename, lineno)
+        self.message_args = (name, orig_lineno)
+
+
 class ImportShadowedByLoopVar(Message):
     message = 'import %r from line %r shadowed by loop variable'
 

@@ -279,6 +279,12 @@ class Checker(object):
     def report(self, messageClass, *args, **kwargs):
         self.messages.append(messageClass(self.filename, *args, **kwargs))
 
+    def hasParent(self, node, kind):
+        while hasattr(node, 'parent'):
+            node = node.parent
+            if isinstance(node, kind):
+                return True
+
     def addBinding(self, lineno, value, reportRedef=True):
         '''Called when a binding is altered.
 
@@ -288,6 +294,7 @@ class Checker(object):
         - if `reportRedef` is True (default), rebinding while unused will be
           reported.
         '''
+        redefinedWhileUnused = False
         if not isinstance(self.scope, ClassScope):
             for scope in self.scopeStack[::-1]:
                 existing = scope.get(value.name)
@@ -295,10 +302,17 @@ class Checker(object):
                         and not existing.used
                         and (not isinstance(value, Importation) or value.fullName == existing.fullName)
                         and reportRedef):
+                    redefinedWhileUnused = True
                     self.report(messages.RedefinedWhileUnused,
-                                lineno, value.name, scope[value.name].source.lineno)
+                                lineno, value.name, existing.source.lineno)
 
         existing = self.scope.get(value.name)
+        if not redefinedWhileUnused and self.hasParent(value.source, ast.ListComp):
+            if (existing and reportRedef
+                    and not self.hasParent(existing.source, (ast.For, ast.ListComp))):
+                self.report(messages.RedefinedInListComp,
+                            lineno, value.name, existing.source.lineno)
+
         if isinstance(value, UnBinding):
             try:
                 del self.scope[value.name]

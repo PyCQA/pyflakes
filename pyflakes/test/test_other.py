@@ -26,6 +26,35 @@ class Test(harness.Test):
         f()
         ''', m.UndefinedName)
 
+    def test_redefinedInListComp(self):
+        """
+        Test that shadowing a variable in a list comprehension raises
+        a warning.
+        """
+        self.flakes('''
+        a = 1
+        [1 for a, b in [(1, 2)]]
+        ''', m.RedefinedInListComp)
+        self.flakes('''
+        class A:
+            a = 1
+            [1 for a, b in [(1, 2)]]
+        ''', m.RedefinedInListComp)
+        self.flakes('''
+        def f():
+            a = 1
+            [1 for a, b in [(1, 2)]]
+        ''', m.RedefinedInListComp)
+        self.flakes('''
+        [1 for a, b in [(1, 2)]]
+        [1 for a, b in [(1, 2)]]
+        ''')
+        self.flakes('''
+        for a, b in [(1, 2)]:
+            pass
+        [1 for a, b in [(1, 2)]]
+        ''')
+
     def test_redefinedFunction(self):
         """
         Test that shadowing a function definition with another one raises a
