@@ -2,20 +2,21 @@
 # (c) 2005-2010 Divmod, Inc.
 # See LICENSE file for details
 
-import __builtin__
 import os.path
-import _ast
+try:
+    import builtins
+    PY2 = False
+except ImportError:
+    import __builtin__ as builtins
+    PY2 = True
 
-from pyflakes import messages
-
-
-# utility function to iterate over an AST node's children, adapted
-# from Python 2.6's standard ast module
 try:
     import ast
     iter_child_nodes = ast.iter_child_nodes
-except (ImportError, AttributeError):
-    def iter_child_nodes(node, astcls=_ast.AST):
+except (ImportError, AttributeError):   # Python 2.5
+    import _ast as ast
+
+    def iter_child_nodes(node, astcls=ast.AST):
         """
         Yield all direct child nodes of *node*, that is, all fields that are nodes
         and all items of fields that are lists of nodes.
@@ -27,6 +28,8 @@ except (ImportError, AttributeError):
             elif isinstance(field, list):
                 for item in field:
                     yield item
+
+from pyflakes import messages
 
 
 class Binding(object):
@@ -46,10 +49,8 @@ class Binding(object):
         self.source = source
         self.used = False
 
-
     def __str__(self):
         return self.name
-
 
     def __repr__(self):
         return '<%s object %r from line %r at 0x%x>' % (self.__class__.__name__,
@@ -58,10 +59,8 @@ class Binding(object):
                                                         id(self))
 
 
-
 class UnBinding(Binding):
     '''Created by the 'del' operator.'''
-
 
 
 class Importation(Binding):
@@ -78,7 +77,6 @@ class Importation(Binding):
         super(Importation, self).__init__(name, source)
 
 
-
 class Argument(Binding):
     """
     Represents binding a name as an argument.
@@ -87,7 +85,7 @@ class Argument(Binding):
 
 class Definition(Binding):
     """
-    A binding that defines a function or class.
+    A binding that defines a function or a class.
     """
 
 
@@ -101,15 +99,12 @@ class Assignment(Binding):
     """
 
 
-
 class FunctionDefinition(Definition):
     pass
 
 
-
 class ClassDefinition(Definition):
     pass
-
 
 
 class ExportBinding(Binding):
@@ -131,30 +126,25 @@ class ExportBinding(Binding):
         Return a list of the names referenced by this binding.
         """
         names = []
-        if isinstance(self.source, _ast.List):
+        if isinstance(self.source, ast.List):
             for node in self.source.elts:
-                if isinstance(node, _ast.Str):
+                if isinstance(node, ast.Str):
                     names.append(node.s)
         return names
-
 
 
 class Scope(dict):
     importStarred = False       # set to True when import * is found
 
-
     def __repr__(self):
         return '<%s at 0x%x %s>' % (self.__class__.__name__, id(self), dict.__repr__(self))
-
 
     def __init__(self):
         super(Scope, self).__init__()
 
 
-
 class ClassScope(Scope):
     pass
-
 
 
 class FunctionScope(Scope):
@@ -168,15 +158,21 @@ class FunctionScope(Scope):
         self.globals = {}
 
 
-
 class ModuleScope(Scope):
     pass
 
 
-# Globally defined names which are not attributes of the __builtin__ module, or
+# Globally defined names which are not attributes of the builtins module, or
 # are only present on some platforms.
 _MAGIC_GLOBALS = ['__file__', '__builtins__', 'WindowsError']
 
+
+def getNodeName(node):
+    # Returns node.id, or node.name, or None
+    if hasattr(node, 'id'):     # One of the many nodes with an id
+        return node.id
+    if hasattr(node, 'name'):   # a ExceptHandler node
+        return node.name
 
 
 class Checker(object):
@@ -204,18 +200,17 @@ class Checker(object):
         self.scopeStack = [ModuleScope()]
         self.futuresAllowed = True
         self.handleChildren(tree)
-        self._runDeferred(self._deferredFunctions)
+        self.runDeferred(self._deferredFunctions)
         # Set _deferredFunctions to None so that deferFunction will fail
         # noisily if called after we've run through the deferred functions.
         self._deferredFunctions = None
-        self._runDeferred(self._deferredAssignments)
+        self.runDeferred(self._deferredAssignments)
         # Set _deferredAssignments to None so that deferAssignment will fail
         # noisly if called after we've run through the deferred assignments.
         self._deferredAssignments = None
         del self.scopeStack[1:]
         self.popScope()
-        self.check_dead_scopes()
-
+        self.checkDeadScopes()
 
     def deferFunction(self, callable):
         '''
@@ -228,7 +223,6 @@ class Checker(object):
         '''
         self._deferredFunctions.append((callable, self.scopeStack[:]))
 
-
     def deferAssignment(self, callable):
         """
         Schedule an assignment handler to be called just after deferred
@@ -236,8 +230,7 @@ class Checker(object):
         """
         self._deferredAssignments.append((callable, self.scopeStack[:]))
 
-
-    def _runDeferred(self, deferred):
+    def runDeferred(self, deferred):
         """
         Run the callables in C{deferred} using their associated scope stack.
         """
@@ -245,16 +238,14 @@ class Checker(object):
             self.scopeStack = scope
             handler()
 
-
+    @property
     def scope(self):
         return self.scopeStack[-1]
-    scope = property(scope)
 
     def popScope(self):
         self.dead_scopes.append(self.scopeStack.pop())
 
-
-    def check_dead_scopes(self):
+    def checkDeadScopes(self):
         """
         Look at scopes which have been fully examined and report names in them
         which were imported but unused.
@@ -267,22 +258,17 @@ class Checker(object):
                     # Look for possible mistakes in the export list
                     undefined = set(all) - set(scope)
                     for name in undefined:
-                        self.report(
-                            messages.UndefinedExport,
-                            scope['__all__'].source.lineno,
-                            name)
+                        self.report(messages.UndefinedExport,
+                                    scope['__all__'].source.lineno, name)
             else:
                 all = []
 
             # Look for imported names that aren't used.
-            for importation in scope.itervalues():
+            for importation in scope.values():
                 if isinstance(importation, Importation):
                     if not importation.used and importation.name not in all:
-                        self.report(
-                            messages.UnusedImport,
-                            importation.source.lineno,
-                            importation.name)
-
+                        self.report(messages.UnusedImport,
+                                    importation.source.lineno, importation.name)
 
     def pushFunctionScope(self):
         self.scopeStack.append(FunctionScope())
@@ -293,64 +279,11 @@ class Checker(object):
     def report(self, messageClass, *args, **kwargs):
         self.messages.append(messageClass(self.filename, *args, **kwargs))
 
-    def handleChildren(self, tree):
-        for node in iter_child_nodes(tree):
-            self.handleNode(node, tree)
-
-    def isDocstring(self, node):
-        """
-        Determine if the given node is a docstring, as long as it is at the
-        correct place in the node tree.
-        """
-        return isinstance(node, _ast.Str) or \
-               (isinstance(node, _ast.Expr) and
-                isinstance(node.value, _ast.Str))
-
-    def handleNode(self, node, parent):
-        node.parent = parent
-        if self.traceTree:
-            print '  ' * self.nodeDepth + node.__class__.__name__
-        self.nodeDepth += 1
-        if self.futuresAllowed and not \
-               (isinstance(node, _ast.ImportFrom) or self.isDocstring(node)):
-            self.futuresAllowed = False
-        nodeType = node.__class__.__name__.upper()
-        try:
-            handler = getattr(self, nodeType)
-            handler(node)
-        finally:
-            self.nodeDepth -= 1
-        if self.traceTree:
-            print '  ' * self.nodeDepth + 'end ' + node.__class__.__name__
-
-    def ignore(self, node):
-        pass
-
-    # "stmt" type nodes
-    RETURN = DELETE = PRINT = WHILE = IF = WITH = RAISE = TRYEXCEPT = \
-        TRYFINALLY = ASSERT = EXEC = EXPR = handleChildren
-
-    CONTINUE = BREAK = PASS = ignore
-
-    # "expr" type nodes
-    BOOLOP = BINOP = UNARYOP = IFEXP = DICT = SET = YIELD = COMPARE = \
-    CALL = REPR = ATTRIBUTE = SUBSCRIPT = LIST = TUPLE = handleChildren
-
-    NUM = STR = ELLIPSIS = ignore
-
-    # "slice" type nodes
-    SLICE = EXTSLICE = INDEX = handleChildren
-
-    # expression contexts are node instances too, though being constants
-    LOAD = STORE = DEL = AUGLOAD = AUGSTORE = PARAM = ignore
-
-    # same for operators
-    AND = OR = ADD = SUB = MULT = DIV = MOD = POW = LSHIFT = RSHIFT = \
-    BITOR = BITXOR = BITAND = FLOORDIV = INVERT = NOT = UADD = USUB = \
-    EQ = NOTEQ = LT = LTE = GT = GTE = IS = ISNOT = IN = NOTIN = ignore
-
-    # additional node types
-    COMPREHENSION = EXCEPTHANDLER = KEYWORD = handleChildren
+    def hasParent(self, node, kind):
+        while hasattr(node, 'parent'):
+            node = node.parent
+            if isinstance(node, kind):
+                return True
 
     def addBinding(self, lineno, value, reportRedef=True):
         '''Called when a binding is altered.
@@ -361,6 +294,7 @@ class Checker(object):
         - if `reportRedef` is True (default), rebinding while unused will be
           reported.
         '''
+        redefinedWhileUnused = False
         if not isinstance(self.scope, ClassScope):
             for scope in self.scopeStack[::-1]:
                 existing = scope.get(value.name)
@@ -368,11 +302,17 @@ class Checker(object):
                         and not existing.used
                         and (not isinstance(value, Importation) or value.fullName == existing.fullName)
                         and reportRedef):
-
+                    redefinedWhileUnused = True
                     self.report(messages.RedefinedWhileUnused,
-                                lineno, value.name, scope[value.name].source.lineno)
+                                lineno, value.name, existing.source.lineno)
 
         existing = self.scope.get(value.name)
+        if not redefinedWhileUnused and self.hasParent(value.source, ast.ListComp):
+            if (existing and reportRedef
+                    and not self.hasParent(existing.source, (ast.For, ast.ListComp))):
+                self.report(messages.RedefinedInListComp,
+                            lineno, value.name, existing.source.lineno)
+
         if isinstance(value, UnBinding):
             try:
                 del self.scope[value.name]
@@ -384,12 +324,150 @@ class Checker(object):
         else:
             self.scope[value.name] = value
 
+    def handleNodeLoad(self, node):
+        name = getNodeName(node)
+        if not name:
+            return
+        # try local scope
+        importStarred = self.scope.importStarred
+        try:
+            self.scope[name].used = (self.scope, node.lineno)
+        except KeyError:
+            pass
+        else:
+            return
+
+        # try enclosing function scopes
+        for scope in self.scopeStack[-2:0:-1]:
+            importStarred = importStarred or scope.importStarred
+            if not isinstance(scope, FunctionScope):
+                continue
+            try:
+                scope[name].used = (self.scope, node.lineno)
+            except KeyError:
+                pass
+            else:
+                return
+
+        # try global scope
+        importStarred = importStarred or self.scopeStack[0].importStarred
+        try:
+            self.scopeStack[0][name].used = (self.scope, node.lineno)
+        except KeyError:
+            if ((not hasattr(builtins, name)) and name not in _MAGIC_GLOBALS and not importStarred):
+                if (os.path.basename(self.filename) == '__init__.py' and name == '__path__'):
+                    # the special name __path__ is valid only in packages
+                    pass
+                else:
+                    self.report(messages.UndefinedName, node.lineno, name)
+
+    def handleNodeStore(self, node):
+        name = getNodeName(node)
+        if not name:
+            return
+        # if the name hasn't already been defined in the current scope
+        if isinstance(self.scope, FunctionScope) and name not in self.scope:
+            # for each function or module scope above us
+            for scope in self.scopeStack[:-1]:
+                if not isinstance(scope, (FunctionScope, ModuleScope)):
+                    continue
+                # if the name was defined in that scope, and the name has
+                # been accessed already in the current scope, and hasn't
+                # been declared global
+                if (name in scope and scope[name].used and scope[name].used[0] is self.scope
+                        and name not in self.scope.globals):
+                    # then it's probably a mistake
+                    self.report(messages.UndefinedLocal,
+                                scope[name].used[1], name, scope[name].source.lineno)
+                    break
+
+        parent = getattr(node, 'parent', None)
+        if isinstance(parent, (ast.For, ast.comprehension, ast.Tuple, ast.List)):
+            binding = Binding(name, node)
+        elif parent is not None and name == '__all__' and isinstance(self.scope, ModuleScope):
+            binding = ExportBinding(name, parent.value)
+        else:
+            binding = Assignment(name, node)
+        if name in self.scope:
+            binding.used = self.scope[name].used
+        self.addBinding(node.lineno, binding)
+
+    def handleNodeDelete(self, node):
+        name = getNodeName(node)
+        if not name:
+            return
+        if isinstance(self.scope, FunctionScope) and name in self.scope.globals:
+            del self.scope.globals[name]
+        else:
+            self.addBinding(node.lineno, UnBinding(name, node))
+
+    def handleChildren(self, tree):
+        for node in iter_child_nodes(tree):
+            self.handleNode(node, tree)
+
+    def isDocstring(self, node):
+        """
+        Determine if the given node is a docstring, as long as it is at the
+        correct place in the node tree.
+        """
+        return isinstance(node, ast.Str) or (isinstance(node, ast.Expr) and
+                                             isinstance(node.value, ast.Str))
+
+    def handleNode(self, node, parent):
+        node.parent = parent
+        if self.traceTree:
+            print('  ' * self.nodeDepth + node.__class__.__name__)
+        self.nodeDepth += 1
+        if self.futuresAllowed and not (isinstance(node, ast.ImportFrom) or
+                                        self.isDocstring(node)):
+            self.futuresAllowed = False
+        nodeType = node.__class__.__name__.upper()
+        try:
+            handler = getattr(self, nodeType)
+            handler(node)
+        finally:
+            self.nodeDepth -= 1
+        if self.traceTree:
+            print('  ' * self.nodeDepth + 'end ' + node.__class__.__name__)
+
+    def ignore(self, node):
+        pass
+
+    # "stmt" type nodes
+    RETURN = DELETE = PRINT = WHILE = IF = WITH = WITHITEM = RAISE = \
+        TRYEXCEPT = TRYFINALLY = TRY = ASSERT = EXEC = EXPR = handleChildren
+
+    CONTINUE = BREAK = PASS = ignore
+
+    # "expr" type nodes
+    BOOLOP = BINOP = UNARYOP = IFEXP = DICT = SET = YIELD = YIELDFROM = \
+        COMPARE = CALL = REPR = ATTRIBUTE = SUBSCRIPT = LIST = TUPLE = \
+        STARRED = handleChildren
+
+    NUM = STR = BYTES = ELLIPSIS = ignore
+
+    # "slice" type nodes
+    SLICE = EXTSLICE = INDEX = handleChildren
+
+    # expression contexts are node instances too, though being constants
+    LOAD = STORE = DEL = AUGLOAD = AUGSTORE = PARAM = ignore
+
+    # same for operators
+    AND = OR = ADD = SUB = MULT = DIV = MOD = POW = LSHIFT = RSHIFT = \
+        BITOR = BITXOR = BITAND = FLOORDIV = INVERT = NOT = UADD = USUB = \
+        EQ = NOTEQ = LT = LTE = GT = GTE = IS = ISNOT = IN = NOTIN = ignore
+
+    # additional node types
+    COMPREHENSION = KEYWORD = handleChildren
+
     def GLOBAL(self, node):
         """
         Keep track of globals declarations.
         """
         if isinstance(self.scope, FunctionScope):
             self.scope.globals.update(dict.fromkeys(node.names))
+
+    NONLOCAL = GLOBAL
 
     def LISTCOMP(self, node):
         # handle generators before element
@@ -399,7 +477,6 @@ class Checker(object):
 
     GENERATOREXP = SETCOMP = LISTCOMP
 
-    # dictionary comprehensions; introduced in Python 2.7
     def DICTCOMP(self, node):
         for gen in node.generators:
             self.handleNode(gen, node)
@@ -411,10 +488,11 @@ class Checker(object):
         Process bindings for loop variables.
         """
         vars = []
+
         def collectLoopVars(n):
-            if isinstance(n, _ast.Name):
+            if isinstance(n, ast.Name):
                 vars.append(n.id)
-            elif isinstance(n, _ast.expr_context):
+            elif isinstance(n, ast.expr_context):
                 return
             else:
                 for c in iter_child_nodes(n):
@@ -435,88 +513,16 @@ class Checker(object):
         Handle occurrence of Name (which can be a load/store/delete access.)
         """
         # Locate the name in locals / function / globals scopes.
-        if isinstance(node.ctx, (_ast.Load, _ast.AugLoad)):
-            # try local scope
-            importStarred = self.scope.importStarred
-            try:
-                self.scope[node.id].used = (self.scope, node.lineno)
-            except KeyError:
-                pass
-            else:
-                return
-
-            # try enclosing function scopes
-
-            for scope in self.scopeStack[-2:0:-1]:
-                importStarred = importStarred or scope.importStarred
-                if not isinstance(scope, FunctionScope):
-                    continue
-                try:
-                    scope[node.id].used = (self.scope, node.lineno)
-                except KeyError:
-                    pass
-                else:
-                    return
-
-            # try global scope
-
-            importStarred = importStarred or self.scopeStack[0].importStarred
-            try:
-                self.scopeStack[0][node.id].used = (self.scope, node.lineno)
-            except KeyError:
-                if ((not hasattr(__builtin__, node.id))
-                        and node.id not in _MAGIC_GLOBALS
-                        and not importStarred):
-                    if (os.path.basename(self.filename) == '__init__.py' and
-                        node.id == '__path__'):
-                        # the special name __path__ is valid only in packages
-                        pass
-                    else:
-                        self.report(messages.UndefinedName, node.lineno, node.id)
-        elif isinstance(node.ctx, (_ast.Store, _ast.AugStore)):
-            # if the name hasn't already been defined in the current scope
-            if isinstance(self.scope, FunctionScope) and node.id not in self.scope:
-                # for each function or module scope above us
-                for scope in self.scopeStack[:-1]:
-                    if not isinstance(scope, (FunctionScope, ModuleScope)):
-                        continue
-                    # if the name was defined in that scope, and the name has
-                    # been accessed already in the current scope, and hasn't
-                    # been declared global
-                    if (node.id in scope
-                            and scope[node.id].used
-                            and scope[node.id].used[0] is self.scope
-                            and node.id not in self.scope.globals):
-                        # then it's probably a mistake
-                        self.report(messages.UndefinedLocal,
-                                    scope[node.id].used[1],
-                                    node.id,
-                                    scope[node.id].source.lineno)
-                        break
-
-            if isinstance(node.parent,
-                          (_ast.For, _ast.comprehension, _ast.Tuple, _ast.List)):
-                binding = Binding(node.id, node)
-            elif (node.id == '__all__' and
-                  isinstance(self.scope, ModuleScope)):
-                binding = ExportBinding(node.id, node.parent.value)
-            else:
-                binding = Assignment(node.id, node)
-            if node.id in self.scope:
-                binding.used = self.scope[node.id].used
-            self.addBinding(node.lineno, binding)
-        elif isinstance(node.ctx, _ast.Del):
-            if isinstance(self.scope, FunctionScope) and \
-                   node.id in self.scope.globals:
-                del self.scope.globals[node.id]
-            else:
-                self.addBinding(node.lineno, UnBinding(node.id, node))
+        if isinstance(node.ctx, (ast.Load, ast.AugLoad)):
+            self.handleNodeLoad(node)
+        elif isinstance(node.ctx, (ast.Store, ast.AugStore)):
+            self.handleNodeStore(node)
+        elif isinstance(node.ctx, ast.Del):
+            self.handleNodeDelete(node)
         else:
             # must be a Param context -- this only happens for names in function
             # arguments, but these aren't dispatched through here
-            raise RuntimeError(
-                "Got impossible expression context: %r" % (node.ctx,))
-
+            raise RuntimeError("Got impossible expression context: %r" % (node.ctx,))
 
     def FUNCTIONDEF(self, node):
         # the decorators attribute is called decorator_list as of Python 2.6
@@ -536,18 +542,28 @@ class Checker(object):
         def runFunction():
             args = []
 
-            def addArgs(arglist):
-                for arg in arglist:
-                    if isinstance(arg, _ast.Tuple):
-                        addArgs(arg.elts)
-                    else:
-                        if arg.id in args:
+            if PY2:
+                def addArgs(arglist):
+                    for arg in arglist:
+                        if isinstance(arg, ast.Tuple):
+                            addArgs(arg.elts)
+                        else:
+                            if arg.id in args:
+                                self.report(messages.DuplicateArgument,
+                                            node.lineno, arg.id)
+                            args.append(arg.id)
+            else:
+                def addArgs(arglist):
+                    for arg in arglist:
+                        if arg.arg in args:
                             self.report(messages.DuplicateArgument,
-                                        node.lineno, arg.id)
-                        args.append(arg.id)
+                                        node.lineno, arg.arg)
+                        args.append(arg.arg)
 
             self.pushFunctionScope()
             addArgs(node.args.args)
+            if not PY2:
+                addArgs(node.args.kwonlyargs)
             # vararg/kwarg identifiers are not Name nodes
             if node.args.vararg:
                 args.append(node.args.vararg)
@@ -562,20 +578,20 @@ class Checker(object):
             else:
                 # case for Lambdas
                 self.handleNode(node.body, node)
+
             def checkUnusedAssignments():
                 """
                 Check to see if any assignments have not been used.
                 """
-                for name, binding in self.scope.iteritems():
-                    if (not binding.used and not name in self.scope.globals
-                        and isinstance(binding, Assignment)):
+                for name, binding in self.scope.items():
+                    if (not binding.used and name not in self.scope.globals
+                            and isinstance(binding, Assignment)):
                         self.report(messages.UnusedVariable,
                                     binding.source.lineno, name)
             self.deferAssignment(checkUnusedAssignments)
             self.popScope()
 
         self.deferFunction(runFunction)
-
 
     def CLASSDEF(self, node):
         """
@@ -600,13 +616,9 @@ class Checker(object):
             self.handleNode(target, node)
 
     def AUGASSIGN(self, node):
-        # AugAssign is awkward: must set the context explicitly and visit twice,
-        # once with AugLoad context, once with AugStore context
-        node.target.ctx = _ast.AugLoad()
-        self.handleNode(node.target, node)
+        self.handleNodeLoad(node.target)
         self.handleNode(node.value, node)
-        node.target.ctx = _ast.AugStore()
-        self.handleNode(node.target, node)
+        self.handleNodeStore(node.target)
 
     def IMPORT(self, node):
         for alias in node.names:
@@ -617,8 +629,8 @@ class Checker(object):
     def IMPORTFROM(self, node):
         if node.module == '__future__':
             if not self.futuresAllowed:
-                self.report(messages.LateFutureImport, node.lineno,
-                            [n.name for n in node.names])
+                self.report(messages.LateFutureImport,
+                            node.lineno, [n.name for n in node.names])
         else:
             self.futuresAllowed = False
 
@@ -632,3 +644,10 @@ class Checker(object):
             if node.module == '__future__':
                 importation.used = (self.scope, node.lineno)
             self.addBinding(node.lineno, importation)
+
+    def EXCEPTHANDLER(self, node):
+        # in addition to handling children, we must handle the name of the exception, which is not
+        # a Name node, but a simple string.
+        if node.name:
+            self.handleNodeStore(node)
+        self.handleChildren(node)

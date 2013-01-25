@@ -2,6 +2,10 @@
 # See LICENSE file for details
 
 import sys
+try:
+    u = unicode
+except NameError:
+    u = str
 
 
 class Reporter(object):
@@ -23,7 +27,6 @@ class Reporter(object):
         self._stdout = warningStream
         self._stderr = errorStream
 
-
     def unexpectedError(self, filename, msg):
         """
         An unexpected error occurred trying to process C{filename}.
@@ -33,8 +36,7 @@ class Reporter(object):
         @param msg: A message explaining the problem.
         @ptype msg: C{unicode}
         """
-        self._stderr.write(u"%s: %s\n" % (filename, msg))
-
+        self._stderr.write(u("%s: %s\n") % (filename, msg))
 
     def syntaxError(self, filename, msg, lineno, offset, text):
         """
@@ -54,12 +56,11 @@ class Reporter(object):
         line = text.splitlines()[-1]
         if offset is not None:
             offset = offset - (len(text) - len(line))
-        self._stderr.write(u'%s:%d: %s\n' % (filename, lineno, msg))
-        self._stderr.write(line)
-        self._stderr.write(u'\n')
+        self._stderr.write(u('%s:%d: %s\n') % (filename, lineno, msg))
+        self._stderr.write(u(line))
+        self._stderr.write(u('\n'))
         if offset is not None:
-            self._stderr.write(u" " * (offset + 1) + u"^\n")
-
+            self._stderr.write(u(" " * (offset + 1) + "^\n"))
 
     def flake(self, message):
         """
@@ -67,9 +68,8 @@ class Reporter(object):
 
         @param: A L{pyflakes.messages.Message}.
         """
-        self._stdout.write(unicode(message))
-        self._stdout.write(u'\n')
-
+        self._stdout.write(u(message))
+        self._stdout.write(u('\n'))
 
 
 def _makeDefaultReporter():

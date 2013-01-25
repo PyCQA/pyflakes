@@ -16,8 +16,8 @@ class Test(harness.Test):
         self.flakes('from moo import fu as FU, bar as FU', m.RedefinedWhileUnused, m.UnusedImport)
 
     def test_usedImport(self):
-        self.flakes('import fu; print fu')
-        self.flakes('from baz import fu; print fu')
+        self.flakes('import fu; print(fu)')
+        self.flakes('from baz import fu; print(fu)')
 
     def test_redefinedWhileUnused(self):
         self.flakes('import fu; fu = 3', m.RedefinedWhileUnused)
@@ -74,28 +74,28 @@ class Test(harness.Test):
         import fu
         class bar:
             fu = 1
-        print fu
+        print(fu)
         ''')
 
     def test_usedInFunction(self):
         self.flakes('''
         import fu
         def fun():
-            print fu
+            print(fu)
         ''')
 
     def test_shadowedByParameter(self):
         self.flakes('''
         import fu
         def fun(fu):
-            print fu
+            print(fu)
         ''', m.UnusedImport)
 
         self.flakes('''
         import fu
         def fun(fu):
-            print fu
-        print fu
+            print(fu)
+        print(fu)
         ''')
 
     def test_newAssignment(self):
@@ -106,12 +106,12 @@ class Test(harness.Test):
         self.flakes('import fu; "bar".fu.baz', m.UnusedImport)
 
     def test_usedInSlice(self):
-        self.flakes('import fu; print fu.bar[1:]')
+        self.flakes('import fu; print(fu.bar[1:])')
 
     def test_usedInIfBody(self):
         self.flakes('''
         import fu
-        if True: print fu
+        if True: print(fu)
         ''')
 
     def test_usedInIfConditional(self):
@@ -131,7 +131,7 @@ class Test(harness.Test):
         self.flakes('''
         import fu
         if False: pass
-        else: print fu
+        else: print(fu)
         ''')
 
     def test_usedInCall(self):
@@ -156,14 +156,14 @@ class Test(harness.Test):
         import fu
         def bleh():
             pass
-        print fu
+        print(fu)
         ''')
 
     def test_usedInFor(self):
         self.flakes('''
         import fu
         for bar in range(9):
-            print fu
+            print(fu)
         ''')
 
     def test_usedInForElse(self):
@@ -172,7 +172,7 @@ class Test(harness.Test):
         for bar in range(10):
             pass
         else:
-            print fu
+            print(fu)
         ''')
 
     def test_redefinedByFor(self):
@@ -262,11 +262,12 @@ class Test(harness.Test):
         ''')
 
     def test_redefinedByExcept(self):
+        as_exc = ', ' if version_info < (2, 6) else ' as '
         self.flakes('''
         import fu
         try: pass
-        except Exception, fu: pass
-        ''', m.RedefinedWhileUnused)
+        except Exception%sfu: pass
+        ''' % as_exc, m.RedefinedWhileUnused)
 
     def test_usedInRaise(self):
         self.flakes('''
@@ -341,11 +342,16 @@ class Test(harness.Test):
         def f(): global fu
         ''', m.UnusedImport)
 
+    @skipIf(version_info >= (3,), 'deprecated syntax')
     def test_usedInBackquote(self):
         self.flakes('import fu; `fu`')
 
     def test_usedInExec(self):
-        self.flakes('import fu; exec "print 1" in fu.bar')
+        if version_info < (3,):
+            exec_stmt = 'exec "print 1" in fu.bar'
+        else:
+            exec_stmt = 'exec("print(1)", fu.bar)'
+        self.flakes('import fu; %s' % exec_stmt)
 
     def test_usedInLambda(self):
         self.flakes('import fu; lambda: fu')
@@ -385,7 +391,7 @@ class Test(harness.Test):
             import fu
             class b:
                 def c(self):
-                    print fu
+                    print(fu)
         ''')
 
     def test_importStar(self):
@@ -454,6 +460,7 @@ class Test(harness.Test):
             import fu
         except ImportError:
             import bar as fu
+        fu
         ''')
 
     def test_nonGlobalDoesNotRedefine(self):
@@ -479,6 +486,9 @@ class Test(harness.Test):
             fu
         fu
         ''', m.RedefinedWhileUnused)
+
+    def test_ignoreNonImportRedefinitions(self):
+        self.flakes('a = 1; a = 2')
 
     @skip("todo")
     def test_importingForImportError(self):

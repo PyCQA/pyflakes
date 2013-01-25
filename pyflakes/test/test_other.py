@@ -26,6 +26,35 @@ class Test(harness.Test):
         f()
         ''', m.UndefinedName)
 
+    def test_redefinedInListComp(self):
+        """
+        Test that shadowing a variable in a list comprehension raises
+        a warning.
+        """
+        self.flakes('''
+        a = 1
+        [1 for a, b in [(1, 2)]]
+        ''', m.RedefinedInListComp)
+        self.flakes('''
+        class A:
+            a = 1
+            [1 for a, b in [(1, 2)]]
+        ''', m.RedefinedInListComp)
+        self.flakes('''
+        def f():
+            a = 1
+            [1 for a, b in [(1, 2)]]
+        ''', m.RedefinedInListComp)
+        self.flakes('''
+        [1 for a, b in [(1, 2)]]
+        [1 for a, b in [(1, 2)]]
+        ''')
+        self.flakes('''
+        for a, b in [(1, 2)]:
+            pass
+        [1 for a, b in [(1, 2)]]
+        ''')
+
     def test_redefinedFunction(self):
         """
         Test that shadowing a function definition with another one raises a
@@ -69,6 +98,21 @@ class Test(harness.Test):
             def a(): pass
             a = classmethod(a)
         ''')
+
+    @skipIf(version_info < (2, 6), "Python >= 2.6 only")
+    def test_modern_property(self):
+        self.flakes("""
+        class A:
+            @property
+            def t(self):
+                pass
+            @t.setter
+            def t(self, value):
+                pass
+            @t.deleter
+            def t(self):
+                pass
+        """)
 
     def test_unaryPlus(self):
         '''Don't die on unary +'''
@@ -263,6 +307,19 @@ class Test(harness.Test):
         [1, 2][x,:]
         ''')
 
+    def test_const_augassign(self):
+        """Augmented assignment of a constant is supported. We don't care about const refs"""
+        self.flakes('''
+        foo = 0
+        foo += 1
+        ''')
+
+    def test_attr_augassign(self):
+        """Augmented assignment of attributes is supported. We don't care about attr refs"""
+        self.flakes('''
+        foo = None
+        foo.bar += foo.baz
+        ''')
 
 
 class TestUnusedAssignment(harness.Test):
@@ -291,6 +348,20 @@ class TestUnusedAssignment(harness.Test):
         def a():
             global b
             b = 1
+        ''')
+
+
+    @skipIf(version_info < (3,), 'new in Python 3')
+    def test_assignToNonlocal(self):
+        """
+        Assigning to a nonlocal and then not using that binding is perfectly
+        acceptable. Do not mistake it for an unused local variable.
+        """
+        self.flakes('''
+        b = b'0'
+        def a():
+            nonlocal b
+            b = b'1'
         ''')
 
 
@@ -637,3 +708,41 @@ class TestUnusedAssignment(harness.Test):
         a = {1, 2, 3}
         b = {x for x in range(10)}
         ''')
+
+    def test_exceptionUsedInExcept(self):
+        as_exc = ', ' if version_info < (2, 6) else ' as '
+        self.flakes('''
+        try: pass
+        except Exception%se: e
+        ''' % as_exc)
+
+    def test_exceptWithoutNameInFunction(self):
+        """
+        Don't issue false warning when an unnamed exception is used. Previously, there would be
+        a false warning, but only when the try..except was in a function
+        """
+        self.flakes('''
+        def foo():
+            try: pass
+            except Exception: pass
+        ''')
+
+    def test_augassign_imported_function_call(self):
+        """Consider a function that is called on the right part of an augassign operation to be
+        used.
+        """
+        self.flakes('''
+        from foo import bar
+        baz = 0
+        baz += bar()
+        ''')
+
+    @skipIf(version_info < (3, 3), 'new in Python 3.3')
+    def test_yieldFromUndefined(self):
+        """
+        Test C{yield from} statement
+        """
+        self.flakes('''
+        def bar():
+            yield from foo()
+        ''', m.UndefinedName)

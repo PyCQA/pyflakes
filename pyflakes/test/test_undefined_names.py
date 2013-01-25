@@ -1,7 +1,8 @@
 
 from _ast import PyCF_ONLY_AST
+from sys import version_info
 
-from unittest2 import skip, TestCase
+from unittest2 import skip, skipIf, TestCase
 
 from pyflakes import messages as m, checker
 from pyflakes.test import harness
@@ -80,6 +81,7 @@ class Test(harness.Test):
         bar
         ''', m.ImportStarUsed, m.UndefinedName)
 
+    @skipIf(version_info >= (3,), 'obsolete syntax')
     def test_unpackedParameter(self):
         '''Unpacked function parameters create bindings'''
         self.flakes('''
@@ -102,7 +104,7 @@ class Test(harness.Test):
         self.flakes('''
         global x
         def foo():
-            print x
+            print(x)
         ''', m.UndefinedName)
 
     def test_del(self):
@@ -176,8 +178,8 @@ class Test(harness.Test):
                 def h(self):
                     a = x
                     x = None
-                    print x, a
-            print x
+                    print(x, a)
+            print(x)
         ''', m.UndefinedLocal)
 
 
@@ -246,7 +248,31 @@ class Test(harness.Test):
         '''star and double-star arg names are defined'''
         self.flakes('''
         def f(a, *b, **c):
-            print a, b, c
+            print(a, b, c)
+        ''')
+
+    @skipIf(version_info < (3,), 'new in Python 3')
+    def test_definedAsStarUnpack(self):
+        '''star names in unpack are defined'''
+        self.flakes('''
+        a, *b = range(10)
+        print(a, b)
+        ''')
+        self.flakes('''
+        *a, b = range(10)
+        print(a, b)
+        ''')
+        self.flakes('''
+        a, *b, c = range(10)
+        print(a, b, c)
+        ''')
+
+    @skipIf(version_info < (3,), 'new in Python 3')
+    def test_keywordOnlyArgs(self):
+        '''kwonly arg names are defined'''
+        self.flakes('''
+        def f(*, a, b=None):
+            print(a, b)
         ''')
 
     def test_definedInGenExp(self):
@@ -254,7 +280,8 @@ class Test(harness.Test):
         Using the loop variable of a generator expression results in no
         warnings.
         """
-        self.flakes('(a for a in xrange(10) if a)')
+        self.flakes('(a for a in %srange(10) if a)' %
+                    ('x' if version_info < (3,) else ''))
 
 
 
