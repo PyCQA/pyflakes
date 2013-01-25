@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # Copyright 2005-2011 Divmod, Inc.  See LICENSE file for details
 
 from distutils.core import setup
