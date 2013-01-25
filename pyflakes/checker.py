@@ -28,6 +28,8 @@ except (ImportError, AttributeError):   # Python 2.5
             elif isinstance(field, list):
                 for item in field:
                     yield item
+# Python >= 3.3 uses ast.Try instead of ast.TryExcept
+ast_Try = getattr(ast, 'Try', None) or ast.TryExcept
 
 from pyflakes import messages
 
@@ -199,6 +201,7 @@ class Checker(object):
         self.filename = filename
         self.scopeStack = [ModuleScope()]
         self.futuresAllowed = True
+        self.root = tree
         self.handleChildren(tree)
         self.runDeferred(self._deferredFunctions)
         # Set _deferredFunctions to None so that deferFunction will fail
@@ -285,10 +288,50 @@ class Checker(object):
             if isinstance(node, kind):
                 return True
 
-    def addBinding(self, lineno, value, reportRedef=True):
+    def lowestCommonAncestor(self, lnode, rnode, stop=None):
+        if not stop:
+            stop = self.root
+        if lnode is rnode:
+            return lnode
+        if stop in (lnode, rnode):
+            return stop
+
+        if not hasattr(lnode, 'parent') or not hasattr(rnode, 'parent'):
+            return
+        if (lnode.level > rnode.level):
+            return self.lowestCommonAncestor(lnode.parent, rnode, stop)
+        if (rnode.level > lnode.level):
+            return self.lowestCommonAncestor(lnode, rnode.parent, stop)
+        return self.lowestCommonAncestor(lnode.parent, rnode.parent, stop)
+
+    def descendantOf(self, node, ancestors, stop=None):
+        for a in ancestors:
+            p = self.lowestCommonAncestor(node, a, stop)
+            if p not in (stop, None):
+                return True
+        return False
+
+    def onFork(self, parent, lnode, rnode, items):
+        return (self.descendantOf(lnode, items, parent) ^
+                self.descendantOf(rnode, items, parent))
+
+    def differentForks(self, lnode, rnode):
+        "True, if lnode and rnode are located on different forks of IF/TRY"
+        ancestor = self.lowestCommonAncestor(lnode, rnode)
+        if isinstance(ancestor, ast.If):
+            for fork in (ancestor.body, ancestor.orelse):
+                if self.onFork(ancestor, lnode, rnode, fork):
+                    return True
+        if isinstance(ancestor, ast_Try):
+            for fork in (ancestor.body, ancestor.handlers, ancestor.orelse):
+                if self.onFork(ancestor, lnode, rnode, fork):
+                    return True
+        return False
+
+    def addBinding(self, node, value, reportRedef=True):
         '''Called when a binding is altered.
 
-        - `lineno` is the line of the statement responsible for the change
+        - `node` is the statement responsible for the change
         - `value` is the optional new value, a Binding instance, associated
           with the binding; if None, the binding is deleted if it exists.
         - if `reportRedef` is True (default), rebinding while unused will be
@@ -301,26 +344,29 @@ class Checker(object):
                 if (isinstance(existing, Importation)
                         and not existing.used
                         and (not isinstance(value, Importation) or value.fullName == existing.fullName)
-                        and reportRedef):
+                        and reportRedef
+                        and not self.differentForks(node, existing.source)):
                     redefinedWhileUnused = True
                     self.report(messages.RedefinedWhileUnused,
-                                lineno, value.name, existing.source.lineno)
+                                node.lineno, value.name, existing.source.lineno)
 
         existing = self.scope.get(value.name)
         if not redefinedWhileUnused and self.hasParent(value.source, ast.ListComp):
             if (existing and reportRedef
                     and not self.hasParent(existing.source, (ast.For, ast.ListComp))):
                 self.report(messages.RedefinedInListComp,
-                            lineno, value.name, existing.source.lineno)
+                            node.lineno, value.name, existing.source.lineno)
 
         if isinstance(value, UnBinding):
             try:
                 del self.scope[value.name]
             except KeyError:
-                self.report(messages.UndefinedName, lineno, value.name)
-        elif isinstance(existing, Definition) and not existing.used:
+                self.report(messages.UndefinedName, node.lineno, value.name)
+        elif (isinstance(existing, Definition)
+              and not existing.used
+              and not self.differentForks(node, existing.source)):
             self.report(messages.RedefinedWhileUnused,
-                        lineno, value.name, existing.source.lineno)
+                        node.lineno, value.name, existing.source.lineno)
         else:
             self.scope[value.name] = value
 
@@ -390,7 +436,7 @@ class Checker(object):
             binding = Assignment(name, node)
         if name in self.scope:
             binding.used = self.scope[name].used
-        self.addBinding(node.lineno, binding)
+        self.addBinding(node, binding)
 
     def handleNodeDelete(self, node):
         name = getNodeName(node)
@@ -399,7 +445,7 @@ class Checker(object):
         if isinstance(self.scope, FunctionScope) and name in self.scope.globals:
             del self.scope.globals[name]
         else:
-            self.addBinding(node.lineno, UnBinding(name, node))
+            self.addBinding(node, UnBinding(name, node))
 
     def handleChildren(self, tree):
         for node in iter_child_nodes(tree):
@@ -422,6 +468,7 @@ class Checker(object):
                                         self.isDocstring(node)):
             self.futuresAllowed = False
         nodeType = node.__class__.__name__.upper()
+        node.level = self.nodeDepth
         try:
             handler = getattr(self, nodeType)
             handler(node)
@@ -529,7 +576,7 @@ class Checker(object):
             node.decorator_list = node.decorators
         for deco in node.decorator_list:
             self.handleNode(deco, node)
-        self.addBinding(node.lineno, FunctionDefinition(node.name, node))
+        self.addBinding(node, FunctionDefinition(node.name, node))
         self.LAMBDA(node)
 
     def LAMBDA(self, node):
@@ -567,7 +614,7 @@ class Checker(object):
             if node.args.kwarg:
                 args.append(node.args.kwarg)
             for name in args:
-                self.addBinding(node.lineno, Argument(name, node), reportRedef=False)
+                self.addBinding(node, Argument(name, node), reportRedef=False)
             if isinstance(node.body, list):
                 # case for FunctionDefs
                 for stmt in node.body:
@@ -605,7 +652,7 @@ class Checker(object):
         for stmt in node.body:
             self.handleNode(stmt, node)
         self.popScope()
-        self.addBinding(node.lineno, ClassDefinition(node.name, node))
+        self.addBinding(node, ClassDefinition(node.name, node))
 
     def ASSIGN(self, node):
         self.handleNode(node.value, node)
@@ -621,7 +668,7 @@ class Checker(object):
         for alias in node.names:
             name = alias.asname or alias.name
             importation = Importation(name, node)
-            self.addBinding(node.lineno, importation)
+            self.addBinding(node, importation)
 
     def IMPORTFROM(self, node):
         if node.module == '__future__':
@@ -640,7 +687,7 @@ class Checker(object):
             importation = Importation(name, node)
             if node.module == '__future__':
                 importation.used = (self.scope, node.lineno)
-            self.addBinding(node.lineno, importation)
+            self.addBinding(node, importation)
 
     def EXCEPTHANDLER(self, node):
         # in addition to handling children, we must handle the name of the exception, which is not

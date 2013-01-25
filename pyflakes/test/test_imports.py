@@ -25,6 +25,70 @@ class Test(harness.Test):
         self.flakes('import fu; fu, bar = 3', m.RedefinedWhileUnused)
         self.flakes('import fu; [fu, bar] = 3', m.RedefinedWhileUnused)
 
+    def test_redefinedIf(self):
+        """
+        Test that importing a module twice within an if
+        block does raise a warning.
+        """
+        self.flakes('''
+        i = 2
+        if i==1:
+            import os
+            import os
+        os.path''', m.RedefinedWhileUnused)
+
+    def test_redefinedIfElse(self):
+        """
+        Test that importing a module twice in if
+        and else blocks does not raise a warning.
+        """
+        self.flakes('''
+        i = 2
+        if i==1:
+            import os
+        else:
+            import os
+        os.path''')
+
+    def test_redefinedTry(self):
+        """
+        Test that importing a module twice in an try block
+        does raise a warning.
+        """
+        self.flakes('''
+        try:
+            import os
+            import os
+        except:
+            pass
+        os.path''', m.RedefinedWhileUnused)
+
+    def test_redefinedTryExcept(self):
+        """
+        Test that importing a module twice in an try
+        and except block does not raise a warning.
+        """
+        self.flakes('''
+        try:
+            import os
+        except:
+            import os
+        os.path''')
+
+    def test_redefinedTryNested(self):
+        """
+        Test that importing a module twice using a nested
+        try/except and if blocks does not issue a warning.
+        """
+        self.flakes('''
+        try:
+            if True:
+                if True:
+                    import os
+        except:
+            import os
+        os.path''')
+
     def test_redefinedByFunction(self):
         self.flakes('''
         import fu
@@ -453,7 +517,6 @@ class Test(harness.Test):
         self.flakes('import fu; [fu, bar] = fu')
         self.flakes('import fu; fu += fu')
 
-    @skip("todo")
     def test_tryingMultipleImports(self):
         self.flakes('''
         try:
