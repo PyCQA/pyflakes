@@ -3,7 +3,6 @@
 # See LICENSE file for details
 
 import os.path
-import _ast
 try:
     import builtins
     PY2 = False
@@ -11,16 +10,13 @@ except ImportError:
     import __builtin__ as builtins
     PY2 = True
 
-from pyflakes import messages
-
-
-# utility function to iterate over an AST node's children, adapted
-# from Python 2.6's standard ast module
 try:
     import ast
     iter_child_nodes = ast.iter_child_nodes
-except (ImportError, AttributeError):
-    def iter_child_nodes(node, astcls=_ast.AST):
+except (ImportError, AttributeError):   # Python 2.5
+    import _ast as ast
+
+    def iter_child_nodes(node, astcls=ast.AST):
         """
         Yield all direct child nodes of *node*, that is, all fields that are nodes
         and all items of fields that are lists of nodes.
@@ -32,6 +28,8 @@ except (ImportError, AttributeError):
             elif isinstance(field, list):
                 for item in field:
                     yield item
+
+from pyflakes import messages
 
 
 class Binding(object):
@@ -136,9 +134,9 @@ class ExportBinding(Binding):
         Return a list of the names referenced by this binding.
         """
         names = []
-        if isinstance(self.source, _ast.List):
+        if isinstance(self.source, ast.List):
             for node in self.source.elts:
-                if isinstance(node, _ast.Str):
+                if isinstance(node, ast.Str):
                     names.append(node.s)
         return names
 
@@ -363,7 +361,7 @@ class Checker(object):
                     break
 
         parent = getattr(node, 'parent', None)
-        if isinstance(parent, (_ast.For, _ast.comprehension, _ast.Tuple, _ast.List)):
+        if isinstance(parent, (ast.For, ast.comprehension, ast.Tuple, ast.List)):
             binding = Binding(name, node)
         elif parent is not None and name == '__all__' and isinstance(self.scope, ModuleScope):
             binding = ExportBinding(name, parent.value)
@@ -391,9 +389,9 @@ class Checker(object):
         Determine if the given node is a docstring, as long as it is at the
         correct place in the node tree.
         """
-        return isinstance(node, _ast.Str) or \
-               (isinstance(node, _ast.Expr) and
-                isinstance(node.value, _ast.Str))
+        return isinstance(node, ast.Str) or \
+               (isinstance(node, ast.Expr) and
+                isinstance(node.value, ast.Str))
 
     def handleNode(self, node, parent):
         node.parent = parent
@@ -401,7 +399,7 @@ class Checker(object):
             print('  ' * self.nodeDepth + node.__class__.__name__)
         self.nodeDepth += 1
         if self.futuresAllowed and not \
-               (isinstance(node, _ast.ImportFrom) or self.isDocstring(node)):
+               (isinstance(node, ast.ImportFrom) or self.isDocstring(node)):
             self.futuresAllowed = False
         nodeType = node.__class__.__name__.upper()
         try:
@@ -501,9 +499,9 @@ class Checker(object):
         """
         vars = []
         def collectLoopVars(n):
-            if isinstance(n, _ast.Name):
+            if isinstance(n, ast.Name):
                 vars.append(n.id)
-            elif isinstance(n, _ast.expr_context):
+            elif isinstance(n, ast.expr_context):
                 return
             else:
                 for c in iter_child_nodes(n):
@@ -524,11 +522,11 @@ class Checker(object):
         Handle occurrence of Name (which can be a load/store/delete access.)
         """
         # Locate the name in locals / function / globals scopes.
-        if isinstance(node.ctx, (_ast.Load, _ast.AugLoad)):
+        if isinstance(node.ctx, (ast.Load, ast.AugLoad)):
             self.handleNodeLoad(node)
-        elif isinstance(node.ctx, (_ast.Store, _ast.AugStore)):
+        elif isinstance(node.ctx, (ast.Store, ast.AugStore)):
             self.handleNodeStore(node)
-        elif isinstance(node.ctx, _ast.Del):
+        elif isinstance(node.ctx, ast.Del):
             self.handleNodeDelete(node)
         else:
             # must be a Param context -- this only happens for names in function
@@ -557,7 +555,7 @@ class Checker(object):
             if PY2:
                 def addArgs(arglist):
                     for arg in arglist:
-                        if isinstance(arg, _ast.Tuple):
+                        if isinstance(arg, ast.Tuple):
                             addArgs(arg.elts)
                         else:
                             if arg.id in args:
