@@ -460,6 +460,7 @@ class Test(harness.Test):
             import fu
         except ImportError:
             import bar as fu
+        fu
         ''')
 
     def test_nonGlobalDoesNotRedefine(self):
@@ -485,6 +486,9 @@ class Test(harness.Test):
             fu
         fu
         ''', m.RedefinedWhileUnused)
+
+    def test_ignoreNonImportRedefinitions(self):
+        self.flakes('a = 1; a = 2')
 
     @skip("todo")
     def test_importingForImportError(self):

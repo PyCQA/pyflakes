@@ -395,11 +395,11 @@ class Checker(object):
     CONTINUE = BREAK = PASS = ignore
 
     # "expr" type nodes
-    BOOLOP = BINOP = UNARYOP = IFEXP = DICT = SET = YIELD = \
+    BOOLOP = BINOP = UNARYOP = IFEXP = DICT = SET = YIELD = YIELDFROM = \
         COMPARE = CALL = REPR = ATTRIBUTE = SUBSCRIPT = LIST = TUPLE = \
-        handleChildren
+        STARRED = handleChildren
 
-    NUM = STR = ELLIPSIS = ignore
+    NUM = STR = BYTES = ELLIPSIS = ignore
 
     # "slice" type nodes
     SLICE = EXTSLICE = INDEX = handleChildren
@@ -453,6 +453,8 @@ class Checker(object):
         if isinstance(self.scope, FunctionScope):
             self.scope.globals.update(dict.fromkeys(node.names))
 
+    NONLOCAL = GLOBAL
+
     def LISTCOMP(self, node):
         # handle generators before element
         for gen in node.generators:
@@ -461,7 +463,6 @@ class Checker(object):
 
     GENERATOREXP = SETCOMP = LISTCOMP
 
-    # dictionary comprehensions; introduced in Python 2.7
     def DICTCOMP(self, node):
         for gen in node.generators:
             self.handleNode(gen, node)

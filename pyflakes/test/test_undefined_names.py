@@ -251,6 +251,30 @@ class Test(harness.Test):
             print(a, b, c)
         ''')
 
+    @skipIf(version_info < (3,), 'new in Python 3')
+    def test_definedAsStarUnpack(self):
+        '''star names in unpack are defined'''
+        self.flakes('''
+        a, *b = range(10)
+        print(a, b)
+        ''')
+        self.flakes('''
+        *a, b = range(10)
+        print(a, b)
+        ''')
+        self.flakes('''
+        a, *b, c = range(10)
+        print(a, b, c)
+        ''')
+
+    @skipIf(version_info < (3,), 'new in Python 3')
+    def test_keywordOnlyArgs(self):
+        '''kwonly arg names are defined'''
+        self.flakes('''
+        def f(*, a, b=None):
+            print(a, b)
+        ''')
+
     def test_definedInGenExp(self):
         """
         Using the loop variable of a generator expression results in no
