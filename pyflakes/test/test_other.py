@@ -100,7 +100,7 @@ class Test(harness.Test):
         ''')
 
     @skipIf(version_info < (2, 6), "Python >= 2.6 only")
-    def test_modern_property(self):
+    def test_modernProperty(self):
         self.flakes("""
         class A:
             @property
@@ -307,14 +307,14 @@ class Test(harness.Test):
         [1, 2][x,:]
         ''')
 
-    def test_const_augassign(self):
-        """Augmented assignment of a constant is supported. We don't care about const refs"""
+    def test_varAugmentedAssignment(self):
+        """Augmented assignment of a variable is supported. We don't care about var refs"""
         self.flakes('''
         foo = 0
         foo += 1
         ''')
 
-    def test_attr_augassign(self):
+    def test_attrAugmentedAssignment(self):
         """Augmented assignment of attributes is supported. We don't care about attr refs"""
         self.flakes('''
         foo = None
@@ -727,7 +727,7 @@ class TestUnusedAssignment(harness.Test):
             except Exception: pass
         ''')
 
-    def test_augassign_imported_function_call(self):
+    def test_augmentedAssignmentImportedFunctionCall(self):
         """Consider a function that is called on the right part of an augassign operation to be
         used.
         """
