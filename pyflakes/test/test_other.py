@@ -338,6 +338,28 @@ class TestUnusedAssignment(harness.Test):
         ''', m.UnusedVariable)
 
 
+    def test_unusedVariableAsLocals(self):
+        """
+        Using locals() it is perfectly valid to have unused variables
+        """
+        self.flakes('''
+        def a():
+            b = 1
+            return locals()
+        ''')
+
+    def test_unusedVariableNoLocals(self):
+        """
+        Using locals() in wrong scope should not matter
+        """
+        self.flakes('''
+        def a():
+            locals()
+            def a():
+                b = 1
+                return
+        ''', m.UnusedVariable)
+
     def test_assignToGlobal(self):
         """
         Assigning to a global and then not using that global is perfectly

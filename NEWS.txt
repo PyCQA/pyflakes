@@ -5,6 +5,7 @@
   - Add WindowsError as a known built-in name on all platforms.
   - Allow function redefinition for modern property construction via
     property.setter/deleter.
+  - Don't issue Unused Variable warning when using locals() in current scope.
   - Handle problems with the encoding of source files.
   - Remove dependency on Twisted for the tests.
 
