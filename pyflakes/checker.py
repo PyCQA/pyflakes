@@ -200,17 +200,17 @@ class Checker(object):
         self.scopeStack = [ModuleScope()]
         self.futuresAllowed = True
         self.handleChildren(tree)
-        self._runDeferred(self._deferredFunctions)
+        self.runDeferred(self._deferredFunctions)
         # Set _deferredFunctions to None so that deferFunction will fail
         # noisily if called after we've run through the deferred functions.
         self._deferredFunctions = None
-        self._runDeferred(self._deferredAssignments)
+        self.runDeferred(self._deferredAssignments)
         # Set _deferredAssignments to None so that deferAssignment will fail
         # noisly if called after we've run through the deferred assignments.
         self._deferredAssignments = None
         del self.scopeStack[1:]
         self.popScope()
-        self.check_dead_scopes()
+        self.checkDeadScopes()
 
     def deferFunction(self, callable):
         '''
@@ -230,7 +230,7 @@ class Checker(object):
         """
         self._deferredAssignments.append((callable, self.scopeStack[:]))
 
-    def _runDeferred(self, deferred):
+    def runDeferred(self, deferred):
         """
         Run the callables in C{deferred} using their associated scope stack.
         """
@@ -245,7 +245,7 @@ class Checker(object):
     def popScope(self):
         self.dead_scopes.append(self.scopeStack.pop())
 
-    def check_dead_scopes(self):
+    def checkDeadScopes(self):
         """
         Look at scopes which have been fully examined and report names in them
         which were imported but unused.
