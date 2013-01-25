@@ -27,7 +27,6 @@ class Reporter(object):
         self._stdout = warningStream
         self._stderr = errorStream
 
-
     def unexpectedError(self, filename, msg):
         """
         An unexpected error occurred trying to process C{filename}.
@@ -38,7 +37,6 @@ class Reporter(object):
         @ptype msg: C{unicode}
         """
         self._stderr.write(u("%s: %s\n") % (filename, msg))
-
 
     def syntaxError(self, filename, msg, lineno, offset, text):
         """
@@ -64,7 +62,6 @@ class Reporter(object):
         if offset is not None:
             self._stderr.write(u(" " * (offset + 1) + "^\n"))
 
-
     def flake(self, message):
         """
         pyflakes found something wrong with the code.
@@ -73,7 +70,6 @@ class Reporter(object):
         """
         self._stdout.write(u(message))
         self._stdout.write(u('\n'))
-
 
 
 def _makeDefaultReporter():

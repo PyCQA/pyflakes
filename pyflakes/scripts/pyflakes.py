@@ -77,7 +77,6 @@ def checkPath(filename, reporter=None):
         return 1
 
 
-
 def iterSourceCode(paths):
     """
     Iterate over all Python source files in C{paths}.
@@ -96,7 +95,6 @@ def iterSourceCode(paths):
             yield path
 
 
-
 def checkRecursive(paths, reporter):
     """
     Recursively check all source files in C{paths}.
@@ -111,7 +109,6 @@ def checkRecursive(paths, reporter):
     for sourcePath in iterSourceCode(paths):
         warnings += checkPath(sourcePath, reporter)
     return warnings
-
 
 
 def main():

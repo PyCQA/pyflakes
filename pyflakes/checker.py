@@ -49,10 +49,8 @@ class Binding(object):
         self.source = source
         self.used = False
 
-
     def __str__(self):
         return self.name
-
 
     def __repr__(self):
         return '<%s object %r from line %r at 0x%x>' % (self.__class__.__name__,
@@ -61,10 +59,8 @@ class Binding(object):
                                                         id(self))
 
 
-
 class UnBinding(Binding):
     '''Created by the 'del' operator.'''
-
 
 
 class Importation(Binding):
@@ -79,7 +75,6 @@ class Importation(Binding):
         self.fullName = name
         name = name.split('.')[0]
         super(Importation, self).__init__(name, source)
-
 
 
 class Argument(Binding):
@@ -104,15 +99,12 @@ class Assignment(Binding):
     """
 
 
-
 class FunctionDefinition(Definition):
     pass
 
 
-
 class ClassDefinition(Definition):
     pass
-
 
 
 class ExportBinding(Binding):
@@ -141,23 +133,18 @@ class ExportBinding(Binding):
         return names
 
 
-
 class Scope(dict):
     importStarred = False       # set to True when import * is found
 
-
     def __repr__(self):
         return '<%s at 0x%x %s>' % (self.__class__.__name__, id(self), dict.__repr__(self))
-
 
     def __init__(self):
         super(Scope, self).__init__()
 
 
-
 class ClassScope(Scope):
     pass
-
 
 
 class FunctionScope(Scope):
@@ -169,7 +156,6 @@ class FunctionScope(Scope):
     def __init__(self):
         super(FunctionScope, self).__init__()
         self.globals = {}
-
 
 
 class ModuleScope(Scope):
@@ -226,7 +212,6 @@ class Checker(object):
         self.popScope()
         self.check_dead_scopes()
 
-
     def deferFunction(self, callable):
         '''
         Schedule a function handler to be called just before completion.
@@ -238,14 +223,12 @@ class Checker(object):
         '''
         self._deferredFunctions.append((callable, self.scopeStack[:]))
 
-
     def deferAssignment(self, callable):
         """
         Schedule an assignment handler to be called just after deferred
         function handlers.
         """
         self._deferredAssignments.append((callable, self.scopeStack[:]))
-
 
     def _runDeferred(self, deferred):
         """
@@ -255,14 +238,12 @@ class Checker(object):
             self.scopeStack = scope
             handler()
 
-
     def scope(self):
         return self.scopeStack[-1]
     scope = property(scope)
 
     def popScope(self):
         self.dead_scopes.append(self.scopeStack.pop())
-
 
     def check_dead_scopes(self):
         """
@@ -277,10 +258,8 @@ class Checker(object):
                     # Look for possible mistakes in the export list
                     undefined = set(all) - set(scope)
                     for name in undefined:
-                        self.report(
-                            messages.UndefinedExport,
-                            scope['__all__'].source.lineno,
-                            name)
+                        self.report(messages.UndefinedExport,
+                                    scope['__all__'].source.lineno, name)
             else:
                 all = []
 
@@ -288,11 +267,8 @@ class Checker(object):
             for importation in scope.values():
                 if isinstance(importation, Importation):
                     if not importation.used and importation.name not in all:
-                        self.report(
-                            messages.UnusedImport,
-                            importation.source.lineno,
-                            importation.name)
-
+                        self.report(messages.UnusedImport,
+                                    importation.source.lineno, importation.name)
 
     def pushFunctionScope(self):
         self.scopeStack.append(FunctionScope())
@@ -356,8 +332,8 @@ class Checker(object):
                 if (name in scope and scope[name].used and scope[name].used[0] is self.scope
                         and name not in self.scope.globals):
                     # then it's probably a mistake
-                    self.report(messages.UndefinedLocal, scope[name].used[1], name,
-                        scope[name].source.lineno)
+                    self.report(messages.UndefinedLocal,
+                                scope[name].used[1], name, scope[name].source.lineno)
                     break
 
         parent = getattr(node, 'parent', None)
@@ -389,17 +365,16 @@ class Checker(object):
         Determine if the given node is a docstring, as long as it is at the
         correct place in the node tree.
         """
-        return isinstance(node, ast.Str) or \
-               (isinstance(node, ast.Expr) and
-                isinstance(node.value, ast.Str))
+        return isinstance(node, ast.Str) or (isinstance(node, ast.Expr) and
+                                             isinstance(node.value, ast.Str))
 
     def handleNode(self, node, parent):
         node.parent = parent
         if self.traceTree:
             print('  ' * self.nodeDepth + node.__class__.__name__)
         self.nodeDepth += 1
-        if self.futuresAllowed and not \
-               (isinstance(node, ast.ImportFrom) or self.isDocstring(node)):
+        if self.futuresAllowed and not (isinstance(node, ast.ImportFrom) or
+                                        self.isDocstring(node)):
             self.futuresAllowed = False
         nodeType = node.__class__.__name__.upper()
         try:
@@ -420,8 +395,9 @@ class Checker(object):
     CONTINUE = BREAK = PASS = ignore
 
     # "expr" type nodes
-    BOOLOP = BINOP = UNARYOP = IFEXP = DICT = SET = YIELD = COMPARE = \
-    CALL = REPR = ATTRIBUTE = SUBSCRIPT = LIST = TUPLE = handleChildren
+    BOOLOP = BINOP = UNARYOP = IFEXP = DICT = SET = YIELD = \
+        COMPARE = CALL = REPR = ATTRIBUTE = SUBSCRIPT = LIST = TUPLE = \
+        handleChildren
 
     NUM = STR = ELLIPSIS = ignore
 
@@ -433,8 +409,8 @@ class Checker(object):
 
     # same for operators
     AND = OR = ADD = SUB = MULT = DIV = MOD = POW = LSHIFT = RSHIFT = \
-    BITOR = BITXOR = BITAND = FLOORDIV = INVERT = NOT = UADD = USUB = \
-    EQ = NOTEQ = LT = LTE = GT = GTE = IS = ISNOT = IN = NOTIN = ignore
+        BITOR = BITXOR = BITAND = FLOORDIV = INVERT = NOT = UADD = USUB = \
+        EQ = NOTEQ = LT = LTE = GT = GTE = IS = ISNOT = IN = NOTIN = ignore
 
     # additional node types
     COMPREHENSION = KEYWORD = handleChildren
@@ -455,7 +431,6 @@ class Checker(object):
                         and not existing.used
                         and (not isinstance(value, Importation) or value.fullName == existing.fullName)
                         and reportRedef):
-
                     self.report(messages.RedefinedWhileUnused,
                                 lineno, value.name, scope[value.name].source.lineno)
 
@@ -498,6 +473,7 @@ class Checker(object):
         Process bindings for loop variables.
         """
         vars = []
+
         def collectLoopVars(n):
             if isinstance(n, ast.Name):
                 vars.append(n.id)
@@ -532,7 +508,6 @@ class Checker(object):
             # must be a Param context -- this only happens for names in function
             # arguments, but these aren't dispatched through here
             raise RuntimeError("Got impossible expression context: %r" % (node.ctx,))
-
 
     def FUNCTIONDEF(self, node):
         # the decorators attribute is called decorator_list as of Python 2.6
@@ -588,20 +563,20 @@ class Checker(object):
             else:
                 # case for Lambdas
                 self.handleNode(node.body, node)
+
             def checkUnusedAssignments():
                 """
                 Check to see if any assignments have not been used.
                 """
                 for name, binding in self.scope.items():
-                    if (not binding.used and not name in self.scope.globals
-                        and isinstance(binding, Assignment)):
+                    if (not binding.used and name not in self.scope.globals
+                            and isinstance(binding, Assignment)):
                         self.report(messages.UnusedVariable,
                                     binding.source.lineno, name)
             self.deferAssignment(checkUnusedAssignments)
             self.popScope()
 
         self.deferFunction(runFunction)
-
 
     def CLASSDEF(self, node):
         """
@@ -639,8 +614,8 @@ class Checker(object):
     def IMPORTFROM(self, node):
         if node.module == '__future__':
             if not self.futuresAllowed:
-                self.report(messages.LateFutureImport, node.lineno,
-                            [n.name for n in node.names])
+                self.report(messages.LateFutureImport,
+                            node.lineno, [n.name for n in node.names])
         else:
             self.futuresAllowed = False
 
