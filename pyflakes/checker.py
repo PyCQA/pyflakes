@@ -279,6 +279,37 @@ class Checker(object):
     def report(self, messageClass, *args, **kwargs):
         self.messages.append(messageClass(self.filename, *args, **kwargs))
 
+    def addBinding(self, lineno, value, reportRedef=True):
+        '''Called when a binding is altered.
+
+        - `lineno` is the line of the statement responsible for the change
+        - `value` is the optional new value, a Binding instance, associated
+          with the binding; if None, the binding is deleted if it exists.
+        - if `reportRedef` is True (default), rebinding while unused will be
+          reported.
+        '''
+        if not isinstance(self.scope, ClassScope):
+            for scope in self.scopeStack[::-1]:
+                existing = scope.get(value.name)
+                if (isinstance(existing, Importation)
+                        and not existing.used
+                        and (not isinstance(value, Importation) or value.fullName == existing.fullName)
+                        and reportRedef):
+                    self.report(messages.RedefinedWhileUnused,
+                                lineno, value.name, scope[value.name].source.lineno)
+
+        existing = self.scope.get(value.name)
+        if isinstance(value, UnBinding):
+            try:
+                del self.scope[value.name]
+            except KeyError:
+                self.report(messages.UndefinedName, lineno, value.name)
+        elif isinstance(existing, Definition) and not existing.used:
+            self.report(messages.RedefinedWhileUnused,
+                        lineno, value.name, existing.source.lineno)
+        else:
+            self.scope[value.name] = value
+
     def handleNodeLoad(self, node):
         name = getNodeName(node)
         if not name:
@@ -414,37 +445,6 @@ class Checker(object):
 
     # additional node types
     COMPREHENSION = KEYWORD = handleChildren
-
-    def addBinding(self, lineno, value, reportRedef=True):
-        '''Called when a binding is altered.
-
-        - `lineno` is the line of the statement responsible for the change
-        - `value` is the optional new value, a Binding instance, associated
-          with the binding; if None, the binding is deleted if it exists.
-        - if `reportRedef` is True (default), rebinding while unused will be
-          reported.
-        '''
-        if not isinstance(self.scope, ClassScope):
-            for scope in self.scopeStack[::-1]:
-                existing = scope.get(value.name)
-                if (isinstance(existing, Importation)
-                        and not existing.used
-                        and (not isinstance(value, Importation) or value.fullName == existing.fullName)
-                        and reportRedef):
-                    self.report(messages.RedefinedWhileUnused,
-                                lineno, value.name, scope[value.name].source.lineno)
-
-        existing = self.scope.get(value.name)
-        if isinstance(value, UnBinding):
-            try:
-                del self.scope[value.name]
-            except KeyError:
-                self.report(messages.UndefinedName, lineno, value.name)
-        elif isinstance(existing, Definition) and not existing.used:
-            self.report(messages.RedefinedWhileUnused,
-                        lineno, value.name, existing.source.lineno)
-        else:
-            self.scope[value.name] = value
 
     def GLOBAL(self, node):
         """
