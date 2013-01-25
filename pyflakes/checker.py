@@ -92,7 +92,7 @@ class Argument(Binding):
 
 class Definition(Binding):
     """
-    A binding that defines a function or class.
+    A binding that defines a function or a class.
     """
 
 
@@ -533,8 +533,7 @@ class Checker(object):
         else:
             # must be a Param context -- this only happens for names in function
             # arguments, but these aren't dispatched through here
-            raise RuntimeError(
-                "Got impossible expression context: %r" % (node.ctx,))
+            raise RuntimeError("Got impossible expression context: %r" % (node.ctx,))
 
 
     def FUNCTIONDEF(self, node):
