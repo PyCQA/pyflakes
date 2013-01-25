@@ -16,7 +16,7 @@ from unittest2 import skipIf, TestCase
 
 from pyflakes.messages import UnusedImport
 from pyflakes.reporter import Reporter
-from pyflakes.scripts.pyflakes import (
+from pyflakes.api import (
     checkPath,
     checkRecursive,
     iterSourceCode,
@@ -271,6 +271,11 @@ class CheckTests(TestCase):
         reporter = LoggingReporter(log)
         count = checkPath(path, reporter)
         return count, log
+
+
+    def test_legacyScript(self):
+        from pyflakes.scripts import pyflakes as script_pyflakes
+        self.assertIs(script_pyflakes.checkPath, checkPath)
 
 
     def test_missingTrailingNewline(self):

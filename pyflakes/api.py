@@ -1,8 +1,6 @@
 """
-Implementation of the command-line I{pyflakes} tool.
+API for the command-line I{pyflakes} tool.
 """
-
-from __future__ import absolute_import
 
 import sys
 import os
@@ -10,6 +8,8 @@ import _ast
 
 from pyflakes import checker
 from pyflakes import reporter as modReporter
+
+__all__ = ['check', 'checkPath', 'checkRecursive', 'iterSourceCode', 'main']
 
 
 def check(codeString, filename, reporter=None):
@@ -74,7 +74,7 @@ def checkPath(filename, reporter=None):
     except IOError:
         msg = sys.exc_info()[1]
         reporter.unexpectedError(filename, msg.args[1])
-        return 1
+    return 1
 
 
 def iterSourceCode(paths):
