@@ -238,9 +238,9 @@ class Checker(object):
             self.scopeStack = scope
             handler()
 
+    @property
     def scope(self):
         return self.scopeStack[-1]
-    scope = property(scope)
 
     def popScope(self):
         self.dead_scopes.append(self.scopeStack.pop())
