@@ -49,6 +49,9 @@ def check(codeString, filename, reporter=None):
         else:
             reporter.syntaxError(filename, msg, lineno, offset, text)
         return 1
+    except TypeError:
+        reporter.unexpectedError(filename, 'problem decoding source')
+        return 1
     else:
         # Okay, it's syntactically valid.  Now check it.
         w = checker.Checker(tree, filename)
@@ -70,7 +73,13 @@ def checkPath(filename, reporter=None):
     if reporter is None:
         reporter = modReporter._makeDefaultReporter()
     try:
-        return check(open(filename, 'U').read() + '\n', filename, reporter)
+        f = open(filename, 'U')
+        try:
+            return check(f.read() + '\n', filename, reporter)
+        finally:
+            f.close()
+    except UnicodeError:
+        reporter.unexpectedError(filename, 'problem decoding source')
     except IOError:
         msg = sys.exc_info()[1]
         reporter.unexpectedError(filename, msg.args[1])

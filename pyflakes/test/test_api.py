@@ -21,6 +21,8 @@ from pyflakes.api import (
     checkRecursive,
     iterSourceCode,
 )
+if sys.version_info >= (3,):
+    unichr = chr
 
 
 def withStderrTo(stderr, f, *args, **kwargs):
@@ -418,8 +420,8 @@ foo(bar=baz, bax)
             errors, [('flake', str(UnusedImport(sourcePath, 1, 'foo')))])
 
 
-    @skipIf(sys.version_info >= (3,), "need adaptation for Python 3")
-    def test_misencodedFile(self):
+    @skipIf(sys.version_info >= (3,), "not relevant")
+    def test_misencodedFileUTF8(self):
         """
         If a source file contains bytes which cannot be decoded, this is
         reported on stderr.
@@ -429,6 +431,21 @@ foo(bar=baz, bax)
 # coding: ascii
 x = "%s"
 """ % SNOWMAN).encode('utf-8')
+        sourcePath = self.makeTempFile(source)
+        self.assertHasErrors(
+            sourcePath, ["%s: problem decoding source\n" % (sourcePath,)])
+
+
+    def test_misencodedFileUTF16(self):
+        """
+        If a source file contains bytes which cannot be decoded, this is
+        reported on stderr.
+        """
+        SNOWMAN = unichr(0x2603)
+        source = ("""\
+# coding: ascii
+x = "%s"
+""" % SNOWMAN).encode('utf-16')
         sourcePath = self.makeTempFile(source)
         self.assertHasErrors(
             sourcePath, ["%s: problem decoding source\n" % (sourcePath,)])
