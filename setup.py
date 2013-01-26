@@ -1,17 +1,18 @@
 #!/usr/bin/env python
-# Copyright 2005-2011 Divmod, Inc.  See LICENSE file for details
+# Copyright 2005-2011 Divmod, Inc.
+# Copyright 2013 Florent Xicluna.  See LICENSE file for details
 
 from distutils.core import setup
 
 setup(
     name="pyflakes",
     license="MIT",
-    version="0.5.0",
+    version="0.6.a0",
     description="passive checker of Python programs",
     author="Phil Frost",
     author_email="indigo@bitglue.com",
-    maintainer="Divmod developers",
-    maintainer_email="divmod-dev@lists.launchpad.net",
+    maintainer="Florent Xicluna",
+    maintainer_email="florent.xicluna@gmail.com",
     url="https://launchpad.net/pyflakes",
     packages=["pyflakes", "pyflakes.scripts", "pyflakes.test"],
     scripts=["bin/pyflakes"],
@@ -28,4 +29,4 @@ modules with side effects. It's also much faster.""",
         "Programming Language :: Python :: 3",
         "Topic :: Software Development",
         "Topic :: Utilities",
-        ])
+    ])
