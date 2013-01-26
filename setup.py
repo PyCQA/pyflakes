@@ -1,8 +1,20 @@
 #!/usr/bin/env python
 # Copyright 2005-2011 Divmod, Inc.
 # Copyright 2013 Florent Xicluna.  See LICENSE file for details
+import sys
 
-from distutils.core import setup
+try:
+    from setuptools import setup
+except ImportError:
+    from distutils.core import setup
+    extra = {}
+else:
+    if sys.version_info < (3,):
+        extra = {'tests_require': ['unittest2'],
+                 'test_suite': 'unittest2.collector'}
+    else:
+        extra = {'tests_require': ['unittest2py3k'],
+                 'test_suite': 'unittest2.collector.collector'}
 
 setup(
     name="pyflakes",
@@ -29,4 +41,5 @@ modules with side effects. It's also much faster.""",
         "Programming Language :: Python :: 3",
         "Topic :: Software Development",
         "Topic :: Utilities",
-    ])
+    ],
+    **extra)

@@ -7,6 +7,7 @@
     property.setter/deleter.
   - Handle problems with the encoding of source files.
   - Remove dependency on Twisted for the tests.
+  - Support `python setup.py test` and `python setup.py develop`.
 
 0.5.0 (2011-09-02):
   - Convert pyflakes to use newer _ast infrastructure rather than compiler.
