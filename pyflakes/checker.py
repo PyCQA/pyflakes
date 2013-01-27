@@ -690,8 +690,8 @@ class Checker(object):
             self.addBinding(node, importation)
 
     def EXCEPTHANDLER(self, node):
-        # in addition to handling children, we must handle the name of the exception, which is not
-        # a Name node, but a simple string.
-        if node.name:
+        # 3.x: in addition to handling children, we must handle the name of
+        # the exception, which is not a Name node, but a simple string.
+        if isinstance(node.name, str):
             self.handleNodeStore(node)
         self.handleChildren(node)

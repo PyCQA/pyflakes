@@ -764,6 +764,12 @@ class TestUnusedAssignment(harness.Test):
         except Exception%se: e
         ''' % as_exc)
 
+        self.flakes('''
+        def download_review():
+            try: pass
+            except Exception%se: e
+        ''' % as_exc)
+
     def test_exceptWithoutNameInFunction(self):
         """
         Don't issue false warning when an unnamed exception is used. Previously, there would be
