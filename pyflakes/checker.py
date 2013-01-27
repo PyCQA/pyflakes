@@ -139,9 +139,6 @@ class Scope(dict):
     def __repr__(self):
         return '<%s at 0x%x %s>' % (self.__class__.__name__, id(self), dict.__repr__(self))
 
-    def __init__(self):
-        super(Scope, self).__init__()
-
 
 class ClassScope(Scope):
     pass
