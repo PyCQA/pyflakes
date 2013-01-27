@@ -7,7 +7,7 @@ try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
-    extra = {}
+    extra = {'scripts': ["bin/pyflakes"]}
 else:
     if sys.version_info < (3,):
         extra = {'tests_require': ['unittest2'],
@@ -15,6 +15,9 @@ else:
     else:
         extra = {'tests_require': ['unittest2py3k'],
                  'test_suite': 'unittest2.collector.collector'}
+    extra['entry_points'] = {
+        'console_scripts': ['pyflakes = pyflakes.api:main'],
+    }
 
 setup(
     name="pyflakes",
@@ -27,7 +30,6 @@ setup(
     maintainer_email="florent.xicluna@gmail.com",
     url="https://launchpad.net/pyflakes",
     packages=["pyflakes", "pyflakes.scripts", "pyflakes.test"],
-    scripts=["bin/pyflakes"],
     long_description="""Pyflakes is program to analyze Python programs and detect various errors. It
 works by parsing the source file, not importing it, so it is safe to use on
 modules with side effects. It's also much faster.""",
