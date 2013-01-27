@@ -603,6 +603,16 @@ class TestSpecialAll(harness.Test):
             ''', filename=filename)
 
 
+    def test_importStarExported(self):
+        """
+        Do not report undefined if import * is used
+        """
+        self.flakes('''
+        from foolib import *
+        __all__ = ["foo"]
+        ''', m.ImportStarUsed)
+
+
     def test_usedInGenExp(self):
         """
         Using a global in a generator expression results in no warnings.

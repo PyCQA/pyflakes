@@ -251,7 +251,7 @@ class Checker(object):
             export = isinstance(scope.get('__all__'), ExportBinding)
             if export:
                 all = scope['__all__'].names()
-                if os.path.split(self.filename)[1] != '__init__.py':
+                if not scope.importStarred and os.path.basename(self.filename) != '__init__.py':
                     # Look for possible mistakes in the export list
                     undefined = set(all) - set(scope)
                     for name in undefined:
