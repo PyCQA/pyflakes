@@ -194,7 +194,7 @@ class Checker(object):
     def __init__(self, tree, filename='(none)'):
         self._deferredFunctions = []
         self._deferredAssignments = []
-        self.dead_scopes = []
+        self.deadScopes = []
         self.messages = []
         self.filename = filename
         self.scopeStack = [ModuleScope()]
@@ -206,7 +206,7 @@ class Checker(object):
         self._deferredFunctions = None
         self.runDeferred(self._deferredAssignments)
         # Set _deferredAssignments to None so that deferAssignment will fail
-        # noisly if called after we've run through the deferred assignments.
+        # noisily if called after we've run through the deferred assignments.
         self._deferredAssignments = None
         del self.scopeStack[1:]
         self.popScope()
@@ -243,14 +243,14 @@ class Checker(object):
         return self.scopeStack[-1]
 
     def popScope(self):
-        self.dead_scopes.append(self.scopeStack.pop())
+        self.deadScopes.append(self.scopeStack.pop())
 
     def checkDeadScopes(self):
         """
         Look at scopes which have been fully examined and report names in them
         which were imported but unused.
         """
-        for scope in self.dead_scopes:
+        for scope in self.deadScopes:
             export = isinstance(scope.get('__all__'), ExportBinding)
             if export:
                 all = scope['__all__'].names()
