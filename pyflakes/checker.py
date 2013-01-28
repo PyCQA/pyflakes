@@ -28,8 +28,13 @@ except (ImportError, AttributeError):   # Python 2.5
             elif isinstance(field, list):
                 for item in field:
                     yield item
-# Python >= 3.3 uses ast.Try instead of ast.TryExcept
-ast_Try = getattr(ast, 'Try', None) or ast.TryExcept
+# Python >= 3.3 uses ast.Try instead of (ast.TryExcept + ast.TryFinally)
+if hasattr(ast, 'Try'):
+    ast_TryExcept = ast.Try
+    ast_TryFinally = ()
+else:
+    ast_TryExcept = ast.TryExcept
+    ast_TryFinally = ast.TryFinally
 
 from pyflakes import messages
 
@@ -322,10 +327,14 @@ class Checker(object):
             for fork in (ancestor.body, ancestor.orelse):
                 if self.onFork(ancestor, lnode, rnode, fork):
                     return True
-        if isinstance(ancestor, ast_Try):
-            for fork in (ancestor.body, ancestor.handlers, ancestor.orelse):
+        elif isinstance(ancestor, ast_TryExcept):
+            body = ancestor.body + ancestor.orelse
+            for fork in [body] + [[hdl] for hdl in ancestor.handlers]:
                 if self.onFork(ancestor, lnode, rnode, fork):
                     return True
+        elif isinstance(ancestor, ast_TryFinally):
+            if self.onFork(ancestor, lnode, rnode, ancestor.body):
+                return True
         return False
 
     def addBinding(self, node, value, reportRedef=True):

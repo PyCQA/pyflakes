@@ -89,6 +89,67 @@ class Test(harness.Test):
             import os
         os.path''')
 
+    def test_redefinedTryExceptMulti(self):
+        self.flakes("""
+        try:
+            from aa import mixer
+        except AttributeError:
+            from bb import mixer
+        except RuntimeError:
+            from cc import mixer
+        except:
+            from dd import mixer
+        mixer(123)
+        """)
+
+    def test_redefinedTryElse(self):
+        self.flakes("""
+        try:
+            from aa import mixer
+        except ImportError:
+            pass
+        else:
+            from bb import mixer
+        mixer(123)
+        """, m.RedefinedWhileUnused)
+
+    def test_redefinedTryExceptElse(self):
+        self.flakes("""
+        try:
+            import funca
+        except ImportError:
+            from bb import funca
+            from bb import funcb
+        else:
+            from bbb import funcb
+        print(funca, funcb)
+        """)
+
+    def test_redefinedTryExceptFinally(self):
+        self.flakes("""
+        try:
+            from aa import a
+        except ImportError:
+            from bb import a
+        finally:
+            a = 42
+        print(a)
+        """)
+
+    def test_redefinedTryExceptElseFinally(self):
+        self.flakes("""
+        try:
+            import b
+        except ImportError:
+            b = Ellipsis
+            from bb import a
+        else:
+            from aa import a
+        finally:
+            a = 42
+        print(a, b)
+        """)
+
     def test_redefinedByFunction(self):
         self.flakes('''
         import fu
