@@ -293,7 +293,7 @@ class Checker(object):
             if isinstance(node, kind):
                 return True
 
-    def lowestCommonAncestor(self, lnode, rnode, stop=None):
+    def getCommonAncestor(self, lnode, rnode, stop=None):
         if not stop:
             stop = self.root
         if lnode is rnode:
@@ -304,15 +304,14 @@ class Checker(object):
         if not hasattr(lnode, 'parent') or not hasattr(rnode, 'parent'):
             return
         if (lnode.level > rnode.level):
-            return self.lowestCommonAncestor(lnode.parent, rnode, stop)
+            return self.getCommonAncestor(lnode.parent, rnode, stop)
         if (rnode.level > lnode.level):
-            return self.lowestCommonAncestor(lnode, rnode.parent, stop)
-        return self.lowestCommonAncestor(lnode.parent, rnode.parent, stop)
+            return self.getCommonAncestor(lnode, rnode.parent, stop)
+        return self.getCommonAncestor(lnode.parent, rnode.parent, stop)
 
     def descendantOf(self, node, ancestors, stop=None):
         for a in ancestors:
-            p = self.lowestCommonAncestor(node, a, stop)
-            if p not in (stop, None):
+            if self.getCommonAncestor(node, a, stop) not in (stop, None):
                 return True
         return False
 
@@ -322,7 +321,7 @@ class Checker(object):
 
     def differentForks(self, lnode, rnode):
         """True, if lnode and rnode are located on different forks of IF/TRY"""
-        ancestor = self.lowestCommonAncestor(lnode, rnode)
+        ancestor = self.getCommonAncestor(lnode, rnode)
         if isinstance(ancestor, ast.If):
             for fork in (ancestor.body, ancestor.orelse):
                 if self.onFork(ancestor, lnode, rnode, fork):
