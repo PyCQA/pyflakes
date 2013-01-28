@@ -299,8 +299,9 @@ class Test(harness.Test):
         ''')
 
         self.flakes('''
-        d = e = 42
-        def f(a: {1, d}) -> (lambda c: e): pass
+        def func():
+            d = e = 42
+            def func(a: {1, d}) -> (lambda c: e): pass
         ''')
 
     @skipIf(version_info < (3,), 'new in Python 3')
