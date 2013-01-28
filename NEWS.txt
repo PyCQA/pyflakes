@@ -6,6 +6,7 @@
   - Allow function redefinition for modern property construction via
     property.setter/deleter.
   - Do not report undefined name in __all__ if import * is used.
+  - Support specifying additional built-ins in `Checker` constructor.
   - Handle problems with the encoding of source files.
   - Remove dependency on Twisted for the tests.
   - Support `python setup.py test` and `python setup.py develop`.
