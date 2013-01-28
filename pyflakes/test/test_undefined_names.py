@@ -275,6 +275,41 @@ class Test(harness.Test):
             print(a, b)
         ''')
 
+        self.flakes('''
+        import default_b
+        def f(*, a, b=default_b):
+            print(a, b)
+        ''')
+
+    @skipIf(version_info < (3,), 'new in Python 3')
+    def test_keywordOnlyArgsUndefined(self):
+        '''typo in kwonly name'''
+        self.flakes('''
+        def f(*, a, b=default_c):
+            print(a, b)
+        ''', m.UndefinedName)
+
+    @skipIf(version_info < (3,), 'new in Python 3')
+    def test_annotationUndefined(self):
+        """Undefined annotations"""
+        self.flakes('''
+        from abc import note1, note2, note3, note4, note5
+        def func(a: note1, *args: note2,
+                 b: note3=12, **kw: note4) -> note5: pass
+        ''')
+
+        self.flakes('''
+        d = e = 42
+        def f(a: {1, d}) -> (lambda c: e): pass
+        ''')
+
+    @skipIf(version_info < (3,), 'new in Python 3')
+    def test_metaClassUndefined(self):
+        self.flakes('''
+        from abc import ABCMeta
+        class A(metaclass=ABCMeta): pass
+        ''')
+
     def test_definedInGenExp(self):
         """
         Using the loop variable of a generator expression results in no

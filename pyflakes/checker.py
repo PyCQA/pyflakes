@@ -411,6 +411,8 @@ class Checker(object):
                                              isinstance(node.value, ast.Str))
 
     def handleNode(self, node, parent):
+        if node is None:
+            return
         node.parent = parent
         if self.traceTree:
             print('  ' * self.nodeDepth + node.__class__.__name__)
@@ -530,39 +532,46 @@ class Checker(object):
         self.LAMBDA(node)
 
     def LAMBDA(self, node):
-        for default in node.args.defaults:
+        args = []
+
+        if PY2:
+            def addArgs(arglist):
+                for arg in arglist:
+                    if isinstance(arg, ast.Tuple):
+                        addArgs(arg.elts)
+                    else:
+                        if arg.id in args:
+                            self.report(messages.DuplicateArgument,
+                                        node.lineno, arg.id)
+                        args.append(arg.id)
+            addArgs(node.args.args)
+            defaults = node.args.defaults
+        else:
+            for arg in node.args.args + node.args.kwonlyargs:
+                if arg.arg in args:
+                    self.report(messages.DuplicateArgument,
+                                node.lineno, arg.arg)
+                args.append(arg.arg)
+                self.handleNode(arg.annotation, node)
+            if hasattr(node, 'returns'):    # Only for FunctionDefs
+                for annotation in (node.args.varargannotation,
+                                   node.args.kwargannotation, node.returns):
+                    self.handleNode(annotation, node)
+            defaults = node.args.defaults + node.args.kw_defaults
+
+        # vararg/kwarg identifiers are not Name nodes
+        for wildcard in (node.args.vararg, node.args.kwarg):
+            if not wildcard:
+                continue
+            if wildcard in args:
+                self.report(messages.DuplicateArgument, node.lineno, wildcard)
+            args.append(wildcard)
+        for default in defaults:
             self.handleNode(default, node)
 
         def runFunction():
-            args = []
-
-            if PY2:
-                def addArgs(arglist):
-                    for arg in arglist:
-                        if isinstance(arg, ast.Tuple):
-                            addArgs(arg.elts)
-                        else:
-                            if arg.id in args:
-                                self.report(messages.DuplicateArgument,
-                                            node.lineno, arg.id)
-                            args.append(arg.id)
-            else:
-                def addArgs(arglist):
-                    for arg in arglist:
-                        if arg.arg in args:
-                            self.report(messages.DuplicateArgument,
-                                        node.lineno, arg.arg)
-                        args.append(arg.arg)
 
             self.pushFunctionScope()
-            addArgs(node.args.args)
-            if not PY2:
-                addArgs(node.args.kwonlyargs)
-            # vararg/kwarg identifiers are not Name nodes
-            if node.args.vararg:
-                args.append(node.args.vararg)
-            if node.args.kwarg:
-                args.append(node.args.kwarg)
             for name in args:
                 self.addBinding(node.lineno, Argument(name, node), reportRedef=False)
             if isinstance(node.body, list):
@@ -598,6 +607,9 @@ class Checker(object):
             self.handleNode(deco, node)
         for baseNode in node.bases:
             self.handleNode(baseNode, node)
+        if not PY2:
+            for keywordNode in node.keywords:
+                self.handleNode(keywordNode, node)
         self.pushClassScope()
         for stmt in node.body:
             self.handleNode(stmt, node)
