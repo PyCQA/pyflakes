@@ -62,7 +62,7 @@ class Binding(object):
 
 
 class UnBinding(Binding):
-    '''Created by the 'del' operator.'''
+    """Created by the 'del' operator."""
 
 
 class Importation(Binding):
@@ -216,14 +216,14 @@ class Checker(object):
         self.checkDeadScopes()
 
     def deferFunction(self, callable):
-        '''
+        """
         Schedule a function handler to be called just before completion.
 
         This is used for handling function bodies, which must be deferred
         because code later in the file might modify the global scope. When
         `callable` is called, the scope at the time this is called will be
         restored, however it will contain any new bindings added to it.
-        '''
+        """
         self._deferredFunctions.append((callable, self.scopeStack[:]))
 
     def deferAssignment(self, callable):
@@ -316,7 +316,7 @@ class Checker(object):
                 self.descendantOf(rnode, items, parent))
 
     def differentForks(self, lnode, rnode):
-        "True, if lnode and rnode are located on different forks of IF/TRY"
+        """True, if lnode and rnode are located on different forks of IF/TRY"""
         ancestor = self.lowestCommonAncestor(lnode, rnode)
         if isinstance(ancestor, ast.If):
             for fork in (ancestor.body, ancestor.orelse):
@@ -329,14 +329,15 @@ class Checker(object):
         return False
 
     def addBinding(self, node, value, reportRedef=True):
-        '''Called when a binding is altered.
+        """
+        Called when a binding is altered.
 
         - `node` is the statement responsible for the change
         - `value` is the optional new value, a Binding instance, associated
           with the binding; if None, the binding is deleted if it exists.
         - if `reportRedef` is True (default), rebinding while unused will be
           reported.
-        '''
+        """
         redefinedWhileUnused = False
         if not isinstance(self.scope, ClassScope):
             for scope in self.scopeStack[::-1]:
