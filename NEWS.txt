@@ -4,6 +4,7 @@
   - Support custom reporters in addition to the default Reporter.
   - Allow function redefinition for modern property construction via
     property.setter/deleter.
+  - Fix spurious redefinition warnings in conditionals.
   - Do not report undefined name in __all__ if import * is used.
   - Add WindowsError as a known built-in name on all platforms.
   - Support specifying additional built-ins in the `Checker` constructor.

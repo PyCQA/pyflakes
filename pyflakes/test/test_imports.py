@@ -25,6 +25,131 @@ class Test(harness.Test):
         self.flakes('import fu; fu, bar = 3', m.RedefinedWhileUnused)
         self.flakes('import fu; [fu, bar] = 3', m.RedefinedWhileUnused)
 
+    def test_redefinedIf(self):
+        """
+        Test that importing a module twice within an if
+        block does raise a warning.
+        """
+        self.flakes('''
+        i = 2
+        if i==1:
+            import os
+            import os
+        os.path''', m.RedefinedWhileUnused)
+
+    def test_redefinedIfElse(self):
+        """
+        Test that importing a module twice in if
+        and else blocks does not raise a warning.
+        """
+        self.flakes('''
+        i = 2
+        if i==1:
+            import os
+        else:
+            import os
+        os.path''')
+
+    def test_redefinedTry(self):
+        """
+        Test that importing a module twice in an try block
+        does raise a warning.
+        """
+        self.flakes('''
+        try:
+            import os
+            import os
+        except:
+            pass
+        os.path''', m.RedefinedWhileUnused)
+
+    def test_redefinedTryExcept(self):
+        """
+        Test that importing a module twice in an try
+        and except block does not raise a warning.
+        """
+        self.flakes('''
+        try:
+            import os
+        except:
+            import os
+        os.path''')
+
+    def test_redefinedTryNested(self):
+        """
+        Test that importing a module twice using a nested
+        try/except and if blocks does not issue a warning.
+        """
+        self.flakes('''
+        try:
+            if True:
+                if True:
+                    import os
+        except:
+            import os
+        os.path''')
+
+    def test_redefinedTryExceptMulti(self):
+        self.flakes("""
+        try:
+            from aa import mixer
+        except AttributeError:
+            from bb import mixer
+        except RuntimeError:
+            from cc import mixer
+        except:
+            from dd import mixer
+        mixer(123)
+        """)
+
+    def test_redefinedTryElse(self):
+        self.flakes("""
+        try:
+            from aa import mixer
+        except ImportError:
+            pass
+        else:
+            from bb import mixer
+        mixer(123)
+        """, m.RedefinedWhileUnused)
+
+    def test_redefinedTryExceptElse(self):
+        self.flakes("""
+        try:
+            import funca
+        except ImportError:
+            from bb import funca
+            from bb import funcb
+        else:
+            from bbb import funcb
+        print(funca, funcb)
+        """)
+
+    def test_redefinedTryExceptFinally(self):
+        self.flakes("""
+        try:
+            from aa import a
+        except ImportError:
+            from bb import a
+        finally:
+            a = 42
+        print(a)
+        """)
+
+    def test_redefinedTryExceptElseFinally(self):
+        self.flakes("""
+        try:
+            import b
+        except ImportError:
+            b = Ellipsis
+            from bb import a
+        else:
+            from aa import a
+        finally:
+            a = 42
+        print(a, b)
+        """)
+
     def test_redefinedByFunction(self):
         self.flakes('''
         import fu
@@ -453,7 +578,6 @@ class Test(harness.Test):
         self.flakes('import fu; [fu, bar] = fu')
         self.flakes('import fu; fu += fu')
 
-    @skip("todo")
     def test_tryingMultipleImports(self):
         self.flakes('''
         try:

@@ -76,6 +76,54 @@ class Test(harness.Test):
             def a(): pass
         ''', m.RedefinedWhileUnused)
 
+    def test_redefinedIfElseFunction(self):
+        """
+        Test that shadowing a function definition twice in an if
+        and else block does not raise a warning.
+        """
+        self.flakes('''
+        if True:
+            def a(): pass
+        else:
+            def a(): pass
+        ''')
+
+    def test_redefinedIfFunction(self):
+        """
+        Test that shadowing a function definition within an if block
+        raises a warning.
+        """
+        self.flakes('''
+        if True:
+            def a(): pass
+            def a(): pass
+        ''', m.RedefinedWhileUnused)
+
+    def test_redefinedTryExceptFunction(self):
+        """
+        Test that shadowing a function definition twice in try
+        and except block does not raise a warning.
+        """
+        self.flakes('''
+        try:
+            def a(): pass
+        except:
+            def a(): pass
+        ''')
+
+    def test_redefinedTryFunction(self):
+        """
+        Test that shadowing a function definition within a try block
+        raises a warning.
+        """
+        self.flakes('''
+        try:
+            def a(): pass
+            def a(): pass
+        except:
+            pass
+        ''', m.RedefinedWhileUnused)
+
     def test_functionDecorator(self):
         """
         Test that shadowing a function definition with a decorated version of
@@ -736,6 +784,12 @@ class TestUnusedAssignment(harness.Test):
         self.flakes('''
         try: pass
         except Exception%se: e
+        ''' % as_exc)
+
+        self.flakes('''
+        def download_review():
+            try: pass
+            except Exception%se: e
         ''' % as_exc)
 
     def test_exceptWithoutNameInFunction(self):
