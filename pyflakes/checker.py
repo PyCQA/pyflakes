@@ -135,6 +135,7 @@ class ExportBinding(Binding):
 
 class Scope(dict):
     importStarred = False       # set to True when import * is found
+    usesLocals = False
 
     def __repr__(self):
         return '<%s at 0x%x %s>' % (self.__class__.__name__, id(self), dict.__repr__(self))
@@ -514,6 +515,9 @@ class Checker(object):
         """
         Handle occurrence of Name (which can be a load/store/delete access.)
         """
+        if node.id == 'locals' and isinstance(node.parent, ast.Call):
+            # we are doing locals() call in current scope
+            self.scope.usesLocals = True
         # Locate the name in locals / function / globals scopes.
         if isinstance(node.ctx, (ast.Load, ast.AugLoad)):
             self.handleNodeLoad(node)
@@ -591,6 +595,7 @@ class Checker(object):
                 """
                 for name, binding in self.scope.items():
                     if (not binding.used and name not in self.scope.globals
+                            and not self.scope.usesLocals
                             and isinstance(binding, Assignment)):
                         self.report(messages.UnusedVariable,
                                     binding.source.lineno, name)

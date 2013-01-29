@@ -2,11 +2,12 @@
   - Support Python 3 up to 3.3, based on the pyflakes3k project.
   - Preserve compatibility with Python 2.5 and all recent versions of Python.
   - Support custom reporters in addition to the default Reporter.
-  - Add WindowsError as a known built-in name on all platforms.
   - Allow function redefinition for modern property construction via
     property.setter/deleter.
   - Do not report undefined name in __all__ if import * is used.
-  - Support specifying additional built-ins in `Checker` constructor.
+  - Add WindowsError as a known built-in name on all platforms.
+  - Support specifying additional built-ins in the `Checker` constructor.
+  - Don't issue Unused Variable warning when using locals() in current scope.
   - Handle problems with the encoding of source files.
   - Remove dependency on Twisted for the tests.
   - Support `python setup.py test` and `python setup.py develop`.
