@@ -187,13 +187,16 @@ class Checker(object):
 
     nodeDepth = 0
     traceTree = False
+    builtIns = set(dir(builtins)) | set(_MAGIC_GLOBALS)
 
-    def __init__(self, tree, filename='(none)'):
+    def __init__(self, tree, filename='(none)', builtins=None):
         self._deferredFunctions = []
         self._deferredAssignments = []
         self.deadScopes = []
         self.messages = []
         self.filename = filename
+        if builtins:
+            self.builtIns = self.builtIns.union(builtins)
         self.scopeStack = [ModuleScope()]
         self.futuresAllowed = True
         self.handleChildren(tree)
@@ -351,7 +354,7 @@ class Checker(object):
         try:
             self.scopeStack[0][name].used = (self.scope, node.lineno)
         except KeyError:
-            if ((not hasattr(builtins, name)) and name not in _MAGIC_GLOBALS and not importStarred):
+            if not importStarred and name not in self.builtIns:
                 if (os.path.basename(self.filename) == '__init__.py' and name == '__path__'):
                     # the special name __path__ is valid only in packages
                     pass
