@@ -22,7 +22,7 @@ else:
 setup(
     name="pyflakes",
     license="MIT",
-    version="0.6.0",
+    version="0.6.1",
     description="passive checker of Python programs",
     author="Phil Frost",
     author_email="indigo@bitglue.com",

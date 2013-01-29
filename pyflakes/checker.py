@@ -688,7 +688,7 @@ class Checker(object):
     def AUGASSIGN(self, node):
         self.handleNodeLoad(node.target)
         self.handleNode(node.value, node)
-        self.handleNodeStore(node.target)
+        self.handleNode(node.target, node)
 
     def IMPORT(self, node):
         for alias in node.names:

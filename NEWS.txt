@@ -1,3 +1,6 @@
+0.6.1 (2013-01-29):
+  - Fix detection of variables in augmented assignments.
+
 0.6.0 (2013-01-29):
   - Support Python 3 up to 3.3, based on the pyflakes3k project.
   - Preserve compatibility with Python 2.5 and all recent versions of Python.
