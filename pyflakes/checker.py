@@ -3,6 +3,7 @@
 # See LICENSE file for details
 
 import os.path
+import sys
 try:
     import builtins
     PY2 = False
@@ -194,6 +195,7 @@ class Checker(object):
     """
 
     nodeDepth = 0
+    linenoOffset = 0
     traceTree = False
     builtIns = set(dir(builtins)) | set(_MAGIC_GLOBALS)
 
@@ -230,21 +232,24 @@ class Checker(object):
         `callable` is called, the scope at the time this is called will be
         restored, however it will contain any new bindings added to it.
         """
-        self._deferredFunctions.append((callable, self.scopeStack[:]))
+        self._deferredFunctions.append((callable, self.scopeStack[:],
+                                        self.linenoOffset))
 
     def deferAssignment(self, callable):
         """
         Schedule an assignment handler to be called just after deferred
         function handlers.
         """
-        self._deferredAssignments.append((callable, self.scopeStack[:]))
+        self._deferredAssignments.append((callable, self.scopeStack[:],
+                                          self.linenoOffset))
 
     def runDeferred(self, deferred):
         """
         Run the callables in C{deferred} using their associated scope stack.
         """
-        for handler, scope in deferred:
+        for handler, scope, linenoOffset in deferred:
             self.scopeStack = scope
+            self.linenoOffset = linenoOffset
             handler()
 
     @property
@@ -469,10 +474,18 @@ class Checker(object):
         return isinstance(node, ast.Str) or (isinstance(node, ast.Expr) and
                                              isinstance(node.value, ast.Str))
 
+    def getDocstring(self, node):
+        if isinstance(node, ast.Expr):
+            node = node.value
+        assert isinstance(node, ast.Str)
+        return node.s
+
     def handleNode(self, node, parent):
         if node is None:
             return
         node.parent = parent
+        if getattr(node, 'lineno', None) is not None:
+            node.lineno += self.linenoOffset
         if self.traceTree:
             print('  ' * self.nodeDepth + node.__class__.__name__)
         self.nodeDepth += 1
@@ -488,6 +501,34 @@ class Checker(object):
             self.nodeDepth -= 1
         if self.traceTree:
             print('  ' * self.nodeDepth + 'end ' + node.__class__.__name__)
+
+    def handleDoctests(self, node):
+        if node.body and self.isDocstring(node.body[0]):
+            docstring = self.getDocstring(node.body[0])
+        else:
+            return
+        if not docstring:
+            return
+        import doctest
+        dtparser = doctest.DocTestParser()
+        try:
+            examples = dtparser.get_examples(docstring)
+        except ValueError:
+            # e.g. ValueError: line 6 of the docstring for <string> has inconsistent leading whitespace: ...
+            return
+        self.pushFunctionScope()
+        for example in examples:
+            try:
+                tree = compile(example.source, "<doctest>", "exec", ast.PyCF_ONLY_AST)
+            except SyntaxError:
+                e = sys.exc_info()[1]
+                self.report(messages.DoctestSyntaxError,
+                            node.lineno + example.lineno + e.lineno)
+            else:
+                self.linenoOffset += node.lineno + example.lineno
+                self.handleChildren(tree)
+                self.linenoOffset -= node.lineno + example.lineno
+        self.popScope()
 
     def ignore(self, node):
         pass
@@ -593,6 +634,7 @@ class Checker(object):
             self.handleNode(deco, node)
         self.addBinding(node, FunctionDefinition(node.name, node))
         self.LAMBDA(node)
+        self.deferFunction(lambda: self.handleDoctests(node))
 
     def LAMBDA(self, node):
         args = []
@@ -675,6 +717,7 @@ class Checker(object):
             for keywordNode in node.keywords:
                 self.handleNode(keywordNode, node)
         self.pushClassScope()
+        self.deferFunction(lambda: self.handleDoctests(node))
         for stmt in node.body:
             self.handleNode(stmt, node)
         self.popScope()

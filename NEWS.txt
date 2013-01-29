@@ -1,3 +1,6 @@
+0.6.x (unreleased):
+  - Support checking doctests.
+
 0.6.1 (2013-01-29):
   - Fix detection of variables in augmented assignments.
 

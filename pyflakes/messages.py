@@ -60,6 +60,12 @@ class UndefinedName(Message):
         Message.__init__(self, filename, lineno)
         self.message_args = (name,)
 
+class DoctestSyntaxError(Message):
+    message = 'syntax error in doctest'
+    def __init__(self, filename, lineno):
+        Message.__init__(self, filename, lineno)
+        self.message_args = ()
+
 
 class UndefinedExport(Message):
     message = 'undefined name %r in __all__'
