@@ -22,12 +22,12 @@ else:
 setup(
     name="pyflakes",
     license="MIT",
-    version="0.6.a0",
+    version="0.6.0",
     description="passive checker of Python programs",
     author="Phil Frost",
     author_email="indigo@bitglue.com",
     maintainer="Florent Xicluna",
-    maintainer_email="florent.xicluna@gmail.com",
+    maintainer_email="pyflakes-dev@lists.launchpad.net",
     url="https://launchpad.net/pyflakes",
     packages=["pyflakes", "pyflakes.scripts", "pyflakes.test"],
     long_description="""Pyflakes is program to analyze Python programs and detect various errors. It
