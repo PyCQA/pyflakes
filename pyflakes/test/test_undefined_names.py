@@ -220,6 +220,15 @@ class Test(harness.Test):
                 return a
         ''', m.UndefinedLocal)
 
+    def test_undefinedAugmentedAssignment(self):
+        self.flakes('''
+        def f(seq):
+            a = 0
+            seq[a] += 1
+            seq[b] /= 2
+            c[0] *= 2
+        ''', m.UndefinedName, m.UndefinedName)
+
     def test_nestedClass(self):
         '''nested classes can access enclosing scope'''
         self.flakes('''
