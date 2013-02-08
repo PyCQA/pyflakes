@@ -55,6 +55,95 @@ class Test(harness.Test):
         [1 for a, b in [(1, 2)]]
         ''')
 
+    def test_redefinedInGenerator(self):
+        """
+        Test that reusing a variable in a generator does not raise
+        a warning.
+        """
+        self.flakes('''
+        a = 1
+        (1 for a, b in [(1, 2)])
+        ''')
+        self.flakes('''
+        class A:
+            a = 1
+            list(1 for a, b in [(1, 2)])
+        ''')
+        self.flakes('''
+        def f():
+            a = 1
+            (1 for a, b in [(1, 2)])
+        ''', m.UnusedVariable)
+        self.flakes('''
+        (1 for a, b in [(1, 2)])
+        (1 for a, b in [(1, 2)])
+        ''')
+        self.flakes('''
+        for a, b in [(1, 2)]:
+            pass
+        (1 for a, b in [(1, 2)])
+        ''')
+
+    @skipIf(version_info < (2, 7), "Python >= 2.7 only")
+    def test_redefinedInSetComprehension(self):
+        """
+        Test that reusing a variable in a set comprehension does not raise
+        a warning.
+        """
+        self.flakes('''
+        a = 1
+        {1 for a, b in [(1, 2)]}
+        ''')
+        self.flakes('''
+        class A:
+            a = 1
+            {1 for a, b in [(1, 2)]}
+        ''')
+        self.flakes('''
+        def f():
+            a = 1
+            {1 for a, b in [(1, 2)]}
+        ''', m.UnusedVariable)
+        self.flakes('''
+        {1 for a, b in [(1, 2)]}
+        {1 for a, b in [(1, 2)]}
+        ''')
+        self.flakes('''
+        for a, b in [(1, 2)]:
+            pass
+        {1 for a, b in [(1, 2)]}
+        ''')
+
+    @skipIf(version_info < (2, 7), "Python >= 2.7 only")
+    def test_redefinedInDictComprehension(self):
+        """
+        Test that reusing a variable in a dict comprehension does not raise
+        a warning.
+        """
+        self.flakes('''
+        a = 1
+        {1: 42 for a, b in [(1, 2)]}
+        ''')
+        self.flakes('''
+        class A:
+            a = 1
+            {1: 42 for a, b in [(1, 2)]}
+        ''')
+        self.flakes('''
+        def f():
+            a = 1
+            {1: 42 for a, b in [(1, 2)]}
+        ''', m.UnusedVariable)
+        self.flakes('''
+        {1: 42 for a, b in [(1, 2)]}
+        {1: 42 for a, b in [(1, 2)]}
+        ''')
+        self.flakes('''
+        for a, b in [(1, 2)]:
+            pass
+        {1: 42 for a, b in [(1, 2)]}
+        ''')
+
     def test_redefinedFunction(self):
         """
         Test that shadowing a function definition with another one raises a
