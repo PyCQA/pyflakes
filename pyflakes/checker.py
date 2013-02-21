@@ -13,17 +13,22 @@ except ImportError:
 try:
     import ast
     iter_child_nodes = ast.iter_child_nodes
-except (ImportError, AttributeError):   # Python 2.5
+except ImportError:     # Python 2.5
     import _ast as ast
 
-    def iter_child_nodes(node, astcls=ast.AST):
+    if 'decorator_list' not in ast.ClassDef._fields:
+        # Patch the missing attribute 'decorator_list'
+        ast.ClassDef.decorator_list = ()
+        ast.FunctionDef.decorator_list = property(lambda s: s.decorators)
+
+    def iter_child_nodes(node):
         """
-        Yield all direct child nodes of *node*, that is, all fields that are nodes
-        and all items of fields that are lists of nodes.
+        Yield all direct child nodes of *node*, that is, all fields that
+        are nodes and all items of fields that are lists of nodes.
         """
         for name in node._fields:
             field = getattr(node, name, None)
-            if isinstance(field, astcls):
+            if isinstance(field, ast.AST):
                 yield field
             elif isinstance(field, list):
                 for item in field:
@@ -587,8 +592,6 @@ class Checker(object):
             raise RuntimeError("Got impossible expression context: %r" % (node.ctx,))
 
     def FUNCTIONDEF(self, node):
-        if not hasattr(node, 'decorator_list'):   # Python 2.5
-            node.decorator_list = node.decorators
         for deco in node.decorator_list:
             self.handleNode(deco, node)
         self.addBinding(node, FunctionDefinition(node.name, node))
@@ -666,8 +669,7 @@ class Checker(object):
         classes, and the body of its definition.  Additionally, add its name to
         the current scope.
         """
-        # no class decorator in Python 2.5
-        for deco in getattr(node, 'decorator_list', ''):
+        for deco in node.decorator_list:
             self.handleNode(deco, node)
         for baseNode in node.bases:
             self.handleNode(baseNode, node)
