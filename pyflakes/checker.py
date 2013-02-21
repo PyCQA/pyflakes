@@ -539,13 +539,23 @@ class Checker(object):
             self.handleNode(gen, node)
         self.handleNode(node.elt, node)
 
-    GENERATOREXP = SETCOMP = LISTCOMP
+    def GENERATOREXP(self, node):
+        self.pushFunctionScope()
+        # handle generators before element
+        for gen in node.generators:
+            self.handleNode(gen, node)
+        self.handleNode(node.elt, node)
+        self.popScope()
+
+    SETCOMP = GENERATOREXP
 
     def DICTCOMP(self, node):
+        self.pushFunctionScope()
         for gen in node.generators:
             self.handleNode(gen, node)
         self.handleNode(node.key, node)
         self.handleNode(node.value, node)
+        self.popScope()
 
     def FOR(self, node):
         """

@@ -750,7 +750,8 @@ class TestSpecialAll(harness.Test):
         Re-using a global name as the loop variable for a generator
         expression results in a redefinition warning.
         """
-        self.flakes('import fu; (1 for fu in range(1))', m.RedefinedWhileUnused)
+        self.flakes('import fu; (1 for fu in range(1))',
+                    m.RedefinedWhileUnused, m.UnusedImport)
 
 
     def test_usedAsDecorator(self):

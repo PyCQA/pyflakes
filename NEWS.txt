@@ -1,3 +1,7 @@
+0.6.x (unreleased):
+  - Do not report redefinition of variable for generator expressions and
+    set or dict comprehensions.
+
 0.6.1 (2013-01-29):
   - Fix detection of variables in augmented assignments.
 
