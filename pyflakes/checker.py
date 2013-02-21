@@ -2,6 +2,7 @@
 # (c) 2005-2010 Divmod, Inc.
 # See LICENSE file for details
 
+import doctest
 import os.path
 import sys
 try:
@@ -477,8 +478,7 @@ class Checker(object):
     def getDocstring(self, node):
         if isinstance(node, ast.Expr):
             node = node.value
-        assert isinstance(node, ast.Str)
-        return node.s
+        return node.s if isinstance(node, ast.Str) else None
 
     def handleNode(self, node, parent):
         if node is None:
@@ -502,19 +502,16 @@ class Checker(object):
         if self.traceTree:
             print('  ' * self.nodeDepth + 'end ' + node.__class__.__name__)
 
+    _getDoctestExamples = doctest.DocTestParser().get_examples
+
     def handleDoctests(self, node):
-        if node.body and self.isDocstring(node.body[0]):
-            docstring = self.getDocstring(node.body[0])
-        else:
-            return
+        docstring = node.body and self.getDocstring(node.body[0])
         if not docstring:
             return
-        import doctest
-        dtparser = doctest.DocTestParser()
         try:
-            examples = dtparser.get_examples(docstring)
+            examples = self._getDoctestExamples(docstring)
         except ValueError:
-            # e.g. ValueError: line 6 of the docstring for <string> has inconsistent leading whitespace: ...
+            # e.g. line 6 of the docstring for <string> has inconsistent leading whitespace: ...
             return
         self.pushFunctionScope()
         for example in examples:
