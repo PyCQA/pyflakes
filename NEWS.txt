@@ -1,4 +1,6 @@
 0.6.x (unreleased):
+  - Do not report redefinition of variable for a variable used in a list
+    comprehension in a conditional.
   - Do not report redefinition of variable for generator expressions and
     set or dict comprehensions.
 

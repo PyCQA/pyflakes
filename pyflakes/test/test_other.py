@@ -213,6 +213,31 @@ class Test(harness.Test):
             pass
         ''', m.RedefinedWhileUnused)
 
+    def test_redefinedIfElseInListComp(self):
+        """
+        Test that shadowing a variable in a list comprehension in
+        an if and else block does not raise a warning.
+        """
+        self.flakes('''
+        if False:
+            a = 1
+        else:
+            [a for a in '12']
+        ''')
+
+    def test_redefinedElseInListComp(self):
+        """
+        Test that shadowing a variable in a list comprehension in
+        an else (or if) block raises a warning.
+        """
+        self.flakes('''
+        if False:
+            pass
+        else:
+            a = 1
+            [a for a in '12']
+        ''', m.RedefinedInListComp)
+
     def test_functionDecorator(self):
         """
         Test that shadowing a function definition with a decorated version of
