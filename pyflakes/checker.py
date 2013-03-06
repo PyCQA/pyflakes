@@ -368,7 +368,8 @@ class Checker(object):
         existing = self.scope.get(value.name)
         if not redefinedWhileUnused and self.hasParent(value.source, ast.ListComp):
             if (existing and reportRedef
-                    and not self.hasParent(existing.source, (ast.For, ast.ListComp))):
+                    and not self.hasParent(existing.source, (ast.For, ast.ListComp))
+                    and not self.differentForks(node, existing.source)):
                 self.report(messages.RedefinedInListComp,
                             node.lineno, value.name, existing.source.lineno)
 
