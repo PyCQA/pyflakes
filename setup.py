@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # Copyright 2005-2011 Divmod, Inc.
 # Copyright 2013 Florent Xicluna.  See LICENSE file for details
+from __future__ import with_statement
+
+import os.path
 import sys
 
 try:
@@ -19,10 +22,18 @@ else:
         'console_scripts': ['pyflakes = pyflakes.api:main'],
     }
 
+
+def get_version(fname=os.path.join('pyflakes', '__init__.py')):
+    with open(fname) as f:
+        for line in f:
+            if line.startswith('__version__'):
+                return eval(line.split('=')[-1])
+
+
 setup(
     name="pyflakes",
     license="MIT",
-    version="0.6.1",
+    version=get_version(),
     description="passive checker of Python programs",
     author="Phil Frost",
     author_email="indigo@bitglue.com",
