@@ -5,8 +5,9 @@ API for the command-line I{pyflakes} tool.
 import sys
 import os
 import _ast
+from optparse import OptionParser
 
-from pyflakes import checker
+from pyflakes import checker, __version__
 from pyflakes import reporter as modReporter
 
 __all__ = ['check', 'checkPath', 'checkRecursive', 'iterSourceCode', 'main']
@@ -121,7 +122,8 @@ def checkRecursive(paths, reporter):
 
 
 def main():
-    args = sys.argv[1:]
+    parser = OptionParser(version=__version__)
+    __, args = parser.parse_args()
     reporter = modReporter._makeDefaultReporter()
     if args:
         warnings = checkRecursive(args, reporter)
