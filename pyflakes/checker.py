@@ -44,6 +44,24 @@ else:
 from pyflakes import messages
 
 
+if PY2:
+    def get_type(node, _cache={}):
+        try:
+            return _cache[node.__class__]
+        except KeyError:
+            # workaround the str.upper() which is locale-dependent
+            ntype = str(unicode(node.__class__.__name__).upper())
+        _cache[node.__class__] = ntype
+        return ntype
+else:
+    def get_type(node, _cache={}):
+        try:
+            return _cache[node.__class__]
+        except KeyError:
+            _cache[node.__class__] = ntype = node.__class__.__name__.upper()
+        return ntype
+
+
 class Binding(object):
     """
     Represents the binding of a value to a name.
@@ -478,15 +496,15 @@ class Checker(object):
     def handleNode(self, node, parent):
         if node is None:
             return
-        node.parent = parent
         if self.traceTree:
             print('  ' * self.nodeDepth + node.__class__.__name__)
-        self.nodeDepth += 1
         if self.futuresAllowed and not (isinstance(node, ast.ImportFrom) or
                                         self.isDocstring(node)):
             self.futuresAllowed = False
-        nodeType = node.__class__.__name__.upper()
+        self.nodeDepth += 1
         node.level = self.nodeDepth
+        node.parent = parent
+        nodeType = get_type(node)
         try:
             handler = getattr(self, nodeType)
             handler(node)

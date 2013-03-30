@@ -5,6 +5,7 @@
     comprehension in a conditional.
   - Do not report redefinition of variable for generator expressions and
     set or dict comprehensions.
+  - Fix issue with Turkish locale where `'i'.upper() == 'i'` in Python 2.
 
 0.6.1 (2013-01-29):
   - Fix detection of variables in augmented assignments.
