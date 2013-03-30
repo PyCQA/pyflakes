@@ -1,6 +1,6 @@
 0.6.x (unreleased):
   - Add --version and --help options.
-  - Support `python -m pyflakes`
+  - Support `python -m pyflakes` (Python 2.7 and Python 3.x).
   - Do not report redefinition of variable for a variable used in a list
     comprehension in a conditional.
   - Do not report redefinition of variable for generator expressions and
