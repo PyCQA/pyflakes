@@ -36,9 +36,9 @@ def withStderrTo(stderr, f, *args, **kwargs):
         sys.stderr = outer
 
 
-class Stmt(object):
+class Node(object):
     """
-    Mock an AST statement.
+    Mock an AST node.
     """
     def __init__(self, lineno, col_offset=0):
         self.lineno = lineno
@@ -232,7 +232,7 @@ class TestReporter(TestCase):
         """
         out = StringIO()
         reporter = Reporter(out, None)
-        message = UnusedImport('foo.py', Stmt(42), 'bar')
+        message = UnusedImport('foo.py', Node(42), 'bar')
         reporter.flake(message)
         self.assertEquals(out.getvalue(), "%s\n" % (message,))
 
@@ -443,7 +443,7 @@ foo = '\\xyz'
         count, errors = self.getErrors(sourcePath)
         self.assertEquals(count, 1)
         self.assertEquals(
-            errors, [('flake', str(UnusedImport(sourcePath, Stmt(1), 'foo')))])
+            errors, [('flake', str(UnusedImport(sourcePath, Node(1), 'foo')))])
 
 
     @skipIf(sys.version_info >= (3,), "not relevant")
@@ -498,9 +498,9 @@ x = "%s"
         self.assertEqual(warnings, 2)
         self.assertEqual(
             sorted(log),
-            sorted([('flake', str(UnusedImport(file1, Stmt(1), 'baz'))),
+            sorted([('flake', str(UnusedImport(file1, Node(1), 'baz'))),
                     ('flake',
-                     str(UnusedImport(file2, Stmt(1), 'contraband')))]))
+                     str(UnusedImport(file2, Node(1), 'contraband')))]))
 
 
 class IntegrationTests(TestCase):
@@ -572,7 +572,7 @@ class IntegrationTests(TestCase):
         fd.write("import contraband\n".encode('ascii'))
         fd.close()
         d = self.runPyflakes([self.tempfilepath])
-        self.assertEqual(d, ("%s\n" % UnusedImport(self.tempfilepath, Stmt(1), 'contraband'), '', 1))
+        self.assertEqual(d, ("%s\n" % UnusedImport(self.tempfilepath, Node(1), 'contraband'), '', 1))
 
 
     def test_errors(self):
@@ -590,4 +590,4 @@ class IntegrationTests(TestCase):
         If no arguments are passed to C{pyflakes} then it reads from stdin.
         """
         d = self.runPyflakes([], stdin='import contraband'.encode('ascii'))
-        self.assertEqual(d, ("%s\n" % UnusedImport('<stdin>', Stmt(1), 'contraband'), '', 1))
+        self.assertEqual(d, ("%s\n" % UnusedImport('<stdin>', Node(1), 'contraband'), '', 1))
