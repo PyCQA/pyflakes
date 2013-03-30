@@ -174,7 +174,7 @@ class FunctionScope(Scope):
     """
     def __init__(self):
         super(FunctionScope, self).__init__()
-        self.globals = {}
+        self.globals = set()
 
 
 class ModuleScope(Scope):
@@ -477,7 +477,7 @@ class Checker(object):
         if not name:
             return
         if isinstance(self.scope, FunctionScope) and name in self.scope.globals:
-            del self.scope.globals[name]
+            self.scope.globals.remove(name)
         else:
             self.addBinding(node, UnBinding(name, node))
 
@@ -547,7 +547,7 @@ class Checker(object):
         Keep track of globals declarations.
         """
         if isinstance(self.scope, FunctionScope):
-            self.scope.globals.update(dict.fromkeys(node.names))
+            self.scope.globals.update(node.names)
 
     NONLOCAL = GLOBAL
 
