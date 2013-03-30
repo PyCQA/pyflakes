@@ -45,21 +45,12 @@ from pyflakes import messages
 
 
 if PY2:
-    def get_type(node, _cache={}):
-        try:
-            return _cache[node.__class__]
-        except KeyError:
-            # workaround the str.upper() which is locale-dependent
-            ntype = str(unicode(node.__class__.__name__).upper())
-        _cache[node.__class__] = ntype
-        return ntype
+    def getNodeType(node_class):
+        # workaround str.upper() which is locale-dependent
+        return str(unicode(node_class.__name__).upper())
 else:
-    def get_type(node, _cache={}):
-        try:
-            return _cache[node.__class__]
-        except KeyError:
-            _cache[node.__class__] = ntype = node.__class__.__name__.upper()
-        return ntype
+    def getNodeType(node_class):
+        return node_class.__name__.upper()
 
 
 class Binding(object):
@@ -221,6 +212,7 @@ class Checker(object):
     builtIns = set(dir(builtins)) | set(_MAGIC_GLOBALS)
 
     def __init__(self, tree, filename='(none)', builtins=None):
+        self._nodeHandlers = {}
         self._deferredFunctions = []
         self._deferredAssignments = []
         self.deadScopes = []
@@ -404,6 +396,14 @@ class Checker(object):
         else:
             self.scope[value.name] = value
 
+    def getNodeHandler(self, node_class):
+        try:
+            return self._nodeHandlers[node_class]
+        except KeyError:
+            nodeType = getNodeType(node_class)
+        self._nodeHandlers[node_class] = handler = getattr(self, nodeType)
+        return handler
+
     def handleNodeLoad(self, node):
         name = getNodeName(node)
         if not name:
@@ -504,9 +504,8 @@ class Checker(object):
         self.nodeDepth += 1
         node.level = self.nodeDepth
         node.parent = parent
-        nodeType = get_type(node)
         try:
-            handler = getattr(self, nodeType)
+            handler = self.getNodeHandler(node.__class__)
             handler(node)
         finally:
             self.nodeDepth -= 1
