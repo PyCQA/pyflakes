@@ -18,10 +18,10 @@ class Test(harness.Test):
     def test_usedImport(self):
         self.flakes('import fu; print(fu)')
         self.flakes('from baz import fu; print(fu)')
+        self.flakes('import fu; del fu')
 
     def test_redefinedWhileUnused(self):
         self.flakes('import fu; fu = 3', m.RedefinedWhileUnused)
-        self.flakes('import fu; del fu', m.RedefinedWhileUnused)
         self.flakes('import fu; fu, bar = 3', m.RedefinedWhileUnused)
         self.flakes('import fu; [fu, bar] = 3', m.RedefinedWhileUnused)
 

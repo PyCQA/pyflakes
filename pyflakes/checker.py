@@ -71,10 +71,6 @@ class Binding(object):
                                                         id(self))
 
 
-class UnBinding(Binding):
-    """Created by the 'del' operator."""
-
-
 class Importation(Binding):
     """
     A binding created by an import statement.
@@ -373,14 +369,9 @@ class Checker(object):
                 self.report(messages.RedefinedInListComp,
                             node.lineno, value.name, existing.source.lineno)
 
-        if isinstance(value, UnBinding):
-            try:
-                del self.scope[value.name]
-            except KeyError:
-                self.report(messages.UndefinedName, node.lineno, value.name)
-        elif (isinstance(existing, Definition)
-              and not existing.used
-              and not self.differentForks(node, existing.source)):
+        if (isinstance(existing, Definition)
+                and not existing.used
+                and not self.differentForks(node, existing.source)):
             self.report(messages.RedefinedWhileUnused,
                         node.lineno, value.name, existing.source.lineno)
         else:
@@ -461,7 +452,10 @@ class Checker(object):
         if isinstance(self.scope, FunctionScope) and name in self.scope.globals:
             del self.scope.globals[name]
         else:
-            self.addBinding(node, UnBinding(name, node))
+            try:
+                del self.scope[name]
+            except KeyError:
+                self.report(messages.UndefinedName, node.lineno, name)
 
     def handleChildren(self, tree):
         for node in iter_child_nodes(tree):
