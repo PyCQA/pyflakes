@@ -211,6 +211,7 @@ class Checker(object):
         if builtins:
             self.builtIns = self.builtIns.union(builtins)
         self.scopeStack = [ModuleScope()]
+        self.exceptHandlers = [()]
         self.futuresAllowed = True
         self.root = tree
         self.handleChildren(tree)
@@ -391,7 +392,6 @@ class Checker(object):
         if not name:
             return
         # try local scope
-        importStarred = self.scope.importStarred
         try:
             self.scope[name].used = (self.scope, node.lineno)
         except KeyError:
@@ -400,6 +400,7 @@ class Checker(object):
             return
 
         # try enclosing function scopes
+        importStarred = self.scope.importStarred
         for scope in self.scopeStack[-2:0:-1]:
             importStarred = importStarred or scope.importStarred
             if not isinstance(scope, FunctionScope):
@@ -416,12 +417,20 @@ class Checker(object):
         try:
             self.scopeStack[0][name].used = (self.scope, node.lineno)
         except KeyError:
-            if not importStarred and name not in self.builtIns:
-                if (os.path.basename(self.filename) == '__init__.py' and name == '__path__'):
-                    # the special name __path__ is valid only in packages
-                    pass
-                else:
-                    self.report(messages.UndefinedName, node.lineno, name)
+            pass
+        else:
+            return
+
+        # look in the built-ins
+        if importStarred or name in self.builtIns:
+            return
+        if name == '__path__' and os.path.basename(self.filename) == '__init__.py':
+            # the special name __path__ is valid only in packages
+            return
+
+        # protected with a NameError handler?
+        if 'NameError' not in self.exceptHandlers[-1]:
+            self.report(messages.UndefinedName, node.lineno, name)
 
     def handleNodeStore(self, node):
         name = getNodeName(node)
@@ -500,7 +509,7 @@ class Checker(object):
 
     # "stmt" type nodes
     RETURN = DELETE = PRINT = WHILE = IF = WITH = WITHITEM = RAISE = \
-        TRYEXCEPT = TRYFINALLY = TRY = ASSERT = EXEC = EXPR = handleChildren
+        TRYFINALLY = ASSERT = EXEC = EXPR = handleChildren
 
     CONTINUE = BREAK = PASS = ignore
 
@@ -727,6 +736,24 @@ class Checker(object):
             if node.module == '__future__':
                 importation.used = (self.scope, node.lineno)
             self.addBinding(node, importation)
+
+    def TRY(self, node):
+        handler_names = []
+        for handler in node.handlers:
+            if isinstance(handler.type, ast.Tuple):
+                for exc_type in handler.type.elts:
+                    handler_names.append(exc_type.id)
+            elif handler.type:
+                handler_names.append(handler.type.id)
+        self.exceptHandlers.append(handler_names)
+        for child in node.body:
+            self.handleNode(child, node)
+        self.exceptHandlers.pop()
+        for child in iter_child_nodes(node):
+            if child not in node.body:
+                self.handleNode(child, node)
+
+    TRYEXCEPT = TRY
 
     def EXCEPTHANDLER(self, node):
         # 3.x: in addition to handling children, we must handle the name of
