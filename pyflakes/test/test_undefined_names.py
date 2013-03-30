@@ -15,7 +15,6 @@ class Test(harness.Test):
     def test_definedInListComp(self):
         self.flakes('[a for a in range(10) if a]')
 
-
     def test_functionsNeedGlobalScope(self):
         self.flakes('''
         class a:
@@ -27,14 +26,12 @@ class Test(harness.Test):
     def test_builtins(self):
         self.flakes('range(10)')
 
-
     def test_builtinWindowsError(self):
         """
         C{WindowsError} is sometimes a builtin name, so no warning is emitted
         for using it.
         """
         self.flakes('WindowsError')
-
 
     def test_magicGlobalsFile(self):
         """
@@ -43,14 +40,12 @@ class Test(harness.Test):
         """
         self.flakes('__file__')
 
-
     def test_magicGlobalsBuiltins(self):
         """
         Use of the C{__builtins__} magic global should not emit an undefined
         name warning.
         """
         self.flakes('__builtins__')
-
 
     def test_magicGlobalsName(self):
         """
@@ -59,7 +54,6 @@ class Test(harness.Test):
         """
         self.flakes('__name__')
 
-
     def test_magicGlobalsPath(self):
         """
         Use of the C{__path__} magic global should not emit an undefined name
@@ -67,7 +61,6 @@ class Test(harness.Test):
         """
         self.flakes('__path__', m.UndefinedName)
         self.flakes('__path__', filename='package/__init__.py')
-
 
     def test_globalImportStar(self):
         '''Can't find undefined names with import *'''
@@ -163,7 +156,6 @@ class Test(harness.Test):
                     return a
         ''', m.UndefinedLocal)
 
-
     def test_intermediateClassScopeIgnored(self):
         """
         If a name defined in an enclosing scope is shadowed by a local variable
@@ -181,7 +173,6 @@ class Test(harness.Test):
                     print(x, a)
             print(x)
         ''', m.UndefinedLocal)
-
 
     def test_doubleNestingReportsClosestName(self):
         """
@@ -203,7 +194,6 @@ class Test(harness.Test):
                 return x
         ''', m.UndefinedLocal).messages[0]
         self.assertEqual(exc.message_args, ('x', 5))
-
 
     def test_laterRedefinedGlobalFromNestedScope3(self):
         """
@@ -336,7 +326,6 @@ class Test(harness.Test):
         """
         self.flakes('(a for a in %srange(10) if a)' %
                     ('x' if version_info < (3,) else ''))
-
 
 
 class NameTests(TestCase):
