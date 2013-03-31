@@ -1,5 +1,6 @@
-# (c) 2005-2012 Divmod, Inc.
-# See LICENSE file for details
+"""
+Provide the Reporter class.
+"""
 
 import sys
 try:

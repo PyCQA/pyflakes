@@ -1,7 +1,9 @@
-# -*- test-case-name: pyflakes -*-
-# (c) 2005-2010 Divmod, Inc.
-# See LICENSE file for details
+"""
+Main module.
 
+Implement the central Checker class.
+Also, it models the Bindings and Scopes.
+"""
 import os.path
 try:
     import builtins

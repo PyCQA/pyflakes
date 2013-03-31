@@ -1,4 +1,6 @@
-# (c) 2005 Divmod, Inc.  See LICENSE file for details
+"""
+Provide the class Message and its subclasses.
+"""
 
 
 class Message(object):
