@@ -861,8 +861,9 @@ class TestUnusedAssignment(harness.Test):
 
     def test_exceptWithoutNameInFunction(self):
         """
-        Don't issue false warning when an unnamed exception is used. Previously, there would be
-        a false warning, but only when the try..except was in a function
+        Don't issue false warning when an unnamed exception is used.
+        Previously, there would be a false warning, but only when the
+        try..except was in a function
         """
         self.flakes('''
         def foo():
@@ -871,8 +872,9 @@ class TestUnusedAssignment(harness.Test):
         ''')
 
     def test_augmentedAssignmentImportedFunctionCall(self):
-        """Consider a function that is called on the right part of an augassign operation to be
-        used.
+        """
+        Consider a function that is called on the right part of an
+        augassign operation to be used.
         """
         self.flakes('''
         from foo import bar
