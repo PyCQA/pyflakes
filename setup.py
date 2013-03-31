@@ -30,20 +30,26 @@ def get_version(fname=os.path.join('pyflakes', '__init__.py')):
                 return eval(line.split('=')[-1])
 
 
+def get_long_description():
+    descr = []
+    for fname in ('README.rst',):
+        with open(fname) as f:
+            descr.append(f.read())
+    return '\n\n'.join(descr)
+
+
 setup(
     name="pyflakes",
     license="MIT",
     version=get_version(),
     description="passive checker of Python programs",
+    long_description=get_long_description(),
     author="Phil Frost",
     author_email="indigo@bitglue.com",
     maintainer="Florent Xicluna",
     maintainer_email="pyflakes-dev@lists.launchpad.net",
     url="https://launchpad.net/pyflakes",
     packages=["pyflakes", "pyflakes.scripts", "pyflakes.test"],
-    long_description="""Pyflakes is program to analyze Python programs and detect various errors. It
-works by parsing the source file, not importing it, so it is safe to use on
-modules with side effects. It's also much faster.""",
     classifiers=[
         "Development Status :: 6 - Mature",
         "Environment :: Console",
