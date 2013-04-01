@@ -286,7 +286,7 @@ class Checker(object):
                     undefined = set(all) - set(scope)
                     for name in undefined:
                         self.report(messages.UndefinedExport,
-                                    scope['__all__'].source.lineno, name)
+                                    scope['__all__'].source, name)
             else:
                 all = []
 
@@ -295,7 +295,7 @@ class Checker(object):
                 if isinstance(importation, Importation):
                     if not importation.used and importation.name not in all:
                         self.report(messages.UnusedImport,
-                                    importation.source.lineno, importation.name)
+                                    importation.source, importation.name)
 
     def pushFunctionScope(self):
         self.scopeStack.append(FunctionScope())
@@ -376,7 +376,7 @@ class Checker(object):
                         and not self.differentForks(node, existing.source)):
                     redefinedWhileUnused = True
                     self.report(messages.RedefinedWhileUnused,
-                                node.lineno, value.name, existing.source.lineno)
+                                node, value.name, existing.source)
 
         existing = self.scope.get(value.name)
         if not redefinedWhileUnused and self.hasParent(value.source, ast.ListComp):
@@ -384,18 +384,18 @@ class Checker(object):
                     and not self.hasParent(existing.source, (ast.For, ast.ListComp))
                     and not self.differentForks(node, existing.source)):
                 self.report(messages.RedefinedInListComp,
-                            node.lineno, value.name, existing.source.lineno)
+                            node, value.name, existing.source)
 
         if isinstance(value, UnBinding):
             try:
                 del self.scope[value.name]
             except KeyError:
-                self.report(messages.UndefinedName, node.lineno, value.name)
+                self.report(messages.UndefinedName, node, value.name)
         elif (isinstance(existing, Definition)
               and not existing.used
               and not self.differentForks(node, existing.source)):
             self.report(messages.RedefinedWhileUnused,
-                        node.lineno, value.name, existing.source.lineno)
+                        node, value.name, existing.source)
         else:
             self.scope[value.name] = value
 
@@ -414,7 +414,7 @@ class Checker(object):
         # try local scope
         importStarred = self.scope.importStarred
         try:
-            self.scope[name].used = (self.scope, node.lineno)
+            self.scope[name].used = (self.scope, node)
         except KeyError:
             pass
         else:
@@ -426,7 +426,7 @@ class Checker(object):
             if not isinstance(scope, FunctionScope):
                 continue
             try:
-                scope[name].used = (self.scope, node.lineno)
+                scope[name].used = (self.scope, node)
             except KeyError:
                 pass
             else:
@@ -435,14 +435,14 @@ class Checker(object):
         # try global scope
         importStarred = importStarred or self.scopeStack[0].importStarred
         try:
-            self.scopeStack[0][name].used = (self.scope, node.lineno)
+            self.scopeStack[0][name].used = (self.scope, node)
         except KeyError:
             if not importStarred and name not in self.builtIns:
                 if (os.path.basename(self.filename) == '__init__.py' and name == '__path__'):
                     # the special name __path__ is valid only in packages
                     pass
                 else:
-                    self.report(messages.UndefinedName, node.lineno, name)
+                    self.report(messages.UndefinedName, node, name)
 
     def handleNodeStore(self, node):
         name = getNodeName(node)
@@ -461,7 +461,7 @@ class Checker(object):
                         and name not in self.scope.globals):
                     # then it's probably a mistake
                     self.report(messages.UndefinedLocal,
-                                scope[name].used[1], name, scope[name].source.lineno)
+                                scope[name].used[1], name, scope[name].source)
                     break
 
         parent = getattr(node, 'parent', None)
@@ -599,7 +599,7 @@ class Checker(object):
                     # unused ones will get an unused import warning
                     and self.scope[varn].used):
                 self.report(messages.ImportShadowedByLoopVar,
-                            node.lineno, varn, self.scope[varn].source.lineno)
+                            node, varn, self.scope[varn].source)
 
         self.handleChildren(node)
 
@@ -640,7 +640,7 @@ class Checker(object):
                     else:
                         if arg.id in args:
                             self.report(messages.DuplicateArgument,
-                                        node.lineno, arg.id)
+                                        node, arg.id)
                         args.append(arg.id)
             addArgs(node.args.args)
             defaults = node.args.defaults
@@ -648,7 +648,7 @@ class Checker(object):
             for arg in node.args.args + node.args.kwonlyargs:
                 if arg.arg in args:
                     self.report(messages.DuplicateArgument,
-                                node.lineno, arg.arg)
+                                node, arg.arg)
                 args.append(arg.arg)
                 self.handleNode(arg.annotation, node)
             if hasattr(node, 'returns'):    # Only for FunctionDefs
@@ -662,7 +662,7 @@ class Checker(object):
             if not wildcard:
                 continue
             if wildcard in args:
-                self.report(messages.DuplicateArgument, node.lineno, wildcard)
+                self.report(messages.DuplicateArgument, node, wildcard)
             args.append(wildcard)
         for default in defaults:
             self.handleNode(default, node)
@@ -689,7 +689,7 @@ class Checker(object):
                             and not self.scope.usesLocals
                             and isinstance(binding, Assignment)):
                         self.report(messages.UnusedVariable,
-                                    binding.source.lineno, name)
+                                    binding.source, name)
             self.deferAssignment(checkUnusedAssignments)
             self.popScope()
 
@@ -734,19 +734,19 @@ class Checker(object):
         if node.module == '__future__':
             if not self.futuresAllowed:
                 self.report(messages.LateFutureImport,
-                            node.lineno, [n.name for n in node.names])
+                            node, [n.name for n in node.names])
         else:
             self.futuresAllowed = False
 
         for alias in node.names:
             if alias.name == '*':
                 self.scope.importStarred = True
-                self.report(messages.ImportStarUsed, node.lineno, node.module)
+                self.report(messages.ImportStarUsed, node, node.module)
                 continue
             name = alias.asname or alias.name
             importation = Importation(name, node)
             if node.module == '__future__':
-                importation.used = (self.scope, node.lineno)
+                importation.used = (self.scope, node)
             self.addBinding(node, importation)
 
     def EXCEPTHANDLER(self, node):
