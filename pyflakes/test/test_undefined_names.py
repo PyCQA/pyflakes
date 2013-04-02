@@ -327,6 +327,36 @@ class Test(harness.Test):
         self.flakes('(a for a in %srange(10) if a)' %
                     ('x' if version_info < (3,) else ''))
 
+    def test_undefinedWithErrorHandler(self):
+        """
+        Some compatibility code checks explicitly for NameError.
+        It should not trigger warnings.
+        """
+        self.flakes('''
+        try:
+            socket_map
+        except NameError:
+            socket_map = {}
+        ''')
+        self.flakes('''
+        try:
+            _memoryview.contiguous
+        except (NameError, AttributeError):
+            raise RuntimeError("Python >= 3.3 is required")
+        ''')
+        # If NameError is not explicitly handled, generate a warning
+        self.flakes('''
+        try:
+            socket_map
+        except:
+            socket_map = {}
+        ''', m.UndefinedName)
+        self.flakes('''
+        try:
+            socket_map
+        except Exception:
+            socket_map = {}
+        ''', m.UndefinedName)
 
 class NameTests(TestCase):
     """

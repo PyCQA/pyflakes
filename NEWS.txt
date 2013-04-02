@@ -6,6 +6,8 @@
     comprehension in a conditional.
   - Do not report redefinition of variable for generator expressions and
     set or dict comprehensions.
+  - Do not report undefined name when the code is protected with a
+    `NameError` exception handler.
   - Fix issue with Turkish locale where `'i'.upper() == 'i'` in Python 2.
 
 0.6.1 (2013-01-29):
