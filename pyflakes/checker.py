@@ -170,10 +170,22 @@ class FunctionScope(Scope):
     @ivar globals: Names declared 'global' in this function.
     """
     usesLocals = False
+    alwaysUsed = set(['__tracebackhide__', '__traceback_info__', '__traceback_supplement__'])
 
     def __init__(self):
         super(FunctionScope, self).__init__()
-        self.globals = set()
+        # Simplify: manage the special locals as globals
+        self.globals = self.alwaysUsed.copy()
+
+    def unusedAssignments(self):
+        """
+        Return a generator for the assignments which have not been used.
+        """
+        for name, binding in self.items():
+            if (not binding.used and name not in self.globals
+                    and not self.usesLocals
+                    and isinstance(binding, Assignment)):
+                yield name, binding
 
 
 class ModuleScope(Scope):
@@ -687,12 +699,8 @@ class Checker(object):
                 """
                 Check to see if any assignments have not been used.
                 """
-                for name, binding in self.scope.items():
-                    if (not binding.used and name not in self.scope.globals
-                            and not self.scope.usesLocals
-                            and isinstance(binding, Assignment)):
-                        self.report(messages.UnusedVariable,
-                                    binding.source, name)
+                for name, binding in self.scope.unusedAssignments():
+                    self.report(messages.UnusedVariable, binding.source, name)
             self.deferAssignment(checkUnusedAssignments)
             self.popScope()
 

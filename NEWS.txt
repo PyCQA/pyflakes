@@ -10,6 +10,7 @@
     `NameError` exception handler.
   - Do not report redefinition of variable when unassigning a module imported
     for its side-effect.
+  - Support special locals like `__tracebackhide__` for py.test.
   - Fix issue with Turkish locale where `'i'.upper() == 'i'` in Python 2.
 
 0.6.1 (2013-01-29):

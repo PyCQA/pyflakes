@@ -625,6 +625,16 @@ class TestUnusedAssignment(harness.Test):
             return bar
         ''')
 
+    def test_tracebackhideSpecialVariable(self):
+        """
+        Do not warn about unused local variable __tracebackhide__, which is
+        a special variable for py.test.
+        """
+        self.flakes("""
+            def helper():
+                __tracebackhide__ = True
+        """)
+
     def test_ifexp(self):
         """
         Test C{foo if bar else baz} statements.
