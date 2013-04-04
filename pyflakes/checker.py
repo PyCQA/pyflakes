@@ -221,7 +221,7 @@ class Checker(object):
     """
 
     nodeDepth = 0
-    offset = (0, 0)
+    offset = None
     traceTree = False
     builtIns = set(dir(builtins)) | set(_MAGIC_GLOBALS)
 
@@ -523,8 +523,7 @@ class Checker(object):
     def handleNode(self, node, parent):
         if node is None:
             return
-        node.parent = parent
-        if getattr(node, 'lineno', None) is not None:
+        if self.offset and getattr(node, 'lineno', None) is not None:
             node.lineno += self.offset[0]
             node.col_offset += self.offset[1]
         if self.traceTree:
@@ -554,6 +553,7 @@ class Checker(object):
         except ValueError:
             # e.g. line 6 of the docstring for <string> has inconsistent leading whitespace: ...
             return
+        node_offset = self.offset or (0, 0)
         self.pushFunctionScope()
         for example in examples:
             try:
@@ -564,7 +564,6 @@ class Checker(object):
                 node.col_offset += example.indent + 4 + e.offset
                 self.report(messages.DoctestSyntaxError, node)
             else:
-                node_offset = self.offset
                 self.offset = (node_offset[0] + node.lineno + example.lineno,
                                node_offset[1] + example.indent + 4)
                 self.handleChildren(tree)

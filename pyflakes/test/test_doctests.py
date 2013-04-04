@@ -99,7 +99,7 @@ class Test(TestOther, TestImports, TestUndefinedNames):
         foo()
         ''')
 
-    def test_lineNumbersInDoctests(self):
+    def test_offsetInDoctests(self):
         exc = super(Test, self).flakes('''
 
         def doctest_stuff():
@@ -109,8 +109,9 @@ class Test(TestOther, TestImports, TestUndefinedNames):
 
         ''', m.UndefinedName).messages[0]
         self.assertEqual(exc.lineno, 5)
+        self.assertEqual(exc.col, 12)
 
-    def test_lineNumbersInLambdasInDoctests(self):
+    def test_offsetInLambdasInDoctests(self):
         exc = super(Test, self).flakes('''
 
         def doctest_stuff():
@@ -120,9 +121,9 @@ class Test(TestOther, TestImports, TestUndefinedNames):
 
         ''', m.UndefinedName).messages[0]
         self.assertEqual(exc.lineno, 5)
+        self.assertEqual(exc.col, 20)
 
-
-    def test_lineNumbersAfterDoctests(self):
+    def test_offsetAfterDoctests(self):
         exc = super(Test, self).flakes('''
 
         def doctest_stuff():
@@ -134,6 +135,7 @@ class Test(TestOther, TestImports, TestUndefinedNames):
 
         ''', m.UndefinedName).messages[0]
         self.assertEqual(exc.lineno, 8)
+        self.assertEqual(exc.col, 0)
 
     def test_syntaxErrorInDoctest(self):
         exc = super(Test, self).flakes('''
@@ -143,6 +145,7 @@ class Test(TestOther, TestImports, TestUndefinedNames):
             """
         ''', m.DoctestSyntaxError).messages[0]
         self.assertEqual(exc.lineno, 4)
+        self.assertEqual(exc.col, 26)
 
     def test_indentationErrorInDoctest(self):
         exc = super(Test, self).flakes('''
@@ -153,6 +156,7 @@ class Test(TestOther, TestImports, TestUndefinedNames):
             """
         ''', m.DoctestSyntaxError).messages[0]
         self.assertEqual(exc.lineno, 5)
+        self.assertEqual(exc.col, 16)
 
     def test_doctestCanReferToFunction(self):
         super(Test, self).flakes("""
