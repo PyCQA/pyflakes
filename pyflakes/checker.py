@@ -767,7 +767,7 @@ class Checker(object):
                 for exc_type in handler.type.elts:
                     handler_names.append(getNodeName(exc_type))
             elif handler.type:
-                handler_names.append(handler.type.id)
+                handler_names.append(getNodeName(handler.type))
         self.exceptHandlers.append(handler_names)
         for child in node.body:
             self.handleNode(child, node)
