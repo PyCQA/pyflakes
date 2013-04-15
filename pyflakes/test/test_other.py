@@ -873,9 +873,22 @@ class TestUnusedAssignment(harness.Test):
         try..except was in a function
         """
         self.flakes('''
+        import tokenize
         def foo():
             try: pass
-            except Exception: pass
+            except tokenize.TokenError: pass
+        ''')
+
+    def test_exceptWithoutNameInFunctionTuple(self):
+        """
+        Don't issue false warning when an unnamed exception is used.
+        This example catches a tuple of exception types.
+        """
+        self.flakes('''
+        import tokenize
+        def foo():
+            try: pass
+            except (tokenize.TokenError, IndentationError): pass
         ''')
 
     def test_augmentedAssignmentImportedFunctionCall(self):
