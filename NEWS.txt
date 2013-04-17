@@ -1,4 +1,4 @@
-0.6.x (unreleased):
+0.7.0 (2013-04-17):
   - Add --version and --help options.
   - Support `python -m pyflakes` (Python 2.7 and Python 3.x).
   - Add attribute `Message.col` to report column offset.
