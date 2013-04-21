@@ -4,15 +4,6 @@ Provide the Reporter class.
 
 import sys
 
-if sys.version_info < (3,):
-    _fsencoding = sys.getfilesystemencoding() or 'utf-8'
-
-    def _write(stream, text, encoding=_fsencoding):
-        stream.write(text.decode(encoding, 'replace'))
-else:
-    def _write(stream, text):
-        stream.write(text)
-
 
 class Reporter(object):
     """
@@ -42,7 +33,7 @@ class Reporter(object):
         @param msg: A message explaining the problem.
         @ptype msg: C{unicode}
         """
-        _write(self._stderr, "%s: %s\n" % (filename, msg))
+        self._stderr.write("%s: %s\n" % (filename, msg))
 
     def syntaxError(self, filename, msg, lineno, offset, text):
         """
@@ -62,11 +53,11 @@ class Reporter(object):
         line = text.splitlines()[-1]
         if offset is not None:
             offset = offset - (len(text) - len(line))
-        _write(self._stderr, '%s:%d: %s\n' % (filename, lineno, msg))
-        _write(self._stderr, line)
-        _write(self._stderr, '\n')
+        self._stderr.write('%s:%d: %s\n' % (filename, lineno, msg))
+        self._stderr.write(line)
+        self._stderr.write('\n')
         if offset is not None:
-            _write(self._stderr, " " * (offset + 1) + "^\n")
+            self._stderr.write(" " * (offset + 1) + "^\n")
 
     def flake(self, message):
         """
@@ -74,8 +65,8 @@ class Reporter(object):
 
         @param: A L{pyflakes.messages.Message}.
         """
-        _write(self._stdout, str(message))
-        _write(self._stdout, '\n')
+        self._stdout.write(str(message))
+        self._stdout.write('\n')
 
 
 def _makeDefaultReporter():
