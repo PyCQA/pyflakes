@@ -7,10 +7,6 @@ import sys
 import shutil
 import subprocess
 import tempfile
-try:
-    from io import StringIO
-except ImportError:
-    from StringIO import StringIO
 
 from unittest2 import skipIf, TestCase
 
@@ -21,7 +17,11 @@ from pyflakes.api import (
     checkRecursive,
     iterSourceCode,
 )
-if sys.version_info >= (3,):
+
+if sys.version_info < (3,):
+    from cStringIO import StringIO
+else:
+    from io import StringIO
     unichr = chr
 
 
