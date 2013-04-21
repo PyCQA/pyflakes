@@ -158,7 +158,8 @@ class Scope(dict):
     importStarred = False       # set to True when import * is found
 
     def __repr__(self):
-        return '<%s at 0x%x %s>' % (self.__class__.__name__, id(self), dict.__repr__(self))
+        scope_cls = self.__class__.__name__
+        return '<%s at 0x%x %s>' % (scope_cls, id(self), dict.__repr__(self))
 
 
 class ClassScope(Scope):
@@ -172,7 +173,8 @@ class FunctionScope(Scope):
     @ivar globals: Names declared 'global' in this function.
     """
     usesLocals = False
-    alwaysUsed = set(['__tracebackhide__', '__traceback_info__', '__traceback_supplement__'])
+    alwaysUsed = set(['__tracebackhide__',
+                      '__traceback_info__', '__traceback_supplement__'])
 
     def __init__(self):
         super(FunctionScope, self).__init__()
@@ -294,7 +296,8 @@ class Checker(object):
             export = isinstance(scope.get('__all__'), ExportBinding)
             if export:
                 all = scope['__all__'].names()
-                if not scope.importStarred and os.path.basename(self.filename) != '__init__.py':
+                if not scope.importStarred and \
+                   os.path.basename(self.filename) != '__init__.py':
                     # Look for possible mistakes in the export list
                     undefined = set(all) - set(scope)
                     for name in undefined:
@@ -384,7 +387,8 @@ class Checker(object):
                 existing = scope.get(value.name)
                 if (isinstance(existing, Importation)
                         and not existing.used
-                        and (not isinstance(value, Importation) or value.fullName == existing.fullName)
+                        and (not isinstance(value, Importation) or
+                             value.fullName == existing.fullName)
                         and reportRedef
                         and not self.differentForks(node, existing.source)):
                     redefinedWhileUnused = True
@@ -473,8 +477,8 @@ class Checker(object):
                 # if the name was defined in that scope, and the name has
                 # been accessed already in the current scope, and hasn't
                 # been declared global
-                if (name in scope and scope[name].used and scope[name].used[0] is self.scope
-                        and name not in self.scope.globals):
+                used = name in scope and scope[name].used
+                if used and used[0] is self.scope and name not in self.scope.globals:
                     # then it's probably a mistake
                     self.report(messages.UndefinedLocal,
                                 scope[name].used[1], name, scope[name].source)
@@ -483,7 +487,8 @@ class Checker(object):
         parent = getattr(node, 'parent', None)
         if isinstance(parent, (ast.For, ast.comprehension, ast.Tuple, ast.List)):
             binding = Binding(name, node)
-        elif parent is not None and name == '__all__' and isinstance(self.scope, ModuleScope):
+        elif (parent is not None and name == '__all__' and
+              isinstance(self.scope, ModuleScope)):
             binding = ExportBinding(name, parent.value)
         else:
             binding = Assignment(name, node)
@@ -551,7 +556,8 @@ class Checker(object):
         try:
             examples = self._getDoctestExamples(docstring)
         except ValueError:
-            # e.g. line 6 of the docstring for <string> has inconsistent leading whitespace: ...
+            # e.g. line 6 of the docstring for <string> has inconsistent
+            # leading whitespace: ...
             return
         node_offset = self.offset or (0, 0)
         self.pushFunctionScope()

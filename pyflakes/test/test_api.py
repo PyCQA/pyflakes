@@ -387,7 +387,8 @@ foo(bar=baz, bax)
             decoding_error = "%s: problem decoding source\n" % (sourcePath,)
         else:
             decoding_error = """\
-%s:1: (unicode error) 'unicodeescape' codec can't decode bytes in position 0-2: truncated \\xXX escape
+%s:1: (unicode error) 'unicodeescape' codec can't decode bytes \
+in position 0-2: truncated \\xXX escape
 foo = '\\xyz'
 %s""" % (sourcePath, '       ^\n' if sys.version_info >= (3, 2) else '')
         self.assertHasErrors(
@@ -538,7 +539,8 @@ class IntegrationTests(TestCase):
         fd.write("import contraband\n".encode('ascii'))
         fd.close()
         d = self.runPyflakes([self.tempfilepath])
-        self.assertEqual(d, ("%s\n" % UnusedImport(self.tempfilepath, Node(1), 'contraband'), '', 1))
+        expected = UnusedImport(self.tempfilepath, Node(1), 'contraband')
+        self.assertEqual(d, ("%s\n" % expected, '', 1))
 
     def test_errors(self):
         """
@@ -547,11 +549,13 @@ class IntegrationTests(TestCase):
         printed to stderr.
         """
         d = self.runPyflakes([self.tempfilepath])
-        self.assertEqual(d, ('', '%s: No such file or directory\n' % (self.tempfilepath,), 1))
+        error_msg = '%s: No such file or directory\n' % (self.tempfilepath,)
+        self.assertEqual(d, ('', error_msg, 1))
 
     def test_readFromStdin(self):
         """
         If no arguments are passed to C{pyflakes} then it reads from stdin.
         """
         d = self.runPyflakes([], stdin='import contraband'.encode('ascii'))
-        self.assertEqual(d, ("%s\n" % UnusedImport('<stdin>', Node(1), 'contraband'), '', 1))
+        expected = UnusedImport('<stdin>', Node(1), 'contraband')
+        self.assertEqual(d, ("%s\n" % expected, '', 1))

@@ -13,8 +13,10 @@ class Test(harness.Test):
         self.flakes('from baz import fu, bar', m.UnusedImport, m.UnusedImport)
 
     def test_aliasedImport(self):
-        self.flakes('import fu as FU, bar as FU', m.RedefinedWhileUnused, m.UnusedImport)
-        self.flakes('from moo import fu as FU, bar as FU', m.RedefinedWhileUnused, m.UnusedImport)
+        self.flakes('import fu as FU, bar as FU',
+                    m.RedefinedWhileUnused, m.UnusedImport)
+        self.flakes('from moo import fu as FU, bar as FU',
+                    m.RedefinedWhileUnused, m.UnusedImport)
 
     def test_usedImport(self):
         self.flakes('import fu; print(fu)')
@@ -619,7 +621,7 @@ class Test(harness.Test):
 
     @skip("todo: requires evaluating attribute access")
     def test_importedInClass(self):
-        '''Imports in class scope can be used through self'''
+        """Imports in class scope can be used through self."""
         self.flakes('''
         class c:
             import i
@@ -628,7 +630,7 @@ class Test(harness.Test):
         ''')
 
     def test_futureImport(self):
-        '''__future__ is special'''
+        """__future__ is special."""
         self.flakes('from __future__ import division')
         self.flakes('''
         "docstring is allowed before future import"

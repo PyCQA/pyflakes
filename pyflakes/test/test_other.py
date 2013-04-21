@@ -274,7 +274,7 @@ class Test(harness.Test):
         """)
 
     def test_unaryPlus(self):
-        '''Don't die on unary +'''
+        """Don't die on unary +."""
         self.flakes('+1')
 
     def test_undefinedBaseClass(self):
@@ -446,14 +446,20 @@ class Test(harness.Test):
         ''')
 
     def test_varAugmentedAssignment(self):
-        """Augmented assignment of a variable is supported. We don't care about var refs"""
+        """
+        Augmented assignment of a variable is supported.
+        We don't care about var refs.
+        """
         self.flakes('''
         foo = 0
         foo += 1
         ''')
 
     def test_attrAugmentedAssignment(self):
-        """Augmented assignment of attributes is supported. We don't care about attr refs"""
+        """
+        Augmented assignment of attributes is supported.
+        We don't care about attr refs.
+        """
         self.flakes('''
         foo = None
         foo.bar += foo.baz
@@ -549,8 +555,8 @@ class TestUnusedAssignment(harness.Test):
 
     def test_assignInListComprehension(self):
         """
-        Don't warn when a variable in a list comprehension is assigned to but
-        not used.
+        Don't warn when a variable in a list comprehension is
+        assigned to but not used.
         """
         self.flakes('''
         def f():
@@ -559,7 +565,8 @@ class TestUnusedAssignment(harness.Test):
 
     def test_generatorExpression(self):
         """
-        Don't warn when a variable in a generator expression is assigned to but not used.
+        Don't warn when a variable in a generator expression is
+        assigned to but not used.
         """
         self.flakes('''
         def f():
