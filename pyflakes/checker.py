@@ -8,10 +8,10 @@ import doctest
 import os.path
 import sys
 try:
-    import builtins
+    builtin_vars = dir(__import__('builtins'))
     PY2 = False
 except ImportError:
-    import __builtin__ as builtins
+    builtin_vars = dir(__import__('__builtin__'))
     PY2 = True
 
 try:
@@ -225,7 +225,7 @@ class Checker(object):
     nodeDepth = 0
     offset = None
     traceTree = False
-    builtIns = set(dir(builtins)) | set(_MAGIC_GLOBALS)
+    builtIns = set(builtin_vars).union(_MAGIC_GLOBALS)
 
     def __init__(self, tree, filename='(none)', builtins=None):
         self._nodeHandlers = {}
@@ -810,16 +810,19 @@ class Checker(object):
 
     def TRY(self, node):
         handler_names = []
+        # List the exception handlers
         for handler in node.handlers:
             if isinstance(handler.type, ast.Tuple):
                 for exc_type in handler.type.elts:
                     handler_names.append(getNodeName(exc_type))
             elif handler.type:
                 handler_names.append(getNodeName(handler.type))
+        # Memorize the except handlers and process the body
         self.exceptHandlers.append(handler_names)
         for child in node.body:
             self.handleNode(child, node)
         self.exceptHandlers.pop()
+        # Process the other nodes: "except:", "else:", "finally:"
         for child in iter_child_nodes(node):
             if child not in node.body:
                 self.handleNode(child, node)
