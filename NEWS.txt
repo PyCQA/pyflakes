@@ -1,5 +1,6 @@
 0.7.x (unreleased):
   - File `bin/pyflakes` was missing in tarball generated with distribute.
+  - Fix reporting errors in non-ASCII filenames (Python 2.x).
 
 0.7.0 (2013-04-17):
   - Add --version and --help options.
