@@ -149,8 +149,7 @@ class Test(TestOther, TestImports, TestUndefinedNames):
             ''',
             m.DoctestSyntaxError,
             m.DoctestSyntaxError,
-            m.DoctestSyntaxError,
-        ).messages
+            m.DoctestSyntaxError).messages
         exc = exceptions[0]
         self.assertEqual(exc.lineno, 4)
         self.assertEqual(exc.col, 26)
@@ -171,6 +170,24 @@ class Test(TestOther, TestImports, TestUndefinedNames):
         ''', m.DoctestSyntaxError).messages[0]
         self.assertEqual(exc.lineno, 5)
         self.assertEqual(exc.col, 16)
+
+    def test_offsetWithMultiLineArgs(self):
+        (exc1, exc2) = super(Test, self).flakes(
+            '''
+            def doctest_stuff(arg1,
+                              arg2,
+                              arg3):
+                """
+                    >>> assert
+                    >>> this
+                """
+            ''',
+            m.DoctestSyntaxError,
+            m.UndefinedName).messages
+        self.assertEqual(exc1.lineno, 6)
+        self.assertEqual(exc1.col, 19)
+        self.assertEqual(exc2.lineno, 7)
+        self.assertEqual(exc2.col, 12)
 
     def test_doctestCanReferToFunction(self):
         super(Test, self).flakes("""
