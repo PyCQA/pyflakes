@@ -5,7 +5,7 @@ Implement the central Checker class.
 Also, it models the Bindings and Scopes.
 """
 import doctest
-import os.path
+import os
 import sys
 try:
     builtin_vars = dir(__import__('builtins'))
@@ -225,7 +225,13 @@ class Checker(object):
     nodeDepth = 0
     offset = None
     traceTree = False
+    withDoctest = ('PYFLAKES_NODOCTEST' not in os.environ)
+
     builtIns = set(builtin_vars).union(_MAGIC_GLOBALS)
+    _customBuiltIns = os.environ.get('PYFLAKES_BUILTINS')
+    if _customBuiltIns:
+        builtIns.update(_customBuiltIns.split(','))
+    del _customBuiltIns
 
     def __init__(self, tree, filename='(none)', builtins=None):
         self._nodeHandlers = {}
@@ -523,7 +529,11 @@ class Checker(object):
     def getDocstring(self, node):
         if isinstance(node, ast.Expr):
             node = node.value
-        return node.s if isinstance(node, ast.Str) else None
+        if not isinstance(node, ast.Str):
+            return (None, None)
+        # Computed incorrectly if the docstring has backslash
+        doctest_lineno = node.lineno - node.s.count('\n') - 1
+        return (node.s, doctest_lineno)
 
     def handleNode(self, node, parent):
         if node is None:
@@ -550,12 +560,12 @@ class Checker(object):
     _getDoctestExamples = doctest.DocTestParser().get_examples
 
     def handleDoctests(self, node):
-        docstring = node.body and self.getDocstring(node.body[0])
-        if not docstring:
-            return
         try:
+            docstring, node_lineno = self.getDocstring(node.body[0])
+            if not docstring:
+                return
             examples = self._getDoctestExamples(docstring)
-        except ValueError:
+        except (ValueError, IndexError):
             # e.g. line 6 of the docstring for <string> has inconsistent
             # leading whitespace: ...
             return
@@ -566,11 +576,11 @@ class Checker(object):
                 tree = compile(example.source, "<doctest>", "exec", ast.PyCF_ONLY_AST)
             except SyntaxError:
                 e = sys.exc_info()[1]
-                node.lineno += example.lineno + e.lineno
-                node.col_offset += example.indent + 4 + e.offset
-                self.report(messages.DoctestSyntaxError, node)
+                position = (node_lineno + example.lineno + e.lineno,
+                            example.indent + 4 + e.offset)
+                self.report(messages.DoctestSyntaxError, node, position)
             else:
-                self.offset = (node_offset[0] + node.lineno + example.lineno,
+                self.offset = (node_offset[0] + node_lineno + example.lineno,
                                node_offset[1] + example.indent + 4)
                 self.handleChildren(tree)
                 self.offset = node_offset
@@ -689,7 +699,8 @@ class Checker(object):
             self.handleNode(deco, node)
         self.addBinding(node, FunctionDefinition(node.name, node))
         self.LAMBDA(node)
-        self.deferFunction(lambda: self.handleDoctests(node))
+        if self.withDoctest:
+            self.deferFunction(lambda: self.handleDoctests(node))
 
     def LAMBDA(self, node):
         args = []
@@ -767,7 +778,8 @@ class Checker(object):
             for keywordNode in node.keywords:
                 self.handleNode(keywordNode, node)
         self.pushClassScope()
-        self.deferFunction(lambda: self.handleDoctests(node))
+        if self.withDoctest:
+            self.deferFunction(lambda: self.handleDoctests(node))
         for stmt in node.body:
             self.handleNode(stmt, node)
         self.popScope()
