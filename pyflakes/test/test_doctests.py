@@ -138,14 +138,28 @@ class Test(TestOther, TestImports, TestUndefinedNames):
         self.assertEqual(exc.col, 0)
 
     def test_syntaxErrorInDoctest(self):
-        exc = super(Test, self).flakes('''
-        def doctest_stuff():
-            """
-                >>> from # line 4
-            """
-        ''', m.DoctestSyntaxError).messages[0]
+        exceptions = super(Test, self).flakes(
+            '''
+            def doctest_stuff():
+                """
+                    >>> from # line 4
+                    >>>     fortytwo = 42
+                    >>> except Exception:
+                """
+            ''',
+            m.DoctestSyntaxError,
+            m.DoctestSyntaxError,
+            m.DoctestSyntaxError,
+        ).messages
+        exc = exceptions[0]
         self.assertEqual(exc.lineno, 4)
         self.assertEqual(exc.col, 26)
+        exc = exceptions[1]
+        self.assertEqual(exc.lineno, 5)
+        self.assertEqual(exc.col, 16)
+        exc = exceptions[2]
+        self.assertEqual(exc.lineno, 6)
+        self.assertEqual(exc.col, 18)
 
     def test_indentationErrorInDoctest(self):
         exc = super(Test, self).flakes('''
