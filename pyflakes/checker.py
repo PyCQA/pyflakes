@@ -225,6 +225,7 @@ class Checker(object):
     nodeDepth = 0
     offset = None
     traceTree = False
+    withDoctest = True
     builtIns = set(builtin_vars).union(_MAGIC_GLOBALS)
 
     def __init__(self, tree, filename='(none)', builtins=None):
@@ -693,7 +694,8 @@ class Checker(object):
             self.handleNode(deco, node)
         self.addBinding(node, FunctionDefinition(node.name, node))
         self.LAMBDA(node)
-        self.deferFunction(lambda: self.handleDoctests(node))
+        if self.withDoctest:
+            self.deferFunction(lambda: self.handleDoctests(node))
 
     def LAMBDA(self, node):
         args = []
@@ -771,7 +773,8 @@ class Checker(object):
             for keywordNode in node.keywords:
                 self.handleNode(keywordNode, node)
         self.pushClassScope()
-        self.deferFunction(lambda: self.handleDoctests(node))
+        if self.withDoctest:
+            self.deferFunction(lambda: self.handleDoctests(node))
         for stmt in node.body:
             self.handleNode(stmt, node)
         self.popScope()
