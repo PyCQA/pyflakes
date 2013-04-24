@@ -381,16 +381,20 @@ foo(bar=baz, bax)
         """
         The invalid escape syntax raises ValueError in Python 2
         """
+        ver = sys.version_info
         # ValueError: invalid \x escape
         sourcePath = self.makeTempFile(r"foo = '\xyz'")
-        if sys.version_info < (3,):
+        if ver < (3,):
             decoding_error = "%s: problem decoding source\n" % (sourcePath,)
         else:
+            last_line = '       ^\n' if ver >= (3, 2) else ''
+            # Column has been "fixed" since 3.2.4 and 3.3.1
+            col = 1 if ver >= (3, 3, 1) or ((3, 2, 4) <= ver < (3, 3)) else 2
             decoding_error = """\
 %s:1: (unicode error) 'unicodeescape' codec can't decode bytes \
-in position 0-2: truncated \\xXX escape
+in position 0-%d: truncated \\xXX escape
 foo = '\\xyz'
-%s""" % (sourcePath, '       ^\n' if sys.version_info >= (3, 2) else '')
+%s""" % (sourcePath, col, last_line)
         self.assertHasErrors(
             sourcePath, [decoding_error])
 
