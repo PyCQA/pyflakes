@@ -523,7 +523,11 @@ class Checker(object):
     def getDocstring(self, node):
         if isinstance(node, ast.Expr):
             node = node.value
-        return node.s if isinstance(node, ast.Str) else None
+        if not isinstance(node, ast.Str):
+            return (None, None)
+        # Computed incorrectly if the docstring has backslash
+        doctest_lineno = node.lineno - node.s.count('\n') - 1
+        return (node.s, doctest_lineno)
 
     def handleNode(self, node, parent):
         if node is None:
@@ -550,12 +554,12 @@ class Checker(object):
     _getDoctestExamples = doctest.DocTestParser().get_examples
 
     def handleDoctests(self, node):
-        docstring = node.body and self.getDocstring(node.body[0])
-        if not docstring:
-            return
         try:
+            docstring, node_lineno = self.getDocstring(node.body[0])
+            if not docstring:
+                return
             examples = self._getDoctestExamples(docstring)
-        except ValueError:
+        except (ValueError, IndexError):
             # e.g. line 6 of the docstring for <string> has inconsistent
             # leading whitespace: ...
             return
@@ -566,11 +570,11 @@ class Checker(object):
                 tree = compile(example.source, "<doctest>", "exec", ast.PyCF_ONLY_AST)
             except SyntaxError:
                 e = sys.exc_info()[1]
-                node.lineno += example.lineno + e.lineno
-                node.col_offset += example.indent + 4 + e.offset
-                self.report(messages.DoctestSyntaxError, node)
+                position = (node_lineno + example.lineno + e.lineno,
+                            example.indent + 4 + e.offset)
+                self.report(messages.DoctestSyntaxError, node, position)
             else:
-                self.offset = (node_offset[0] + node.lineno + example.lineno,
+                self.offset = (node_offset[0] + node_lineno + example.lineno,
                                node_offset[1] + example.indent + 4)
                 self.handleChildren(tree)
                 self.offset = node_offset
