@@ -5,7 +5,7 @@ Implement the central Checker class.
 Also, it models the Bindings and Scopes.
 """
 import doctest
-import os.path
+import os
 import sys
 try:
     builtin_vars = dir(__import__('builtins'))
@@ -225,8 +225,13 @@ class Checker(object):
     nodeDepth = 0
     offset = None
     traceTree = False
-    withDoctest = True
+    withDoctest = ('PYFLAKES_NODOCTEST' not in os.environ)
+
     builtIns = set(builtin_vars).union(_MAGIC_GLOBALS)
+    _customBuiltIns = os.environ.get('PYFLAKES_BUILTINS')
+    if _customBuiltIns:
+        builtIns.update(_customBuiltIns.split(','))
+    del _customBuiltIns
 
     def __init__(self, tree, filename='(none)', builtins=None):
         self._nodeHandlers = {}

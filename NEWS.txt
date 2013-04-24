@@ -1,6 +1,9 @@
 0.7.x (unreleased):
   - Fix computation of `DoctestSyntaxError.lineno` and `col`.
   - Add boolean attribute `Checker.withDoctest` to ignore doctests.
+  - If environment variable `PYFLAKES_NODOCTEST` is set, skip doctests.
+  - Environment variable `PYFLAKES_BUILTINS` accepts a comma-separated
+    list of additional built-in names.
 
 0.7.1 (2013-04-23):
   - File `bin/pyflakes` was missing in tarball generated with distribute.
