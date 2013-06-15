@@ -372,12 +372,19 @@ class Test(harness.Test):
         class A:
             T = range(10)
 
-            X = {x for x in T}
-            Y = {x:x for x in T}
             Z = (x for x in T)
             L = [x for x in T]
             B = dict((i, str(i)) for i in T)
         ''')
+
+        if version_info >= (2, 7):
+            self.flakes('''
+            class A:
+                T = range(10)
+
+                X = {x for x in T}
+                Y = {x:x for x in T}
+            ''')
 
 
 class NameTests(TestCase):
