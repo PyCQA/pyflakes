@@ -451,7 +451,6 @@ class Checker(object):
 
         # try enclosing function scopes and global scope
         importStarred = self.scope.importStarred
-        # for scope in self.scopeStack[-2:0:-1]:
         for scope in reversed(scopes):
             importStarred = importStarred or scope.importStarred
             try:
