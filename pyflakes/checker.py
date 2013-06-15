@@ -192,6 +192,10 @@ class FunctionScope(Scope):
                 yield name, binding
 
 
+class GeneratorScope(Scope):
+    pass
+
+
 class ModuleScope(Scope):
     pass
 
@@ -319,11 +323,14 @@ class Checker(object):
                         self.report(messages.UnusedImport,
                                     importation.source, importation.name)
 
+    def pushScope(self, scopeClass=FunctionScope):
+        self.scopeStack.append(scopeClass())
+
     def pushFunctionScope(self):
-        self.scopeStack.append(FunctionScope())
+        self.pushScope(FunctionScope)
 
     def pushClassScope(self):
-        self.scopeStack.append(ClassScope())
+        self.pushScope(ClassScope)
 
     def report(self, messageClass, *args, **kwargs):
         self.messages.append(messageClass(self.filename, *args, **kwargs))
@@ -437,27 +444,22 @@ class Checker(object):
         else:
             return
 
-        # try enclosing function scopes
+        scopes = [scope for scope in self.scopeStack[:-1]
+                  if isinstance(scope, (FunctionScope, ModuleScope))]
+        if isinstance(self.scope, GeneratorScope) and scopes[-1] != self.scopeStack[-2]:
+            scopes.append(self.scopeStack[-2])
+
+        # try enclosing function scopes and global scope
         importStarred = self.scope.importStarred
-        for scope in self.scopeStack[-2:0:-1]:
+        # for scope in self.scopeStack[-2:0:-1]:
+        for scope in reversed(scopes):
             importStarred = importStarred or scope.importStarred
-            if not isinstance(scope, FunctionScope):
-                continue
             try:
                 scope[name].used = (self.scope, node)
             except KeyError:
                 pass
             else:
                 return
-
-        # try global scope
-        importStarred = importStarred or self.scopeStack[0].importStarred
-        try:
-            self.scopeStack[0][name].used = (self.scope, node)
-        except KeyError:
-            pass
-        else:
-            return
 
         # look in the built-ins
         if importStarred or name in self.builtIns:
@@ -632,7 +634,7 @@ class Checker(object):
         self.handleNode(node.elt, node)
 
     def GENERATOREXP(self, node):
-        self.pushFunctionScope()
+        self.pushScope(GeneratorScope)
         # handle generators before element
         for gen in node.generators:
             self.handleNode(gen, node)
@@ -642,7 +644,7 @@ class Checker(object):
     SETCOMP = GENERATOREXP
 
     def DICTCOMP(self, node):
-        self.pushFunctionScope()
+        self.pushScope(GeneratorScope)
         for gen in node.generators:
             self.handleNode(gen, node)
         self.handleNode(node.key, node)
