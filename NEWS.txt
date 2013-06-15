@@ -1,6 +1,8 @@
 0.7.x (unreleased):
   - Do not report undefined name for generator expression and dict or
     set comprehension at class level.
+  - Deprecate `Checker.pushFunctionScope` and `Checker.pushClassScope`:
+    use `Checker.pushScope` instead.
 
 0.7.2 (2013-04-24):
   - Fix computation of `DoctestSyntaxError.lineno` and `col`.

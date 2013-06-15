@@ -326,10 +326,10 @@ class Checker(object):
     def pushScope(self, scopeClass=FunctionScope):
         self.scopeStack.append(scopeClass())
 
-    def pushFunctionScope(self):
+    def pushFunctionScope(self):    # XXX Deprecated
         self.pushScope(FunctionScope)
 
-    def pushClassScope(self):
+    def pushClassScope(self):       # XXX Deprecated
         self.pushScope(ClassScope)
 
     def report(self, messageClass, *args, **kwargs):
@@ -572,7 +572,7 @@ class Checker(object):
             # leading whitespace: ...
             return
         node_offset = self.offset or (0, 0)
-        self.pushFunctionScope()
+        self.pushScope()
         for example in examples:
             try:
                 tree = compile(example.source, "<doctest>", "exec", ast.PyCF_ONLY_AST)
@@ -744,7 +744,7 @@ class Checker(object):
 
         def runFunction():
 
-            self.pushFunctionScope()
+            self.pushScope()
             for name in args:
                 self.addBinding(node, Argument(name, node), reportRedef=False)
             if isinstance(node.body, list):
@@ -779,7 +779,7 @@ class Checker(object):
         if not PY2:
             for keywordNode in node.keywords:
                 self.handleNode(keywordNode, node)
-        self.pushClassScope()
+        self.pushScope(ClassScope)
         if self.withDoctest:
             self.deferFunction(lambda: self.handleDoctests(node))
         for stmt in node.body:
