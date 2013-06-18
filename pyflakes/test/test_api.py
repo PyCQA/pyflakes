@@ -161,7 +161,7 @@ class TestReporter(TestCase):
         err = StringIO()
         reporter = Reporter(None, err)
         reporter.syntaxError('foo.py', 'a problem', 3, 4, 'bad line of source')
-        self.assertEquals(
+        self.assertEqual(
             ("foo.py:3: a problem\n"
              "bad line of source\n"
              "     ^\n"),
@@ -176,7 +176,7 @@ class TestReporter(TestCase):
         reporter = Reporter(None, err)
         reporter.syntaxError('foo.py', 'a problem', 3, None,
                              'bad line of source')
-        self.assertEquals(
+        self.assertEqual(
             ("foo.py:3: a problem\n"
              "bad line of source\n"),
             err.getvalue())
@@ -195,7 +195,7 @@ class TestReporter(TestCase):
         reporter = Reporter(None, err)
         reporter.syntaxError('foo.py', 'a problem', 3, len(lines[0]) + 5,
                              '\n'.join(lines))
-        self.assertEquals(
+        self.assertEqual(
             ("foo.py:3: a problem\n" +
              lines[-1] + "\n" +
              "     ^\n"),
@@ -208,7 +208,7 @@ class TestReporter(TestCase):
         err = StringIO()
         reporter = Reporter(None, err)
         reporter.unexpectedError('source.py', 'error message')
-        self.assertEquals('source.py: error message\n', err.getvalue())
+        self.assertEqual('source.py: error message\n', err.getvalue())
 
     def test_flake(self):
         """
@@ -219,7 +219,7 @@ class TestReporter(TestCase):
         reporter = Reporter(out, None)
         message = UnusedImport('foo.py', Node(42), 'bar')
         reporter.flake(message)
-        self.assertEquals(out.getvalue(), "%s\n" % (message,))
+        self.assertEqual(out.getvalue(), "%s\n" % (message,))
 
 
 class CheckTests(TestCase):
@@ -248,7 +248,7 @@ class CheckTests(TestCase):
         """
         err = StringIO()
         count = withStderrTo(err, checkPath, path)
-        self.assertEquals(
+        self.assertEqual(
             (count, err.getvalue()), (len(errorList), ''.join(errorList)))
 
     def getErrors(self, path):
@@ -283,8 +283,8 @@ class CheckTests(TestCase):
         L{checkPath} handles non-existing files.
         """
         count, errors = self.getErrors('extremo')
-        self.assertEquals(count, 1)
-        self.assertEquals(
+        self.assertEqual(count, 1)
+        self.assertEqual(
             errors,
             [('unexpectedError', 'extremo', 'No such file or directory')])
 
@@ -406,8 +406,8 @@ foo = '\\xyz'
         sourcePath = self.makeTempFile('')
         os.chmod(sourcePath, 0)
         count, errors = self.getErrors(sourcePath)
-        self.assertEquals(count, 1)
-        self.assertEquals(
+        self.assertEqual(count, 1)
+        self.assertEqual(
             errors,
             [('unexpectedError', sourcePath, "Permission denied")])
 
@@ -418,8 +418,8 @@ foo = '\\xyz'
         """
         sourcePath = self.makeTempFile("import foo")
         count, errors = self.getErrors(sourcePath)
-        self.assertEquals(count, 1)
-        self.assertEquals(
+        self.assertEqual(count, 1)
+        self.assertEqual(
             errors, [('flake', str(UnusedImport(sourcePath, Node(1), 'foo')))])
 
     @skipIf(sys.version_info >= (3,), "not relevant")
