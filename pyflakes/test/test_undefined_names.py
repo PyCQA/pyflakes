@@ -364,6 +364,28 @@ class Test(harness.Test):
             socket_map = {}
         ''', m.UndefinedName)
 
+    def test_definedInClass(self):
+        """
+        Defined name for generator expressions and dict/set comprehension.
+        """
+        self.flakes('''
+        class A:
+            T = range(10)
+
+            Z = (x for x in T)
+            L = [x for x in T]
+            B = dict((i, str(i)) for i in T)
+        ''')
+
+        if version_info >= (2, 7):
+            self.flakes('''
+            class A:
+                T = range(10)
+
+                X = {x for x in T}
+                Y = {x:x for x in T}
+            ''')
+
 
 class NameTests(TestCase):
     """
