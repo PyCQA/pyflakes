@@ -3,7 +3,7 @@ Tests for various Pyflakes behavior.
 """
 
 from sys import version_info
-from unittest2 import skip, skipIf
+from unittest import skip, skipIf
 
 from pyflakes import messages as m
 from pyflakes.test import harness

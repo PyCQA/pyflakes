@@ -2,7 +2,7 @@
 from _ast import PyCF_ONLY_AST
 from sys import version_info
 
-from unittest2 import skip, skipIf, TestCase
+from unittest import skip, skipIf, TestCase
 
 from pyflakes import messages as m, checker
 from pyflakes.test import harness

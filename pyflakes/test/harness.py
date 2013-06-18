@@ -2,12 +2,12 @@
 import textwrap
 import _ast
 
-import unittest2
+import unittest
 
 from pyflakes import checker
 
 
-class Test(unittest2.TestCase):
+class Test(unittest.TestCase):
 
     def flakes(self, input, *expectedOutputs, **kw):
         ast = compile(textwrap.dedent(input), "<test>", "exec",

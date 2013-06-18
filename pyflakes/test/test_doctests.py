@@ -1,5 +1,5 @@
 import textwrap
-from unittest2 import skip
+from unittest import skip
 
 from pyflakes.test.test_other import Test as TestOther
 from pyflakes.test.test_imports import Test as TestImports

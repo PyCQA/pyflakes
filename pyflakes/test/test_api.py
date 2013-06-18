@@ -8,7 +8,7 @@ import shutil
 import subprocess
 import tempfile
 
-from unittest2 import skipIf, TestCase
+from unittest import skipIf, TestCase
 
 from pyflakes.messages import UnusedImport
 from pyflakes.reporter import Reporter
