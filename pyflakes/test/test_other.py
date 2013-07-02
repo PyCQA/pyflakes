@@ -3,13 +3,12 @@ Tests for various Pyflakes behavior.
 """
 
 from sys import version_info
-from unittest import skip, skipIf
 
 from pyflakes import messages as m
-from pyflakes.test import harness
+from pyflakes.test.harness import TestCase, skip, skipIf
 
 
-class Test(harness.Test):
+class Test(TestCase):
 
     def test_duplicateArgs(self):
         self.flakes('def fu(bar, bar): pass', m.DuplicateArgument)
@@ -466,7 +465,7 @@ class Test(harness.Test):
         ''')
 
 
-class TestUnusedAssignment(harness.Test):
+class TestUnusedAssignment(TestCase):
     """
     Tests for warning about unused assignments.
     """

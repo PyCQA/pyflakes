@@ -8,8 +8,6 @@ import shutil
 import subprocess
 import tempfile
 
-from unittest import skipIf, TestCase
-
 from pyflakes.messages import UnusedImport
 from pyflakes.reporter import Reporter
 from pyflakes.api import (
@@ -17,6 +15,7 @@ from pyflakes.api import (
     checkRecursive,
     iterSourceCode,
 )
+from pyflakes.test.harness import TestCase, skipIf
 
 if sys.version_info < (3,):
     from cStringIO import StringIO

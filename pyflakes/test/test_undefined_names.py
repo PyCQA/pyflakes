@@ -2,13 +2,11 @@
 from _ast import PyCF_ONLY_AST
 from sys import version_info
 
-from unittest import skip, skipIf, TestCase
-
 from pyflakes import messages as m, checker
-from pyflakes.test import harness
+from pyflakes.test.harness import TestCase, skip, skipIf
 
 
-class Test(harness.Test):
+class Test(TestCase):
     def test_undefined(self):
         self.flakes('bar', m.UndefinedName)
 

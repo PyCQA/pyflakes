@@ -4,7 +4,6 @@
 from __future__ import with_statement
 
 import os.path
-import sys
 
 try:
     from setuptools import setup
@@ -18,8 +17,6 @@ else:
             'console_scripts': ['pyflakes = pyflakes.api:main'],
         },
     }
-    if sys.version_info < (2, 7):
-        extra['tests_require'] = ['unittest2']
 
 
 def get_version(fname=os.path.join('pyflakes', '__init__.py')):

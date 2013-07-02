@@ -1,12 +1,11 @@
 
 from sys import version_info
-from unittest import skip, skipIf
 
 from pyflakes import messages as m
-from pyflakes.test import harness
+from pyflakes.test.harness import TestCase, skip, skipIf
 
 
-class Test(harness.Test):
+class Test(TestCase):
 
     def test_unusedImport(self):
         self.flakes('import fu, bar', m.UnusedImport, m.UnusedImport)
@@ -652,7 +651,7 @@ class Test(harness.Test):
         ''', m.LateFutureImport)
 
 
-class TestSpecialAll(harness.Test):
+class TestSpecialAll(TestCase):
     """
     Tests for suppression of unused import warnings by C{__all__}.
     """
@@ -768,7 +767,7 @@ class TestSpecialAll(harness.Test):
         ''', m.UndefinedName)
 
 
-class Python26Tests(harness.Test):
+class Python26Tests(TestCase):
     """
     Tests for checking of syntax which is valid in PYthon 2.6 and newer.
     """
