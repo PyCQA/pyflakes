@@ -1,4 +1,4 @@
-0.7.x (unreleased):
+0.7.3 (2013-07-02):
   - Do not report undefined name for generator expression and dict or
     set comprehension at class level.
   - Deprecate `Checker.pushFunctionScope` and `Checker.pushClassScope`:
