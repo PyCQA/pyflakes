@@ -579,7 +579,7 @@ class Checker(object):
             except SyntaxError:
                 e = sys.exc_info()[1]
                 position = (node_lineno + example.lineno + e.lineno,
-                            example.indent + 4 + e.offset)
+                            example.indent + 4 + (e.offset or 0))
                 self.report(messages.DoctestSyntaxError, node, position)
             else:
                 self.offset = (node_offset[0] + node_lineno + example.lineno,
