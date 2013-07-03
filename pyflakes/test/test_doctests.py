@@ -207,3 +207,22 @@ class Test(TestOther, TestImports, TestUndefinedNames):
                     >>> Foo
                 '''
         """)
+
+    def test_noOffsetSyntaxErrorInDoctest(self):
+        exceptions = super(Test, self).flakes(
+            '''
+            def buildurl(base, *args, **kwargs):
+                """
+                >>> buildurl('/blah.php', ('a', '&'), ('b', '=')
+                '/blah.php?a=%26&b=%3D'
+                >>> buildurl('/blah.php', a='&', 'b'='=')
+                '/blah.php?b=%3D&a=%26'
+                """
+                pass
+            ''',
+            m.DoctestSyntaxError,
+            m.DoctestSyntaxError).messages
+        exc = exceptions[0]
+        self.assertEqual(exc.lineno, 4)
+        exc = exceptions[1]
+        self.assertEqual(exc.lineno, 6)
