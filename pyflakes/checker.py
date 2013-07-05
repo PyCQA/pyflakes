@@ -587,6 +587,38 @@ class Checker(object):
                 self.offset = node_offset
         self.popScope()
 
+    def findReturnWithArgument(self, node):
+        """
+        Finds and returns a return statment that has an argument.
+
+        Note that we should use node.returns in Python 3, but this method is
+        never called in Python 3 so we don't bother checking.
+        """
+        for item in node.body:
+            if isinstance(item, ast.Return) and item.value:
+                return item
+            if hasattr(item, 'body'):
+                found = self.findReturnWithArgument(item)
+                if found is not None:
+                    return found
+
+    def isGenerator(self, node):
+        """
+        Checks whether a function is a generator by looking for a yield
+        statement or expression.
+        """
+        if not isinstance(node.body, list):
+            # lambdas can not be generators
+            return False
+        for item in node.body:
+            if isinstance(item, (ast.Assign, ast.Expr)):
+                if isinstance(item.value, ast.Yield):
+                    return True
+            if hasattr(item, 'body'):
+                if self.isGenerator(item):
+                    return True
+        return False
+
     def ignore(self, node):
         pass
 
@@ -760,7 +792,21 @@ class Checker(object):
                 """
                 for name, binding in self.scope.unusedAssignments():
                     self.report(messages.UnusedVariable, binding.source, name)
+
             self.deferAssignment(checkUnusedAssignments)
+
+            if PY2:
+                def checkReturnWithArgumentInsideGenerator():
+                    """
+                    Check to see if there are any return statements with
+                    arguments but the function is a generator.
+                    """
+                    if self.isGenerator(node):
+                        stmt = self.findReturnWithArgument(node)
+                        if stmt is not None:
+                            self.report(messages.ReturnWithArgsInsideGenerator,
+                                stmt)
+                self.deferAssignment(checkReturnWithArgumentInsideGenerator)
             self.popScope()
 
         self.deferFunction(runFunction)
