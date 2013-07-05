@@ -792,7 +792,6 @@ class Checker(object):
                 """
                 for name, binding in self.scope.unusedAssignments():
                     self.report(messages.UnusedVariable, binding.source, name)
-
             self.deferAssignment(checkUnusedAssignments)
 
             if PY2:
