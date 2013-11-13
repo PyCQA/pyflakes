@@ -159,11 +159,11 @@ class TestReporter(TestCase):
         """
         err = StringIO()
         reporter = Reporter(None, err)
-        reporter.syntaxError('foo.py', 'a problem', 3, 4, 'bad line of source')
+        reporter.syntaxError('foo.py', 'a problem', 3, 7, 'bad line of source')
         self.assertEqual(
-            ("foo.py:3: a problem\n"
+            ("foo.py:3:7: a problem\n"
              "bad line of source\n"
-             "     ^\n"),
+             "       ^\n"),
             err.getvalue())
 
     def test_syntaxErrorNoOffset(self):
@@ -192,12 +192,12 @@ class TestReporter(TestCase):
             'more bad lines of source',
         ]
         reporter = Reporter(None, err)
-        reporter.syntaxError('foo.py', 'a problem', 3, len(lines[0]) + 5,
+        reporter.syntaxError('foo.py', 'a problem', 3, len(lines[0]) + 7,
                              '\n'.join(lines))
         self.assertEqual(
-            ("foo.py:3: a problem\n" +
+            ("foo.py:3:6: a problem\n" +
              lines[-1] + "\n" +
-             "     ^\n"),
+             "      ^\n"),
             err.getvalue())
 
     def test_unexpectedError(self):
@@ -320,9 +320,9 @@ def baz():
         self.assertHasErrors(
             sourcePath,
             ["""\
-%s:8: invalid syntax
+%s:8:10: invalid syntax
     '''quux'''
-           ^
+          ^
 """ % (sourcePath,)])
 
     def test_eofSyntaxError(self):
@@ -334,9 +334,9 @@ def baz():
         self.assertHasErrors(
             sourcePath,
             ["""\
-%s:1: unexpected EOF while parsing
+%s:1:8: unexpected EOF while parsing
 def foo(
-         ^
+        ^
 """ % (sourcePath,)])
 
     def test_nonDefaultFollowsDefaultSyntaxError(self):
@@ -350,11 +350,11 @@ def foo(bar=baz, bax):
     pass
 """
         sourcePath = self.makeTempFile(source)
-        last_line = '        ^\n' if sys.version_info >= (3, 2) else ''
+        last_line = '       ^\n' if sys.version_info >= (3, 2) else ''
         self.assertHasErrors(
             sourcePath,
             ["""\
-%s:1: non-default argument follows default argument
+%s:1:7: non-default argument follows default argument
 def foo(bar=baz, bax):
 %s""" % (sourcePath, last_line)])
 
@@ -368,11 +368,11 @@ def foo(bar=baz, bax):
 foo(bar=baz, bax)
 """
         sourcePath = self.makeTempFile(source)
-        last_line = '             ^\n' if sys.version_info >= (3, 2) else ''
+        last_line = '            ^\n' if sys.version_info >= (3, 2) else ''
         self.assertHasErrors(
             sourcePath,
             ["""\
-%s:1: non-keyword arg after keyword arg
+%s:1:12: non-keyword arg after keyword arg
 foo(bar=baz, bax)
 %s""" % (sourcePath, last_line)])
 
@@ -386,11 +386,11 @@ foo(bar=baz, bax)
         if ver < (3,):
             decoding_error = "%s: problem decoding source\n" % (sourcePath,)
         else:
-            last_line = '       ^\n' if ver >= (3, 2) else ''
+            last_line = '      ^\n' if ver >= (3, 2) else ''
             # Column has been "fixed" since 3.2.4 and 3.3.1
             col = 1 if ver >= (3, 3, 1) or ((3, 2, 4) <= ver < (3, 3)) else 2
             decoding_error = """\
-%s:1: (unicode error) 'unicodeescape' codec can't decode bytes \
+%s:1:6: (unicode error) 'unicodeescape' codec can't decode bytes \
 in position 0-%d: truncated \\xXX escape
 foo = '\\xyz'
 %s""" % (sourcePath, col, last_line)
