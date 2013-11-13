@@ -57,7 +57,7 @@ class Reporter(object):
         self._stderr.write(line)
         self._stderr.write('\n')
         if offset is not None:
-            self._stderr.write(" " * (offset + 1) + "^\n")
+            self._stderr.write(" " * offset + "^\n")
 
     def flake(self, message):
         """
