@@ -351,12 +351,13 @@ def foo(bar=baz, bax):
 """
         sourcePath = self.makeTempFile(source)
         last_line = '       ^\n' if sys.version_info >= (3, 2) else ''
+        column = '7:' if sys.version_info >= (3, 2) else ''
         self.assertHasErrors(
             sourcePath,
             ["""\
-%s:1:7: non-default argument follows default argument
+%s:1:%s non-default argument follows default argument
 def foo(bar=baz, bax):
-%s""" % (sourcePath, last_line)])
+%s""" % (sourcePath, column, last_line)])
 
     def test_nonKeywordAfterKeywordSyntaxError(self):
         """
@@ -369,12 +370,13 @@ foo(bar=baz, bax)
 """
         sourcePath = self.makeTempFile(source)
         last_line = '            ^\n' if sys.version_info >= (3, 2) else ''
+        column = '12:' if sys.version_info >= (3, 2) else ''
         self.assertHasErrors(
             sourcePath,
             ["""\
-%s:1:12: non-keyword arg after keyword arg
+%s:1:%s non-keyword arg after keyword arg
 foo(bar=baz, bax)
-%s""" % (sourcePath, last_line)])
+%s""" % (sourcePath, column, last_line)])
 
     def test_invalidEscape(self):
         """
