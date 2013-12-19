@@ -7,12 +7,13 @@ Also, it models the Bindings and Scopes.
 import doctest
 import os
 import sys
-try:
-    builtin_vars = dir(__import__('builtins'))
-    PY2 = False
-except ImportError:
-    builtin_vars = dir(__import__('__builtin__'))
+
+if sys.version_info < (3, 0):
     PY2 = True
+    builtin_vars = dir(__import__('__builtin__'))
+else:
+    PY2 = False
+    builtin_vars = dir(__import__('builtins'))
 
 try:
     import ast
