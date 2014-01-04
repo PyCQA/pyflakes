@@ -344,13 +344,13 @@ def foo(
         The error reported for source files which end prematurely causing a
         syntax error reflects the cause for the syntax error.
         """
-        sourcePath = self.makeTempFile("if True:\n\tdef foo(")
+        sourcePath = self.makeTempFile("if True:\n\tfoo =")
         self.assertHasErrors(
             sourcePath,
             ["""\
-%s:2: unexpected EOF while parsing
-\tdef foo(
-\t        ^
+%s:2: invalid syntax
+\tfoo =
+\t     ^
 """ % (sourcePath,)])
 
     def test_nonDefaultFollowsDefaultSyntaxError(self):
