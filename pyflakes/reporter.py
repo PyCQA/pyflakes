@@ -2,6 +2,7 @@
 Provide the Reporter class.
 """
 
+import re
 import sys
 
 
@@ -57,7 +58,8 @@ class Reporter(object):
         self._stderr.write(line)
         self._stderr.write('\n')
         if offset is not None:
-            self._stderr.write(" " * (offset + 1) + "^\n")
+            self._stderr.write(re.sub(r'\S', ' ', line[:offset]) +
+                               "^\n")
 
     def flake(self, message):
         """
