@@ -14,6 +14,7 @@ if sys.version_info < (3, 0):
 else:
     PY2 = False
     builtin_vars = dir(__import__('builtins'))
+PY33 = sys.version_info < (3, 4)    # Python 2.5 to 3.3
 
 try:
     import ast
@@ -706,6 +707,7 @@ class Checker(object):
 
     def LAMBDA(self, node):
         args = []
+        annotations = []
 
         if PY2:
             def addArgs(arglist):
@@ -713,42 +715,41 @@ class Checker(object):
                     if isinstance(arg, ast.Tuple):
                         addArgs(arg.elts)
                     else:
-                        if arg.id in args:
-                            self.report(messages.DuplicateArgument,
-                                        node, arg.id)
                         args.append(arg.id)
             addArgs(node.args.args)
             defaults = node.args.defaults
         else:
             for arg in node.args.args + node.args.kwonlyargs:
-                if arg.arg in args:
-                    self.report(messages.DuplicateArgument,
-                                node, arg.arg)
                 args.append(arg.arg)
-                self.handleNode(arg.annotation, node)
-            if hasattr(node, 'returns'):    # Only for FunctionDefs
-                # TODO: Handle Python 3.4 case where, varargannotation and
-                # kwargannotation have been collapsed into vararg and kwarg
-                # respectively.
-                if hasattr(node.args, 'varargannotation'):
-                    self.handleNode(node.args.varargannotation, node)
-                    self.handleNode(node.args.kwargannotation, node)
-                self.handleNode(node.returns, node)
+                annotations.append(arg.annotation)
             defaults = node.args.defaults + node.args.kw_defaults
 
-        # vararg/kwarg identifiers are not Name nodes
-        for wildcard in (node.args.vararg, node.args.kwarg):
-            if hasattr(wildcard, 'arg'):
-                # Python 3.4
-                wildcard = wildcard.arg
+        # Only for Python3 FunctionDefs
+        is_py3_func = hasattr(node, 'returns')
 
+        for arg_name in ('vararg', 'kwarg'):
+            wildcard = getattr(node.args, arg_name)
             if not wildcard:
                 continue
-            if wildcard in args:
-                self.report(messages.DuplicateArgument, node, wildcard)
-            args.append(wildcard)
-        for default in defaults:
-            self.handleNode(default, node)
+            args.append(wildcard if PY33 else wildcard.arg)
+            if is_py3_func:
+                if PY33:  # Python 2.5 to 3.3
+                    argannotation = arg_name + 'annotation'
+                    annotations.append(getattr(node.args, argannotation))
+                else:     # Python >= 3.4
+                    annotations.append(wildcard.annotation)
+
+        if is_py3_func:
+            annotations.append(node.returns)
+
+        if len(set(args)) < len(args):
+            for (idx, arg) in enumerate(args):
+                if arg in args[:idx]:
+                    self.report(messages.DuplicateArgument, node, arg)
+
+        for child in annotations + defaults:
+            if child:
+                self.handleNode(child, node)
 
         def runFunction():
 
