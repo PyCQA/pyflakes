@@ -1,3 +1,9 @@
+UNRELEASED:
+  - Adapt for the AST in Python 3.4.
+  - Fix caret position on SyntaxError.
+  - Fix crash on Python 2.x with some doctest SyntaxError.
+  - Add tox.ini.
+
 0.7.3 (2013-07-02):
   - Do not report undefined name for generator expression and dict or
     set comprehension at class level.
