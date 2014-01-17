@@ -600,7 +600,7 @@ class Checker(object):
     # "expr" type nodes
     BOOLOP = BINOP = UNARYOP = IFEXP = DICT = SET = YIELD = YIELDFROM = \
         COMPARE = CALL = REPR = ATTRIBUTE = SUBSCRIPT = LIST = TUPLE = \
-        STARRED = handleChildren
+        STARRED = NAMECONSTANT = handleChildren
 
     NUM = STR = BYTES = ELLIPSIS = ignore
 
@@ -727,13 +727,21 @@ class Checker(object):
                 args.append(arg.arg)
                 self.handleNode(arg.annotation, node)
             if hasattr(node, 'returns'):    # Only for FunctionDefs
-                for annotation in (node.args.varargannotation,
-                                   node.args.kwargannotation, node.returns):
-                    self.handleNode(annotation, node)
+                # TODO: Handle Python 3.4 case where, varargannotation and
+                # kwargannotation have been collapsed into vararg and kwarg
+                # respectively.
+                if hasattr(node.args, 'varargannotation'):
+                    self.handleNode(node.args.varargannotation, node)
+                    self.handleNode(node.args.kwargannotation, node)
+                self.handleNode(node.returns, node)
             defaults = node.args.defaults + node.args.kw_defaults
 
         # vararg/kwarg identifiers are not Name nodes
         for wildcard in (node.args.vararg, node.args.kwarg):
+            if hasattr(wildcard, 'arg'):
+                # Python 3.4
+                wildcard = wildcard.arg
+
             if not wildcard:
                 continue
             if wildcard in args:
