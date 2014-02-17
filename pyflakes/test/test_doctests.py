@@ -9,6 +9,8 @@ from pyflakes.test.harness import skip
 
 class Test(TestOther, TestImports, TestUndefinedNames):
 
+    withDoctest = True
+
     def doctestify(self, input):
         lines = []
         for line in textwrap.dedent(input).splitlines():

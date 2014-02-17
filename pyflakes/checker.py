@@ -231,7 +231,6 @@ class Checker(object):
     nodeDepth = 0
     offset = None
     traceTree = False
-    withDoctest = ('PYFLAKES_NODOCTEST' not in os.environ)
 
     builtIns = set(builtin_vars).union(_MAGIC_GLOBALS)
     _customBuiltIns = os.environ.get('PYFLAKES_BUILTINS')
@@ -239,7 +238,8 @@ class Checker(object):
         builtIns.update(_customBuiltIns.split(','))
     del _customBuiltIns
 
-    def __init__(self, tree, filename='(none)', builtins=None):
+    def __init__(self, tree, filename='(none)', builtins=None,
+                 withDoctest='PYFLAKES_DOCTEST' in os.environ):
         self._nodeHandlers = {}
         self._deferredFunctions = []
         self._deferredAssignments = []
@@ -248,6 +248,7 @@ class Checker(object):
         self.filename = filename
         if builtins:
             self.builtIns = self.builtIns.union(builtins)
+        self.withDoctest = withDoctest
         self.scopeStack = [ModuleScope()]
         self.exceptHandlers = [()]
         self.futuresAllowed = True
