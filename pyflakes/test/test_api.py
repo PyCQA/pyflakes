@@ -163,7 +163,7 @@ class TestReporter(TestCase):
         self.assertEqual(
             ("foo.py:3:7: a problem\n"
              "bad line of source\n"
-             "       ^\n"),
+             "    ^\n"),
             err.getvalue())
 
     def test_syntaxErrorNoOffset(self):
@@ -197,7 +197,7 @@ class TestReporter(TestCase):
         self.assertEqual(
             ("foo.py:3:6: a problem\n" +
              lines[-1] + "\n" +
-             "      ^\n"),
+             "    ^\n"),
             err.getvalue())
 
     def test_unexpectedError(self):
@@ -337,6 +337,20 @@ def baz():
 %s:1:8: unexpected EOF while parsing
 def foo(
         ^
+""" % (sourcePath,)])
+
+    def test_eofSyntaxErrorWithTab(self):
+        """
+        The error reported for source files which end prematurely causing a
+        syntax error reflects the cause for the syntax error.
+        """
+        sourcePath = self.makeTempFile("if True:\n\tfoo =")
+        self.assertHasErrors(
+            sourcePath,
+            ["""\
+%s:2: invalid syntax
+\tfoo =
+\t     ^
 """ % (sourcePath,)])
 
     def test_nonDefaultFollowsDefaultSyntaxError(self):

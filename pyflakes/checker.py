@@ -7,12 +7,14 @@ Also, it models the Bindings and Scopes.
 import doctest
 import os
 import sys
-try:
-    builtin_vars = dir(__import__('builtins'))
-    PY2 = False
-except ImportError:
-    builtin_vars = dir(__import__('__builtin__'))
+
+if sys.version_info < (3, 0):
     PY2 = True
+    builtin_vars = dir(__import__('__builtin__'))
+else:
+    PY2 = False
+    builtin_vars = dir(__import__('builtins'))
+PY33 = sys.version_info < (3, 4)    # Python 2.5 to 3.3
 
 try:
     import ast
@@ -578,7 +580,7 @@ class Checker(object):
             except SyntaxError:
                 e = sys.exc_info()[1]
                 position = (node_lineno + example.lineno + e.lineno,
-                            example.indent + 4 + e.offset)
+                            example.indent + 4 + (e.offset or 0))
                 self.report(messages.DoctestSyntaxError, node, position)
             else:
                 self.offset = (node_offset[0] + node_lineno + example.lineno,
@@ -599,7 +601,7 @@ class Checker(object):
     # "expr" type nodes
     BOOLOP = BINOP = UNARYOP = IFEXP = DICT = SET = YIELD = YIELDFROM = \
         COMPARE = CALL = REPR = ATTRIBUTE = SUBSCRIPT = LIST = TUPLE = \
-        STARRED = handleChildren
+        STARRED = NAMECONSTANT = handleChildren
 
     NUM = STR = BYTES = ELLIPSIS = ignore
 
@@ -705,6 +707,7 @@ class Checker(object):
 
     def LAMBDA(self, node):
         args = []
+        annotations = []
 
         if PY2:
             def addArgs(arglist):
@@ -712,34 +715,41 @@ class Checker(object):
                     if isinstance(arg, ast.Tuple):
                         addArgs(arg.elts)
                     else:
-                        if arg.id in args:
-                            self.report(messages.DuplicateArgument,
-                                        node, arg.id)
                         args.append(arg.id)
             addArgs(node.args.args)
             defaults = node.args.defaults
         else:
             for arg in node.args.args + node.args.kwonlyargs:
-                if arg.arg in args:
-                    self.report(messages.DuplicateArgument,
-                                node, arg.arg)
                 args.append(arg.arg)
-                self.handleNode(arg.annotation, node)
-            if hasattr(node, 'returns'):    # Only for FunctionDefs
-                for annotation in (node.args.varargannotation,
-                                   node.args.kwargannotation, node.returns):
-                    self.handleNode(annotation, node)
+                annotations.append(arg.annotation)
             defaults = node.args.defaults + node.args.kw_defaults
 
-        # vararg/kwarg identifiers are not Name nodes
-        for wildcard in (node.args.vararg, node.args.kwarg):
+        # Only for Python3 FunctionDefs
+        is_py3_func = hasattr(node, 'returns')
+
+        for arg_name in ('vararg', 'kwarg'):
+            wildcard = getattr(node.args, arg_name)
             if not wildcard:
                 continue
-            if wildcard in args:
-                self.report(messages.DuplicateArgument, node, wildcard)
-            args.append(wildcard)
-        for default in defaults:
-            self.handleNode(default, node)
+            args.append(wildcard if PY33 else wildcard.arg)
+            if is_py3_func:
+                if PY33:  # Python 2.5 to 3.3
+                    argannotation = arg_name + 'annotation'
+                    annotations.append(getattr(node.args, argannotation))
+                else:     # Python >= 3.4
+                    annotations.append(wildcard.annotation)
+
+        if is_py3_func:
+            annotations.append(node.returns)
+
+        if len(set(args)) < len(args):
+            for (idx, arg) in enumerate(args):
+                if arg in args[:idx]:
+                    self.report(messages.DuplicateArgument, node, arg)
+
+        for child in annotations + defaults:
+            if child:
+                self.handleNode(child, node)
 
         def runFunction():
 
