@@ -14,6 +14,7 @@ if sys.version_info < (3, 0):
 else:
     PY2 = False
     builtin_vars = dir(__import__('builtins'))
+PY32 = sys.version_info < (3, 3)    # Python 2.5 to 3.2
 PY33 = sys.version_info < (3, 4)    # Python 2.5 to 3.3
 
 try:
@@ -805,7 +806,7 @@ class Checker(object):
                     self.report(messages.UnusedVariable, binding.source, name)
             self.deferAssignment(checkUnusedAssignments)
 
-            if PY2:
+            if PY32:
                 def checkReturnWithArgumentInsideGenerator():
                     """
                     Check to see if there are any return statements with
