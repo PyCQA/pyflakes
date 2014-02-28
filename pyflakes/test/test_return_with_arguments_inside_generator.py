@@ -6,7 +6,7 @@ from pyflakes.test.harness import TestCase, skipIf
 
 
 class Test(TestCase):
-    @skipIf(version_info >= (3,), 'new in Python 3')
+    @skipIf(version_info >= (3, 3), 'new in Python 3.3')
     def test_return(self):
         self.flakes('''
         class a:
@@ -17,7 +17,7 @@ class Test(TestCase):
                 return a
         ''', m.ReturnWithArgsInsideGenerator)
 
-    @skipIf(version_info >= (3,), 'new in Python 3')
+    @skipIf(version_info >= (3, 3), 'new in Python 3.3')
     def test_returnNone(self):
         self.flakes('''
         def a():
@@ -25,7 +25,7 @@ class Test(TestCase):
             return None
         ''', m.ReturnWithArgsInsideGenerator)
 
-    @skipIf(version_info >= (3,), 'new in Python 3')
+    @skipIf(version_info >= (3, 3), 'new in Python 3.3')
     def test_returnYieldExpression(self):
         self.flakes('''
         def a():
