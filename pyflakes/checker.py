@@ -329,12 +329,6 @@ class Checker(object):
     def pushScope(self, scopeClass=FunctionScope):
         self.scopeStack.append(scopeClass())
 
-    def pushFunctionScope(self):    # XXX Deprecated
-        self.pushScope(FunctionScope)
-
-    def pushClassScope(self):       # XXX Deprecated
-        self.pushScope(ClassScope)
-
     def report(self, messageClass, *args, **kwargs):
         self.messages.append(messageClass(self.filename, *args, **kwargs))
 

@@ -1,4 +1,4 @@
-UNRELEASED:
+0.8.0 (2014-03-22):
   - Adapt for the AST in Python 3.4.
   - Fix caret position on SyntaxError.
   - Fix crash on Python 2.x with some doctest SyntaxError.
@@ -10,6 +10,7 @@ UNRELEASED:
   - Correctly parse incremental `__all__ += [...]`.
   - Catch return with arguments inside a generator (Python <= 3.2).
   - Do not complain about `_` in doctests.
+  - Drop deprecated methods `pushFunctionScope` and `pushClassScope`.
 
 0.7.3 (2013-07-02):
   - Do not report undefined name for generator expression and dict or
