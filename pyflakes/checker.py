@@ -352,9 +352,9 @@ class Checker(object):
 
         if not hasattr(lnode, 'parent') or not hasattr(rnode, 'parent'):
             return
-        if (lnode.level > rnode.level):
+        if (lnode.depth > rnode.depth):
             return self.getCommonAncestor(lnode.parent, rnode, stop)
-        if (rnode.level > lnode.level):
+        if (rnode.depth > lnode.depth):
             return self.getCommonAncestor(lnode, rnode.parent, stop)
         return self.getCommonAncestor(lnode.parent, rnode.parent, stop)
 
@@ -549,7 +549,7 @@ class Checker(object):
                                         self.isDocstring(node)):
             self.futuresAllowed = False
         self.nodeDepth += 1
-        node.level = self.nodeDepth
+        node.depth = self.nodeDepth
         node.parent = parent
         try:
             handler = self.getNodeHandler(node.__class__)
