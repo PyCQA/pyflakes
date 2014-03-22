@@ -7,6 +7,8 @@ UNRELEASED:
     `PYFLAKES_DOCTEST` environment variable (with the opposite meaning).
     Doctest checking is now disabled by default; set the environment variable
     to enable it.
+  - Correctly parse incremental `__all__ += [...]`
+  - Catch return with arguments inside a generator (Python <= 3.2)
 
 
 0.7.3 (2013-07-02):
