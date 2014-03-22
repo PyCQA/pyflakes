@@ -179,6 +179,8 @@ class FunctionScope(Scope):
         super(FunctionScope, self).__init__()
         # Simplify: manage the special locals as globals
         self.globals = self.alwaysUsed.copy()
+        self.returnValue = None     # First non-empty return
+        self.isGenerator = False    # Detect a generator
 
     def unusedAssignments(self):
         """
@@ -593,49 +595,17 @@ class Checker(object):
                 self.offset = node_offset
         self.popScope()
 
-    def findReturnWithArgument(self, node):
-        """
-        Finds and returns a return statment that has an argument.
-
-        Note that we should use node.returns in Python 3, but this method is
-        never called in Python 3 so we don't bother checking.
-        """
-        for item in node.body:
-            if isinstance(item, ast.Return) and item.value:
-                return item
-            if hasattr(item, 'body'):
-                found = self.findReturnWithArgument(item)
-                if found is not None:
-                    return found
-
-    def isGenerator(self, node):
-        """
-        Checks whether a function is a generator by looking for a yield
-        statement or expression.
-        """
-        if not isinstance(node.body, list):
-            # lambdas can not be generators
-            return False
-        for item in node.body:
-            if isinstance(item, (ast.Assign, ast.Expr)):
-                if isinstance(item.value, ast.Yield):
-                    return True
-            if hasattr(item, 'body'):
-                if self.isGenerator(item):
-                    return True
-        return False
-
     def ignore(self, node):
         pass
 
     # "stmt" type nodes
-    RETURN = DELETE = PRINT = WHILE = IF = WITH = WITHITEM = RAISE = \
+    DELETE = PRINT = WHILE = IF = WITH = WITHITEM = RAISE = \
         TRYFINALLY = ASSERT = EXEC = EXPR = handleChildren
 
     CONTINUE = BREAK = PASS = ignore
 
     # "expr" type nodes
-    BOOLOP = BINOP = UNARYOP = IFEXP = DICT = SET = YIELD = YIELDFROM = \
+    BOOLOP = BINOP = UNARYOP = IFEXP = DICT = SET = \
         COMPARE = CALL = REPR = ATTRIBUTE = SUBSCRIPT = LIST = TUPLE = \
         STARRED = NAMECONSTANT = handleChildren
 
@@ -733,6 +703,17 @@ class Checker(object):
             # arguments, but these aren't dispatched through here
             raise RuntimeError("Got impossible expression context: %r" % (node.ctx,))
 
+    def RETURN(self, node):
+        if node.value and not self.scope.returnValue:
+            self.scope.returnValue = node.value
+        self.handleNode(node.value, node)
+
+    def YIELD(self, node):
+        self.scope.isGenerator = True
+        self.handleNode(node.value, node)
+
+    YIELDFROM = YIELD
+
     def FUNCTIONDEF(self, node):
         for deco in node.decorator_list:
             self.handleNode(deco, node)
@@ -811,14 +792,12 @@ class Checker(object):
             if PY32:
                 def checkReturnWithArgumentInsideGenerator():
                     """
-                    Check to see if there are any return statements with
+                    Check to see if there is any return statement with
                     arguments but the function is a generator.
                     """
-                    if self.isGenerator(node):
-                        stmt = self.findReturnWithArgument(node)
-                        if stmt is not None:
-                            self.report(messages.ReturnWithArgsInsideGenerator,
-                                stmt)
+                    if self.scope.isGenerator and self.scope.returnValue:
+                        self.report(messages.ReturnWithArgsInsideGenerator,
+                                    self.scope.returnValue)
                 self.deferAssignment(checkReturnWithArgumentInsideGenerator)
             self.popScope()
 

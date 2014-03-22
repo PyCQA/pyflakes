@@ -124,7 +124,7 @@ def checkRecursive(paths, reporter):
 
 def main(prog=None):
     parser = OptionParser(prog=prog, version=__version__)
-    __, args = parser.parse_args()
+    (__, args) = parser.parse_args()
     reporter = modReporter._makeDefaultReporter()
     if args:
         warnings = checkRecursive(args, reporter)
