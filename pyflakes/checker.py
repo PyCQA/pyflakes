@@ -145,16 +145,16 @@ class ExportBinding(Binding):
     Names which are imported and not otherwise used but appear in the value of
     C{__all__} will not have an unused import warning reported for them.
     """
-    def names(self):
-        """
-        Return a list of the names referenced by this binding.
-        """
-        names = []
-        if isinstance(self.source, ast.List):
-            for node in self.source.elts:
+    def __init__(self, name, source, scope):
+        if '__all__' in scope and isinstance(source, ast.AugAssign):
+            self.names = list(scope['__all__'].names)
+        else:
+            self.names = []
+        if isinstance(source.value, (ast.List, ast.Tuple)):
+            for node in source.value.elts:
                 if isinstance(node, ast.Str):
-                    names.append(node.s)
-        return names
+                    self.names.append(node.s)
+        super(ExportBinding, self).__init__(name, source)
 
 
 class Scope(dict):
@@ -309,23 +309,24 @@ class Checker(object):
         for scope in self.deadScopes:
             export = isinstance(scope.get('__all__'), ExportBinding)
             if export:
-                all = scope['__all__'].names()
+                all_names = set(scope['__all__'].names)
                 if not scope.importStarred and \
                    os.path.basename(self.filename) != '__init__.py':
                     # Look for possible mistakes in the export list
-                    undefined = set(all) - set(scope)
+                    undefined = all_names.difference(scope)
                     for name in undefined:
                         self.report(messages.UndefinedExport,
                                     scope['__all__'].source, name)
             else:
-                all = []
+                all_names = []
 
             # Look for imported names that aren't used.
             for importation in scope.values():
-                if isinstance(importation, Importation):
-                    if not importation.used and importation.name not in all:
-                        self.report(messages.UnusedImport,
-                                    importation.source, importation.name)
+                if (isinstance(importation, Importation) and
+                        not importation.used and
+                        importation.name not in all_names):
+                    self.report(messages.UnusedImport,
+                                importation.source, importation.name)
 
     def pushScope(self, scopeClass=FunctionScope):
         self.scopeStack.append(scopeClass())
@@ -500,7 +501,7 @@ class Checker(object):
             binding = Binding(name, node)
         elif (parent is not None and name == '__all__' and
               isinstance(self.scope, ModuleScope)):
-            binding = ExportBinding(name, parent.value)
+            binding = ExportBinding(name, parent, self.scope)
         else:
             binding = Assignment(name, node)
         if name in self.scope:

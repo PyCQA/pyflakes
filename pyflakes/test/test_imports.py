@@ -686,6 +686,23 @@ class TestSpecialAll(TestCase):
         import foo
         __all__ = ["foo"]
         ''')
+        self.flakes('''
+        import foo
+        __all__ = ("foo",)
+        ''')
+
+    def test_augmentedAssignment(self):
+        """
+        The C{__all__} variable is defined incrementally.
+        """
+        self.flakes('''
+        import a
+        import c
+        __all__ = ['a']
+        __all__ += ['b']
+        if 1 < 3:
+            __all__ += ['c', 'd']
+        ''', m.UndefinedExport, m.UndefinedExport)
 
     def test_unrecognizable(self):
         """
