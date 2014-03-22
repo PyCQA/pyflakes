@@ -54,8 +54,8 @@ class Reporter(object):
         line = text.splitlines()[-1]
         if offset is not None:
             offset = offset - (len(text) - len(line))
-            self._stderr.write('%s:%d:%d: %s\n' % (filename, lineno, offset + 1,
-        msg))
+            self._stderr.write('%s:%d:%d: %s\n' %
+                               (filename, lineno, offset + 1, msg))
         else:
             self._stderr.write('%s:%d: %s\n' % (filename, lineno, msg))
         self._stderr.write(line)
