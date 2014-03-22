@@ -584,7 +584,12 @@ class Checker(object):
             else:
                 self.offset = (node_offset[0] + node_lineno + example.lineno,
                                node_offset[1] + example.indent + 4)
+                underscore_in_builtins = '_' in self.builtIns
+                if not underscore_in_builtins:
+                    self.builtIns.add('_')
                 self.handleChildren(tree)
+                if not underscore_in_builtins:
+                    self.builtIns.remove('_')
                 self.offset = node_offset
         self.popScope()
 

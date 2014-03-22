@@ -228,3 +228,16 @@ class Test(TestOther, TestImports, TestUndefinedNames):
         self.assertEqual(exc.lineno, 4)
         exc = exceptions[1]
         self.assertEqual(exc.lineno, 6)
+
+    def test_singleUnderscoreInDoctest(self):
+        super(Test, self).flakes('''
+        def func():
+            """A docstring
+
+            >>> func()
+            1
+            >>> _
+            1
+            """
+            return 1
+        ''')
