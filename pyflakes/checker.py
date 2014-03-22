@@ -8,14 +8,10 @@ import doctest
 import os
 import sys
 
-if sys.version_info < (3, 0):
-    PY2 = True
-    builtin_vars = dir(__import__('__builtin__'))
-else:
-    PY2 = False
-    builtin_vars = dir(__import__('builtins'))
+PY2 = sys.version_info < (3, 0)
 PY32 = sys.version_info < (3, 3)    # Python 2.5 to 3.2
 PY33 = sys.version_info < (3, 4)    # Python 2.5 to 3.3
+builtin_vars = dir(__import__('__builtin__' if PY2 else 'builtins'))
 
 try:
     import ast
