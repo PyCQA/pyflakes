@@ -37,12 +37,12 @@ except ImportError:     # Python 2.5
                 for item in field:
                     yield item
 # Python >= 3.3 uses ast.Try instead of (ast.TryExcept + ast.TryFinally)
-if hasattr(ast, 'Try'):
-    ast_TryExcept = ast.Try
-    ast_TryFinally = ()
-else:
+if PY32:
     ast_TryExcept = ast.TryExcept
     ast_TryFinally = ast.TryFinally
+else:
+    ast_TryExcept = ast.Try
+    ast_TryFinally = ()
 
 from pyflakes import messages
 
