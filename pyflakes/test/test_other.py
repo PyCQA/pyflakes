@@ -13,14 +13,13 @@ class Test(TestCase):
     def test_duplicateArgs(self):
         self.flakes('def fu(bar, bar): pass', m.DuplicateArgument)
 
-    @skip("todo: this requires finding all assignments in the function body first")
     def test_localReferencedBeforeAssignment(self):
         self.flakes('''
         a = 1
         def f():
             a; a=1
         f()
-        ''', m.UndefinedName)
+        ''', m.UndefinedLocal, m.UnusedVariable)
 
     def test_redefinedInListComp(self):
         """
