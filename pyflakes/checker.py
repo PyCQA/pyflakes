@@ -46,9 +46,9 @@ else:
 class _FieldsOrder(dict):
     """Fix order of AST fields."""
 
-    def _get_fields(self, node_type):
+    def _get_fields(self, node_class):
         # handle iter before target, and generators before element
-        fields = node_type._fields
+        fields = node_class._fields
         if 'iter' in fields:
             first = 'iter'
         elif 'generators' in fields:
@@ -57,8 +57,8 @@ class _FieldsOrder(dict):
             return fields
         return tuple([first] + [fld for fld in fields if fld != first])
 
-    def __missing__(self, node_type):
-        self[node_type] = fields = self._get_fields(node_type)
+    def __missing__(self, node_class):
+        self[node_class] = fields = self._get_fields(node_class)
         return fields
 
 
