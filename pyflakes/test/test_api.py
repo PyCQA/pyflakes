@@ -439,8 +439,7 @@ foo = '\\xyz'
 
     def test_encodedFileUTF8(self):
         """
-        If a source file contains bytes which cannot be decoded, this is
-        reported on stderr.
+        If source file declares the correct encoding, no error is reported.
         """
         SNOWMAN = unichr(0x2603)
         source = ("""\
