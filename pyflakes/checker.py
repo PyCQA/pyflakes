@@ -827,8 +827,8 @@ class Checker(object):
             if not self.futuresAllowed:
                 self.report(messages.LateFutureImport,
                             node, [n.name for n in node.names])
-        else:
-            self.futuresAllowed = False
+            return
+        self.futuresAllowed = False
 
         for alias in node.names:
             if alias.name == '*':
