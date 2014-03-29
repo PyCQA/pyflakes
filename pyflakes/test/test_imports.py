@@ -693,6 +693,15 @@ class Test(TestCase):
         bar
         ''', m.LateFutureImport)
 
+    def test_futureImportUsed(self):
+        """__future__ is special, but names are injected in the namespace."""
+        self.flakes('''
+        from __future__ import division
+        from __future__ import print_function
+
+        assert print_function is not division
+        ''')
+
 
 class TestSpecialAll(TestCase):
     """

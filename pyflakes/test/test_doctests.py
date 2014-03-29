@@ -230,6 +230,9 @@ class TestImports(_DoctestMixin, TestImports):
     def test_futureImport(self):
         """XXX This test can't work in a doctest"""
 
+    def test_futureImportUsed(self):
+        """XXX This test can't work in a doctest"""
+
 
 class TestUndefinedNames(_DoctestMixin, TestUndefinedNames):
 
