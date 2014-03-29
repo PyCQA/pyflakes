@@ -36,7 +36,6 @@ class _DoctestMixin(object):
 
     def flakes(self, input, *args, **kw):
         return super(_DoctestMixin, self).flakes(self.doctestify(input), *args, **kw)
-        # return TestCase.flakes(self, self.doctestify(input), *args, **kw)
 
 
 class Test(TestCase):
