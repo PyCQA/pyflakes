@@ -559,16 +559,19 @@ class Checker(object):
 
     def handleDoctests(self, node):
         try:
-            docstring, node_lineno = self.getDocstring(node.body[0])
-            if not docstring:
-                return
-            examples = self._getDoctestExamples(docstring)
+            (docstring, node_lineno) = self.getDocstring(node.body[0])
+            examples = docstring and self._getDoctestExamples(docstring)
         except (ValueError, IndexError):
             # e.g. line 6 of the docstring for <string> has inconsistent
             # leading whitespace: ...
             return
+        if not examples:
+            return
         node_offset = self.offset or (0, 0)
         self.pushScope()
+        underscore_in_builtins = '_' in self.builtIns
+        if not underscore_in_builtins:
+            self.builtIns.add('_')
         for example in examples:
             try:
                 tree = compile(example.source, "<doctest>", "exec", ast.PyCF_ONLY_AST)
@@ -580,13 +583,10 @@ class Checker(object):
             else:
                 self.offset = (node_offset[0] + node_lineno + example.lineno,
                                node_offset[1] + example.indent + 4)
-                underscore_in_builtins = '_' in self.builtIns
-                if not underscore_in_builtins:
-                    self.builtIns.add('_')
                 self.handleChildren(tree)
-                if not underscore_in_builtins:
-                    self.builtIns.remove('_')
                 self.offset = node_offset
+        if not underscore_in_builtins:
+            self.builtIns.remove('_')
         self.popScope()
 
     def ignore(self, node):
