@@ -15,7 +15,7 @@ from pyflakes.api import (
     checkRecursive,
     iterSourceCode,
 )
-from pyflakes.test.harness import TestCase, skipIf
+from pyflakes.test.harness import TestCase
 
 if sys.version_info < (3,):
     from cStringIO import StringIO
@@ -437,7 +437,19 @@ foo = '\\xyz'
         self.assertEqual(
             errors, [('flake', str(UnusedImport(sourcePath, Node(1), 'foo')))])
 
-    @skipIf(sys.version_info >= (3,), "not relevant")
+    def test_encodedFileUTF8(self):
+        """
+        If a source file contains bytes which cannot be decoded, this is
+        reported on stderr.
+        """
+        SNOWMAN = unichr(0x2603)
+        source = ("""\
+# coding: utf-8
+x = "%s"
+""" % SNOWMAN).encode('utf-8')
+        sourcePath = self.makeTempFile(source)
+        self.assertHasErrors(sourcePath, [])
+
     def test_misencodedFileUTF8(self):
         """
         If a source file contains bytes which cannot be decoded, this is

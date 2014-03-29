@@ -13,8 +13,6 @@ from pyflakes import reporter as modReporter
 
 __all__ = ['check', 'checkPath', 'checkRecursive', 'iterSourceCode', 'main']
 
-universal_newline = ('U' if sys.version_info < (3, 0) else 'r')
-
 
 def check(codeString, filename, reporter=None):
     """
@@ -76,8 +74,10 @@ def checkPath(filename, reporter=None):
     if reporter is None:
         reporter = modReporter._makeDefaultReporter()
     try:
-        with open(filename, universal_newline) as f:
-            codestr = f.read() + '\n'
+        with open(filename, 'rb') as f:
+            codestr = f.read()
+        if sys.version_info < (2, 7):
+            codestr += '\n'     # Work around for Python <= 2.6
     except UnicodeError:
         reporter.unexpectedError(filename, 'problem decoding source')
         return 1

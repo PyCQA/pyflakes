@@ -1,3 +1,6 @@
+UNRELEASED:
+  - Detect the declared encoding in Python 3.
+
 0.8.0 (2014-03-22):
   - Adapt for the AST in Python 3.4.
   - Fix caret position on SyntaxError.
