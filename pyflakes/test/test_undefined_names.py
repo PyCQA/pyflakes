@@ -384,6 +384,21 @@ class Test(TestCase):
                 Y = {x:x for x in T}
             ''')
 
+    def test_undefinedInLoop(self):
+        """
+        The loop variable is defined after the expression is computed.
+        """
+        self.flakes('''
+        for i in range(i):
+            print(i)
+        ''', m.UndefinedName)
+        self.flakes('''
+        [42 for i in range(i)]
+        ''', m.UndefinedName)
+        self.flakes('''
+        (42 for i in range(i))
+        ''', m.UndefinedName)
+
 
 class NameTests(TestCase):
     """

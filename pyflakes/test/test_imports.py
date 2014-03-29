@@ -338,7 +338,7 @@ class Test(TestCase):
         import fu
         for fu in range(2):
             pass
-        ''', m.RedefinedWhileUnused)
+        ''', m.ImportShadowedByLoopVar)
 
     def test_shadowedByFor(self):
         """
@@ -361,6 +361,13 @@ class Test(TestCase):
         import fu
         fu.bar()
         for (x, y, z, (a, b, c, (fu,))) in ():
+            pass
+        ''', m.ImportShadowedByLoopVar)
+        # Same with a list instead of a tuple
+        self.flakes('''
+        import fu
+        fu.bar()
+        for [x, y, z, (a, b, c, (fu,))] in ():
             pass
         ''', m.ImportShadowedByLoopVar)
 

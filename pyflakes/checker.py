@@ -15,7 +15,6 @@ builtin_vars = dir(__import__('__builtin__' if PY2 else 'builtins'))
 
 try:
     import ast
-    iter_child_nodes = ast.iter_child_nodes
 except ImportError:     # Python 2.5
     import _ast as ast
 
@@ -24,18 +23,9 @@ except ImportError:     # Python 2.5
         ast.ClassDef.decorator_list = ()
         ast.FunctionDef.decorator_list = property(lambda s: s.decorators)
 
-    def iter_child_nodes(node):
-        """
-        Yield all direct child nodes of *node*, that is, all fields that
-        are nodes and all items of fields that are lists of nodes.
-        """
-        for name in node._fields:
-            field = getattr(node, name, None)
-            if isinstance(field, ast.AST):
-                yield field
-            elif isinstance(field, list):
-                for item in field:
-                    yield item
+from pyflakes import messages
+
+
 # Python >= 3.3 uses ast.Try instead of (ast.TryExcept + ast.TryFinally)
 if PY32:
     ast_TryExcept = ast.TryExcept
@@ -44,9 +34,6 @@ else:
     ast_TryExcept = ast.Try
     ast_TryFinally = ()
 
-from pyflakes import messages
-
-
 if PY2:
     def getNodeType(node_class):
         # workaround str.upper() which is locale-dependent
@@ -54,6 +41,39 @@ if PY2:
 else:
     def getNodeType(node_class):
         return node_class.__name__.upper()
+
+
+class _FieldsOrder(dict):
+    """Fix order of AST fields."""
+
+    def _get_fields(self, node_type):
+        # handle iter before target, and generators before element
+        fields = node_type._fields
+        if 'iter' in fields:
+            first = 'iter'
+        elif 'generators' in fields:
+            first = 'generators'
+        else:
+            return fields
+        return tuple([first] + [fld for fld in fields if fld != first])
+
+    def __missing__(self, node_type):
+        self[node_type] = fields = self._get_fields(node_type)
+        return fields
+
+
+def iter_child_nodes(node, _fields_order=_FieldsOrder()):
+    """
+    Yield all direct child nodes of *node*, that is, all fields that
+    are nodes and all items of fields that are lists of nodes.
+    """
+    for name in _fields_order[node.__class__]:
+        field = getattr(node, name, None)
+        if isinstance(field, ast.AST):
+            yield field
+        elif isinstance(field, list):
+            for item in field:
+                yield item
 
 
 class Binding(object):
@@ -328,15 +348,20 @@ class Checker(object):
                 all_names = []
 
             # Look for imported names that aren't used.
-            for importation in scope.values():
-                if (isinstance(importation, Importation) and
-                        not importation.used and
-                        importation.name not in all_names):
-                    for node in importation.redefined:
-                        self.report(messages.RedefinedWhileUnused,
-                                    node, importation.name, importation.source)
-                    self.report(messages.UnusedImport,
-                                importation.source, importation.name)
+            for value in scope.values():
+                if isinstance(value, Importation):
+                    used = value.used or value.name in all_names
+                    if not used:
+                        messg = messages.UnusedImport
+                        self.report(messg, value.source, value.name)
+                    for node in value.redefined:
+                        if self.hasParent(node, ast.For):
+                            messg = messages.ImportShadowedByLoopVar
+                        elif used:
+                            continue
+                        else:
+                            messg = messages.RedefinedWhileUnused
+                        self.report(messg, node, value.name, value.source)
 
     def pushScope(self, scopeClass=FunctionScope):
         self.scopeStack.append(scopeClass())
@@ -345,10 +370,10 @@ class Checker(object):
         self.messages.append(messageClass(self.filename, *args, **kwargs))
 
     def hasParent(self, node, kind):
-        while hasattr(node, 'parent'):
+        while True:
             node = node.parent
-            if isinstance(node, kind):
-                return True
+            if not hasattr(node, 'elts'):
+                return isinstance(node, kind)
 
     def getCommonAncestor(self, lnode, rnode, stop=None):
         if not stop:
@@ -400,6 +425,7 @@ class Checker(object):
         - `node` is the statement responsible for the change
         - `value` is the new value, a Binding instance
         """
+        # assert value.source in (node, node.parent):
         for scope in self.scopeStack[::-1]:
             if value.name in scope:
                 break
@@ -407,9 +433,13 @@ class Checker(object):
 
         if existing and not self.differentForks(node, existing.source):
 
-            if scope is self.scope:
-                if (self.hasParent(value.source, ast.ListComp) and
-                        not self.hasParent(existing.source, (ast.For, ast.ListComp))):
+            if isinstance(existing, Importation) and self.hasParent(value.source, ast.For):
+                self.report(messages.ImportShadowedByLoopVar,
+                            node, value.name, existing.source)
+
+            elif scope is self.scope:
+                if (self.hasParent(value.source, ast.comprehension) and
+                        not self.hasParent(existing.source, (ast.For, ast.comprehension))):
                     self.report(messages.RedefinedInListComp,
                                 node, value.name, existing.source)
                 elif not existing.used and value.redefines(existing):
@@ -593,7 +623,7 @@ class Checker(object):
         pass
 
     # "stmt" type nodes
-    DELETE = PRINT = WHILE = IF = WITH = WITHITEM = RAISE = \
+    DELETE = PRINT = FOR = WHILE = IF = WITH = WITHITEM = RAISE = \
         TRYFINALLY = ASSERT = EXEC = EXPR = handleChildren
 
     CONTINUE = BREAK = PASS = ignore
@@ -617,7 +647,7 @@ class Checker(object):
         EQ = NOTEQ = LT = LTE = GT = GTE = IS = ISNOT = IN = NOTIN = ignore
 
     # additional node types
-    COMPREHENSION = KEYWORD = handleChildren
+    LISTCOMP = COMPREHENSION = KEYWORD = handleChildren
 
     def GLOBAL(self, node):
         """
@@ -628,54 +658,12 @@ class Checker(object):
 
     NONLOCAL = GLOBAL
 
-    def LISTCOMP(self, node):
-        # handle generators before element
-        for gen in node.generators:
-            self.handleNode(gen, node)
-        self.handleNode(node.elt, node)
-
     def GENERATOREXP(self, node):
         self.pushScope(GeneratorScope)
-        # handle generators before element
-        for gen in node.generators:
-            self.handleNode(gen, node)
-        self.handleNode(node.elt, node)
-        self.popScope()
-
-    SETCOMP = GENERATOREXP
-
-    def DICTCOMP(self, node):
-        self.pushScope(GeneratorScope)
-        for gen in node.generators:
-            self.handleNode(gen, node)
-        self.handleNode(node.key, node)
-        self.handleNode(node.value, node)
-        self.popScope()
-
-    def FOR(self, node):
-        """
-        Process bindings for loop variables.
-        """
-        vars = []
-
-        def collectLoopVars(n):
-            if isinstance(n, ast.Name):
-                vars.append(n.id)
-            elif isinstance(n, ast.expr_context):
-                return
-            else:
-                for c in iter_child_nodes(n):
-                    collectLoopVars(c)
-
-        collectLoopVars(node.target)
-        for varn in vars:
-            if (isinstance(self.scope.get(varn), Importation)
-                    # unused ones will get an unused import warning
-                    and self.scope[varn].used):
-                self.report(messages.ImportShadowedByLoopVar,
-                            node, varn, self.scope[varn].source)
-
         self.handleChildren(node)
+        self.popScope()
+
+    DICTCOMP = SETCOMP = GENERATOREXP
 
     def NAME(self, node):
         """
