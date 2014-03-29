@@ -172,6 +172,39 @@ class Test(TestCase):
                     pass
         ''', m.RedefinedWhileUnused, m.UnusedImport)
 
+    def test_redefinedInNestedFunctionTwice(self):
+        """
+        Test that shadowing a global name with a nested function definition
+        generates a warning.
+        """
+        self.flakes('''
+        import fu
+        def bar():
+            import fu
+            def baz():
+                def fu():
+                    pass
+        ''', m.RedefinedWhileUnused, m.RedefinedWhileUnused,
+             m.UnusedImport, m.UnusedImport)
+
+    def test_redefinedButUsedLater(self):
+        """
+        Test that a global import which is redefined locally,
+        but used later in another scope does not generate a warning.
+        """
+        self.flakes('''
+        import unittest, transport
+
+        class GetTransportTestCase(unittest.TestCase):
+            def test_get_transport(self):
+                transport = 'transport'
+                self.assertIsNotNone(transport)
+
+        class TestTransportMethodArgs(unittest.TestCase):
+            def test_send_defaults(self):
+                transport.Transport()
+        ''')
+
     def test_redefinedByClass(self):
         self.flakes('''
         import fu
@@ -214,7 +247,7 @@ class Test(TestCase):
         import fu
         def fun(fu):
             print(fu)
-        ''', m.UnusedImport)
+        ''', m.UnusedImport, m.RedefinedWhileUnused)
 
         self.flakes('''
         import fu
@@ -433,7 +466,8 @@ class Test(TestCase):
         self.flakes('import fu; [1 for _ in range(1) if fu]')
 
     def test_redefinedByListComp(self):
-        self.flakes('import fu; [1 for fu in range(1)]', m.RedefinedWhileUnused)
+        self.flakes('import fu; [1 for fu in range(1)]',
+                    m.RedefinedInListComp)
 
     def test_usedInTryFinally(self):
         self.flakes('''
@@ -481,7 +515,9 @@ class Test(TestCase):
         self.flakes('import fu; lambda: fu')
 
     def test_shadowedByLambda(self):
-        self.flakes('import fu; lambda fu: fu', m.UnusedImport)
+        self.flakes('import fu; lambda fu: fu',
+                    m.UnusedImport, m.RedefinedWhileUnused)
+        self.flakes('import fu; lambda fu: fu\nfu()')
 
     def test_usedInSliceObj(self):
         self.flakes('import fu; "meow"[::fu]')

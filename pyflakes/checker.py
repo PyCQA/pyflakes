@@ -82,8 +82,17 @@ class Binding(object):
                                                         self.source.lineno,
                                                         id(self))
 
+    def redefines(self, other):
+        return isinstance(other, Definition) and self.name == other.name
 
-class Importation(Binding):
+
+class Definition(Binding):
+    """
+    A binding that defines a function or a class.
+    """
+
+
+class Importation(Definition):
     """
     A binding created by an import statement.
 
@@ -93,19 +102,19 @@ class Importation(Binding):
     """
     def __init__(self, name, source):
         self.fullName = name
+        self.redefined = []
         name = name.split('.')[0]
         super(Importation, self).__init__(name, source)
+
+    def redefines(self, other):
+        if isinstance(other, Importation):
+            return self.fullName == other.fullName
+        return isinstance(other, Definition) and self.name == other.name
 
 
 class Argument(Binding):
     """
     Represents binding a name as an argument.
-    """
-
-
-class Definition(Binding):
-    """
-    A binding that defines a function or a class.
     """
 
 
@@ -323,6 +332,9 @@ class Checker(object):
                 if (isinstance(importation, Importation) and
                         not importation.used and
                         importation.name not in all_names):
+                    for node in importation.redefined:
+                        self.report(messages.RedefinedWhileUnused,
+                                    node, importation.name, importation.source)
                     self.report(messages.UnusedImport,
                                 importation.source, importation.name)
 
@@ -381,45 +393,33 @@ class Checker(object):
                 return True
         return False
 
-    def addBinding(self, node, value, reportRedef=True):
+    def addBinding(self, node, value):
         """
         Called when a binding is altered.
 
         - `node` is the statement responsible for the change
-        - `value` is the optional new value, a Binding instance, associated
-          with the binding; if None, the binding is deleted if it exists.
-        - if `reportRedef` is True (default), rebinding while unused will be
-          reported.
+        - `value` is the new value, a Binding instance
         """
-        redefinedWhileUnused = False
-        if not isinstance(self.scope, ClassScope):
-            for scope in self.scopeStack[::-1]:
-                existing = scope.get(value.name)
-                if (isinstance(existing, Importation)
-                        and not existing.used
-                        and (not isinstance(value, Importation) or
-                             value.fullName == existing.fullName)
-                        and reportRedef
-                        and not self.differentForks(node, existing.source)):
-                    redefinedWhileUnused = True
+        for scope in self.scopeStack[::-1]:
+            if value.name in scope:
+                break
+        existing = scope.get(value.name)
+
+        if existing and not self.differentForks(node, existing.source):
+
+            if scope is self.scope:
+                if (self.hasParent(value.source, ast.ListComp) and
+                        not self.hasParent(existing.source, (ast.For, ast.ListComp))):
+                    self.report(messages.RedefinedInListComp,
+                                node, value.name, existing.source)
+                elif not existing.used and value.redefines(existing):
                     self.report(messages.RedefinedWhileUnused,
                                 node, value.name, existing.source)
 
-        existing = self.scope.get(value.name)
-        if not redefinedWhileUnused and self.hasParent(value.source, ast.ListComp):
-            if (existing and reportRedef
-                    and not self.hasParent(existing.source, (ast.For, ast.ListComp))
-                    and not self.differentForks(node, existing.source)):
-                self.report(messages.RedefinedInListComp,
-                            node, value.name, existing.source)
+            elif isinstance(existing, Importation) and value.redefines(existing):
+                existing.redefined.append(node)
 
-        if (isinstance(existing, Definition)
-                and not existing.used
-                and not self.differentForks(node, existing.source)):
-            self.report(messages.RedefinedWhileUnused,
-                        node, value.name, existing.source)
-        else:
-            self.scope[value.name] = value
+        self.scope[value.name] = value
 
     def getNodeHandler(self, node_class):
         try:
@@ -766,7 +766,7 @@ class Checker(object):
 
             self.pushScope()
             for name in args:
-                self.addBinding(node, Argument(name, node), reportRedef=False)
+                self.addBinding(node, Argument(name, node))
             if isinstance(node.body, list):
                 # case for FunctionDefs
                 for stmt in node.body:
