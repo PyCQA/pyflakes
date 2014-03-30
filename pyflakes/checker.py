@@ -712,8 +712,8 @@ class Checker(object):
     def FUNCTIONDEF(self, node):
         for deco in node.decorator_list:
             self.handleNode(deco, node)
-        self.addBinding(node, FunctionDefinition(node.name, node))
         self.LAMBDA(node)
+        self.addBinding(node, FunctionDefinition(node.name, node))
         if self.withDoctest:
             self.deferFunction(lambda: self.handleDoctests(node))
 

@@ -671,6 +671,18 @@ class Test(TestCase):
                 self.i
         ''')
 
+    def test_importUsedInMethodDefinition(self):
+        """
+        Method named 'foo' with default args referring to module named 'foo'.
+        """
+        self.flakes('''
+        import foo
+
+        class Thing(object):
+            def foo(self, parser=foo.parse_foo):
+                pass
+        ''')
+
     def test_futureImport(self):
         """__future__ is special."""
         self.flakes('from __future__ import division')

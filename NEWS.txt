@@ -6,6 +6,8 @@ UNRELEASED:
     loop variable.
   - Report undefined name for `(a, b) = (1, 2)` but not for the general
     unpacking `(a, b) = func()`.
+  - Correctly detect when an imported module is used in default arguments
+    of a method, when the method and the module use the same name.
 
 0.8.0 (2014-03-22):
   - Adapt for the AST in Python 3.4.
