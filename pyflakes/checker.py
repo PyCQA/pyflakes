@@ -522,8 +522,6 @@ class Checker(object):
                     break
 
         parent_stmt = self.getParent(node)
-        # import pdb; pdb.set_trace()
-
         if isinstance(parent_stmt, (ast.For, ast.comprehension)) or (
                 parent_stmt != node.parent and
                 not self.isLiteralTupleUnpacking(parent_stmt)):
