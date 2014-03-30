@@ -1,4 +1,4 @@
-UNRELEASED:
+0.8.1 (2014-03-30):
   - Detect the declared encoding in Python 3.
   - Do not report redefinition of import in a local scope, if the
     global name is used elsewhere in the module.
@@ -8,6 +8,7 @@ UNRELEASED:
     unpacking `(a, b) = func()`.
   - Correctly detect when an imported module is used in default arguments
     of a method, when the method and the module use the same name.
+  - Distribute a universal wheel file.
 
 0.8.0 (2014-03-22):
   - Adapt for the AST in Python 3.4.

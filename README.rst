@@ -30,3 +30,7 @@ Share your feedback and ideas: `subscribe to the mailing-list
 .. image:: https://api.travis-ci.org/pyflakes/pyflakes.png
    :target: https://travis-ci.org/pyflakes/pyflakes
    :alt: Build status
+
+.. image:: https://pypip.in/wheel/pyflakes/badge.png
+   :target: https://pypi.python.org/pypi/pyflakes
+   :alt: Wheel Status

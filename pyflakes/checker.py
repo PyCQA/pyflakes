@@ -128,6 +128,7 @@ class Importation(Definition):
         possibly including multiple dotted components.
     @type fullName: C{str}
     """
+
     def __init__(self, name, source):
         self.fullName = name
         self.redefined = []
@@ -178,6 +179,7 @@ class ExportBinding(Binding):
     Names which are imported and not otherwise used but appear in the value of
     C{__all__} will not have an unused import warning reported for them.
     """
+
     def __init__(self, name, source, scope):
         if '__all__' in scope and isinstance(source, ast.AugAssign):
             self.names = list(scope['__all__'].names)
