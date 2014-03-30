@@ -26,14 +26,6 @@ except ImportError:     # Python 2.5
 from pyflakes import messages
 
 
-# Python >= 3.3 uses ast.Try instead of (ast.TryExcept + ast.TryFinally)
-if PY32:
-    ast_TryExcept = ast.TryExcept
-    ast_TryFinally = ast.TryFinally
-else:
-    ast_TryExcept = ast.Try
-    ast_TryFinally = ()
-
 if PY2:
     def getNodeType(node_class):
         # workaround str.upper() which is locale-dependent
@@ -42,32 +34,48 @@ else:
     def getNodeType(node_class):
         return node_class.__name__.upper()
 
+# Python >= 3.3 uses ast.Try instead of (ast.TryExcept + ast.TryFinally)
+if PY32:
+    def getAlternatives(n):
+        if isinstance(n, (ast.If, ast.TryFinally)):
+            return [n.body]
+        if isinstance(n, ast.TryExcept):
+            return [n.body + n.orelse] + [[hdl] for hdl in n.handlers]
+else:
+    def getAlternatives(n):
+        if isinstance(n, ast.If):
+            return [n.body]
+        if isinstance(n, ast.Try):
+            return [n.body + n.orelse] + [[hdl] for hdl in n.handlers]
+
 
 class _FieldsOrder(dict):
-    """Fix order of AST fields."""
+    """Fix order of AST node fields."""
 
     def _get_fields(self, node_class):
         # handle iter before target, and generators before element
         fields = node_class._fields
         if 'iter' in fields:
-            first = 'iter'
+            key_first = 'iter'.find
         elif 'generators' in fields:
-            first = 'generators'
+            key_first = 'generators'.find
         else:
-            return fields
-        return tuple([first] + [fld for fld in fields if fld != first])
+            key_first = 'value'.find
+        return tuple(sorted(fields, key=key_first, reverse=True))
 
     def __missing__(self, node_class):
         self[node_class] = fields = self._get_fields(node_class)
         return fields
 
 
-def iter_child_nodes(node, _fields_order=_FieldsOrder()):
+def iter_child_nodes(node, omit=None, _fields_order=_FieldsOrder()):
     """
     Yield all direct child nodes of *node*, that is, all fields that
     are nodes and all items of fields that are lists of nodes.
     """
     for name in _fields_order[node.__class__]:
+        if name == omit:
+            continue
         field = getattr(node, name, None)
         if isinstance(field, ast.AST):
             yield field
@@ -334,8 +342,7 @@ class Checker(object):
         which were imported but unused.
         """
         for scope in self.deadScopes:
-            export = isinstance(scope.get('__all__'), ExportBinding)
-            if export:
+            if isinstance(scope.get('__all__'), ExportBinding):
                 all_names = set(scope['__all__'].names)
                 if not scope.importStarred and \
                    os.path.basename(self.filename) != '__init__.py':
@@ -376,47 +383,34 @@ class Checker(object):
             if not hasattr(node, 'elts') and not hasattr(node, 'ctx'):
                 return node
 
-    def getCommonAncestor(self, lnode, rnode, stop=None):
-        if not stop:
-            stop = self.root
+    def getCommonAncestor(self, lnode, rnode, stop):
+        if stop in (lnode, rnode) or not (hasattr(lnode, 'parent') and
+                                          hasattr(rnode, 'parent')):
+            return None
         if lnode is rnode:
             return lnode
-        if stop in (lnode, rnode):
-            return stop
 
-        if not hasattr(lnode, 'parent') or not hasattr(rnode, 'parent'):
-            return
         if (lnode.depth > rnode.depth):
             return self.getCommonAncestor(lnode.parent, rnode, stop)
-        if (rnode.depth > lnode.depth):
+        if (lnode.depth < rnode.depth):
             return self.getCommonAncestor(lnode, rnode.parent, stop)
         return self.getCommonAncestor(lnode.parent, rnode.parent, stop)
 
-    def descendantOf(self, node, ancestors, stop=None):
+    def descendantOf(self, node, ancestors, stop):
         for a in ancestors:
-            if self.getCommonAncestor(node, a, stop) not in (stop, None):
+            if self.getCommonAncestor(node, a, stop):
                 return True
         return False
 
-    def onFork(self, parent, lnode, rnode, items):
-        return (self.descendantOf(lnode, items, parent) ^
-                self.descendantOf(rnode, items, parent))
-
     def differentForks(self, lnode, rnode):
         """True, if lnode and rnode are located on different forks of IF/TRY"""
-        ancestor = self.getCommonAncestor(lnode, rnode)
-        if isinstance(ancestor, ast.If):
-            for fork in (ancestor.body, ancestor.orelse):
-                if self.onFork(ancestor, lnode, rnode, fork):
+        ancestor = self.getCommonAncestor(lnode, rnode, self.root)
+        parts = getAlternatives(ancestor)
+        if parts:
+            for items in parts:
+                if self.descendantOf(lnode, items, ancestor) ^ \
+                   self.descendantOf(rnode, items, ancestor):
                     return True
-        elif isinstance(ancestor, ast_TryExcept):
-            body = ancestor.body + ancestor.orelse
-            for fork in [body] + [[hdl] for hdl in ancestor.handlers]:
-                if self.onFork(ancestor, lnode, rnode, fork):
-                    return True
-        elif isinstance(ancestor, ast_TryFinally):
-            if self.onFork(ancestor, lnode, rnode, ancestor.body):
-                return True
         return False
 
     def addBinding(self, node, value):
@@ -546,8 +540,8 @@ class Checker(object):
             except KeyError:
                 self.report(messages.UndefinedName, node, name)
 
-    def handleChildren(self, tree):
-        for node in iter_child_nodes(tree):
+    def handleChildren(self, tree, omit=None):
+        for node in iter_child_nodes(tree, omit=omit):
             self.handleNode(node, tree)
 
     def isLiteralTupleUnpacking(self, node):
@@ -635,7 +629,7 @@ class Checker(object):
 
     # "stmt" type nodes
     DELETE = PRINT = FOR = WHILE = IF = WITH = WITHITEM = RAISE = \
-        TRYFINALLY = ASSERT = EXEC = EXPR = handleChildren
+        TRYFINALLY = ASSERT = EXEC = EXPR = ASSIGN = handleChildren
 
     CONTINUE = BREAK = PASS = ignore
 
@@ -817,11 +811,6 @@ class Checker(object):
         self.popScope()
         self.addBinding(node, ClassDefinition(node.name, node))
 
-    def ASSIGN(self, node):
-        self.handleNode(node.value, node)
-        for target in node.targets:
-            self.handleNode(target, node)
-
     def AUGASSIGN(self, node):
         self.handleNodeLoad(node.target)
         self.handleNode(node.value, node)
@@ -867,9 +856,7 @@ class Checker(object):
             self.handleNode(child, node)
         self.exceptHandlers.pop()
         # Process the other nodes: "except:", "else:", "finally:"
-        for child in iter_child_nodes(node):
-            if child not in node.body:
-                self.handleNode(child, node)
+        self.handleChildren(node, omit='body')
 
     TRYEXCEPT = TRY
 
