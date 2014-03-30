@@ -355,7 +355,7 @@ class Checker(object):
                         messg = messages.UnusedImport
                         self.report(messg, value.source, value.name)
                     for node in value.redefined:
-                        if self.hasParent(node, ast.For):
+                        if isinstance(self.getParent(node), ast.For):
                             messg = messages.ImportShadowedByLoopVar
                         elif used:
                             continue
@@ -370,13 +370,11 @@ class Checker(object):
         self.messages.append(messageClass(self.filename, *args, **kwargs))
 
     def getParent(self, node):
+        # Lookup the first parent which is not Tuple, List or Starred
         while True:
             node = node.parent
             if not hasattr(node, 'elts') and not hasattr(node, 'ctx'):
                 return node
-
-    def hasParent(self, node, kind):
-        return isinstance(self.getParent(node), kind)
 
     def getCommonAncestor(self, lnode, rnode, stop=None):
         if not stop:
@@ -436,13 +434,15 @@ class Checker(object):
 
         if existing and not self.differentForks(node, existing.source):
 
-            if isinstance(existing, Importation) and self.hasParent(value.source, ast.For):
+            parent_stmt = self.getParent(value.source)
+            if isinstance(existing, Importation) and isinstance(parent_stmt, ast.For):
                 self.report(messages.ImportShadowedByLoopVar,
                             node, value.name, existing.source)
 
             elif scope is self.scope:
-                if (self.hasParent(value.source, ast.comprehension) and
-                        not self.hasParent(existing.source, (ast.For, ast.comprehension))):
+                if (isinstance(parent_stmt, ast.comprehension) and
+                        not isinstance(self.getParent(existing.source),
+                                       (ast.For, ast.comprehension))):
                     self.report(messages.RedefinedInListComp,
                                 node, value.name, existing.source)
                 elif not existing.used and value.redefines(existing):
