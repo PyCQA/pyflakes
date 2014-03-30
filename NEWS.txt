@@ -4,6 +4,8 @@ UNRELEASED:
     global name is used elsewhere in the module.
   - Catch undefined variable in loop generator when it is also used as
     loop variable.
+  - Report undefined name for `(a, b) = (1, 2)` but not for the general
+    unpacking `(a, b) = func()`.
 
 0.8.0 (2014-03-22):
   - Adapt for the AST in Python 3.4.

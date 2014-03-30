@@ -369,11 +369,14 @@ class Checker(object):
     def report(self, messageClass, *args, **kwargs):
         self.messages.append(messageClass(self.filename, *args, **kwargs))
 
-    def hasParent(self, node, kind):
+    def getParent(self, node):
         while True:
             node = node.parent
-            if not hasattr(node, 'elts'):
-                return isinstance(node, kind)
+            if not hasattr(node, 'elts') and not hasattr(node, 'ctx'):
+                return node
+
+    def hasParent(self, node, kind):
+        return isinstance(self.getParent(node), kind)
 
     def getCommonAncestor(self, lnode, rnode, stop=None):
         if not stop:
@@ -518,12 +521,15 @@ class Checker(object):
                                 scope[name].used[1], name, scope[name].source)
                     break
 
-        parent = getattr(node, 'parent', None)
-        if isinstance(parent, (ast.For, ast.comprehension, ast.Tuple, ast.List)):
+        parent_stmt = self.getParent(node)
+        # import pdb; pdb.set_trace()
+
+        if isinstance(parent_stmt, (ast.For, ast.comprehension)) or (
+                parent_stmt != node.parent and
+                not self.isLiteralTupleUnpacking(parent_stmt)):
             binding = Binding(name, node)
-        elif (parent is not None and name == '__all__' and
-              isinstance(self.scope, ModuleScope)):
-            binding = ExportBinding(name, parent, self.scope)
+        elif name == '__all__' and isinstance(self.scope, ModuleScope):
+            binding = ExportBinding(name, node.parent, self.scope)
         else:
             binding = Assignment(name, node)
         if name in self.scope:
@@ -545,6 +551,13 @@ class Checker(object):
     def handleChildren(self, tree):
         for node in iter_child_nodes(tree):
             self.handleNode(node, tree)
+
+    def isLiteralTupleUnpacking(self, node):
+        if isinstance(node, ast.Assign):
+            for child in node.targets + [node.value]:
+                if not hasattr(child, 'elts'):
+                    return False
+            return True
 
     def isDocstring(self, node):
         """

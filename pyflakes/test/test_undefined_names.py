@@ -280,6 +280,42 @@ class Test(TestCase):
         ''')
 
     @skipIf(version_info < (3,), 'new in Python 3')
+    def test_usedAsStarUnpack(self):
+        """
+        Star names in unpack are used if RHS is not a tuple/list literal.
+        """
+        self.flakes('''
+        def f():
+            a, *b = range(10)
+        ''')
+        self.flakes('''
+        def f():
+            (*a, b) = range(10)
+        ''')
+        self.flakes('''
+        def f():
+            [a, *b, c] = range(10)
+        ''')
+
+    @skipIf(version_info < (3,), 'new in Python 3')
+    def test_unusedAsStarUnpack(self):
+        """
+        Star names in unpack are unused if RHS is a tuple/list literal.
+        """
+        self.flakes('''
+        def f():
+            a, *b = any, all, 4, 2, 'un'
+        ''', m.UnusedVariable, m.UnusedVariable)
+        self.flakes('''
+        def f():
+            (*a, b) = [bool, int, float, complex]
+        ''', m.UnusedVariable, m.UnusedVariable)
+        self.flakes('''
+        def f():
+            [a, *b, c] = 9, 8, 7, 6, 5, 4
+        ''', m.UnusedVariable, m.UnusedVariable, m.UnusedVariable)
+
+    @skipIf(version_info < (3,), 'new in Python 3')
     def test_keywordOnlyArgs(self):
         """Keyword-only arg names are defined."""
         self.flakes('''
