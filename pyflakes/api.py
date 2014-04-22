@@ -5,6 +5,7 @@ from __future__ import with_statement
 
 import sys
 import os
+import re
 import _ast
 from optparse import OptionParser
 
@@ -106,7 +107,7 @@ def iterSourceCode(paths):
             yield path
 
 
-def checkRecursive(paths, reporter):
+def checkRecursive(paths, reporter, exclude=None):
     """
     Recursively check all source files in C{paths}.
 
@@ -118,16 +119,22 @@ def checkRecursive(paths, reporter):
     """
     warnings = 0
     for sourcePath in iterSourceCode(paths):
+        if exclude and re.search(exclude, sourcePath):
+            continue
         warnings += checkPath(sourcePath, reporter)
     return warnings
 
 
 def main(prog=None):
     parser = OptionParser(prog=prog, version=__version__)
-    (__, args) = parser.parse_args()
+    parser.add_option(
+        '-e', '--exclude', dest='exclude', default=None, metavar='RE',
+        help='exclude files based on path relative to current directory',
+        )
+    (options, args) = parser.parse_args()
     reporter = modReporter._makeDefaultReporter()
     if args:
-        warnings = checkRecursive(args, reporter)
+        warnings = checkRecursive(args, reporter, exclude=options.exclude)
     else:
         warnings = check(sys.stdin.read(), '<stdin>', reporter)
     raise SystemExit(warnings > 0)
