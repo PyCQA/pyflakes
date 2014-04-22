@@ -9,6 +9,7 @@ install:
   - python setup.py install
 script:
   - python setup.py test -q
+  - pyflakes pyflakes setup.py
 matrix:
   allow_failures:
     - python: pypy
