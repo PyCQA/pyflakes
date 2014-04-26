@@ -11,8 +11,6 @@ modules with side effects.  It's also much faster.
 It is `available on PyPI <http://pypi.python.org/pypi/pyflakes>`_
 and it supports all active versions of Python from 2.5 to 3.4.
 
-If you require more options and more flexibility, you could give a
-look to `Flake8 <http://flake8.readthedocs.org/>`_ too.
 
 
 Installation
@@ -21,6 +19,19 @@ Installation
 It can be installed with::
 
   $ pip install --upgrade pyflakes
+
+
+Useful tips:
+
+* Be sure to install it for a version of Python which is compatible
+  with your codebase: for Python 2, ``pip2 install pyflakes`` and for
+  Python3, ``pip3 install pyflakes``.
+
+* You can also invoke Pyflakes with ``python3 -m pyflakes .`` or
+  ``python2 -m pyflakes .`` if you have it installed for both versions.
+
+* If you require more options and more flexibility, you could give a
+  look to `Flake8 <http://flake8.readthedocs.org/>`_ too.
 
 
 Mailing-list
