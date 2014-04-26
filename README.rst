@@ -11,6 +11,9 @@ modules with side effects.  It's also much faster.
 It is `available on PyPI <http://pypi.python.org/pypi/pyflakes>`_
 and it supports all active versions of Python from 2.5 to 3.4.
 
+If you require more options and more flexibility, you could give a
+look to `Flake8 <http://flake8.readthedocs.org/>`_ too.
+
 
 Installation
 ------------
