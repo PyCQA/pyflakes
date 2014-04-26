@@ -6,7 +6,6 @@ from __future__ import with_statement
 import sys
 import os
 import _ast
-from optparse import OptionParser
 
 from pyflakes import checker, __version__
 from pyflakes import reporter as modReporter
@@ -123,7 +122,18 @@ def checkRecursive(paths, reporter):
 
 
 def main(prog=None):
-    parser = OptionParser(prog=prog, version=__version__)
+    """Entry point for the script "pyflakes"."""
+    import optparse
+    import signal
+
+    # Handle "Keyboard Interrupt" and "Broken pipe" gracefully
+    try:
+        signal.signal(signal.SIGINT, lambda sig, f: sys.exit('... stopped'))
+        signal.signal(signal.SIGPIPE, lambda sig, f: sys.exit(1))
+    except ValueError:
+        pass    # SIGPIPE is not supported on Windows
+
+    parser = optparse.OptionParser(prog=prog, version=__version__)
     (__, args) = parser.parse_args()
     reporter = modReporter._makeDefaultReporter()
     if args:
