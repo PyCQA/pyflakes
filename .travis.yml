@@ -6,10 +6,13 @@ python:
   - 3.3
   - pypy
 install:
+  - pip install flake8
   - python setup.py install
+  - pip list
+  - flake8 --version
 script:
   - python setup.py test -q
-  - pyflakes pyflakes setup.py
+  - flake8 pyflakes setup.py
 matrix:
   allow_failures:
     - python: pypy

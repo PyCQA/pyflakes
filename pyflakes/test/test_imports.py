@@ -184,8 +184,9 @@ class Test(TestCase):
             def baz():
                 def fu():
                     pass
-        ''', m.RedefinedWhileUnused, m.RedefinedWhileUnused,
-             m.UnusedImport, m.UnusedImport)
+        ''',
+                    m.RedefinedWhileUnused, m.RedefinedWhileUnused,
+                    m.UnusedImport, m.UnusedImport)
 
     def test_redefinedButUsedLater(self):
         """
