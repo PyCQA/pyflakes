@@ -938,3 +938,7 @@ class TestUnusedAssignment(TestCase):
         def bar():
             yield from foo()
         ''', m.UndefinedName)
+
+    def test_returnOnly(self):
+        """Do not crash on lone "return"."""
+        self.flakes('return 2')
