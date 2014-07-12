@@ -942,3 +942,23 @@ class TestUnusedAssignment(TestCase):
     def test_returnOnly(self):
         """Do not crash on lone "return"."""
         self.flakes('return 2')
+
+    def test_mutableArgList(self):
+        """
+        Test mutable list in function definition.
+        """
+        self.flakes('''
+        def append_one(l=[]):
+            l.append(1)
+            return l
+        ''', m.MutableArg)
+
+    def test_mutableArgDict(self):
+        """
+        Test mutable dict in function definition.
+        """
+        self.flakes('''
+        def set_one(k, d={}):
+            d[k] = 1
+            return d
+        ''', m.MutableArg)
