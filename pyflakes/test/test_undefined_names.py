@@ -435,6 +435,32 @@ class Test(TestCase):
         (42 for i in range(i))
         ''', m.UndefinedName)
 
+    def test_definedFromLambdaInComprehension(self):
+        """
+        Defined name referenced from a lambda function within a generator
+        expression and dict/set comprehension.
+        """
+        self.flakes('''
+        {lambda: id(x) for x in range(10)}
+        ''')
+
+        self.flakes('''
+        any(lambda: id(x) for x in range(10))
+        ''')
+
+    def test_undefinedFromLambdaInComprehension(self):
+        """
+        Undefined name referenced from a lambda function within a generator
+        expression and dict/set comprehension.
+        """
+        self.flakes('''
+        {lambda: id(y) for x in range(10)}
+        ''', m.UndefinedName)
+
+        self.flakes('''
+        any(lambda: id(y) for x in range(10))
+        ''', m.UndefinedName)
+
 
 class NameTests(TestCase):
     """
