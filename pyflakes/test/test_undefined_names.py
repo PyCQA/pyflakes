@@ -435,28 +435,40 @@ class Test(TestCase):
         (42 for i in range(i))
         ''', m.UndefinedName)
 
-    def test_definedFromLambdaInComprehension(self):
+    @skipIf(version_info < (2, 7), 'Dictionary comprehensions do not exist')
+    def test_definedFromLambdaInDictionaryComprehension(self):
         """
-        Defined name referenced from a lambda function within a generator
-        expression and dict/set comprehension.
+        Defined name referenced from a lambda function within a dict/set
+        comprehension.
         """
         self.flakes('''
         {lambda: id(x) for x in range(10)}
         ''')
 
+    def test_definedFromLambdaInGenerator(self):
+        """
+        Defined name referenced from a lambda function within a generator
+        expression.
+        """
         self.flakes('''
         any(lambda: id(x) for x in range(10))
         ''')
 
-    def test_undefinedFromLambdaInComprehension(self):
+    @skipIf(version_info < (2, 7), 'Dictionary comprehensions do not exist')
+    def test_undefinedFromLambdaInDictionaryComprehension(self):
         """
-        Undefined name referenced from a lambda function within a generator
-        expression and dict/set comprehension.
+        Undefined name referenced from a lambda function within a dict/set
+        comprehension.
         """
         self.flakes('''
         {lambda: id(y) for x in range(10)}
         ''', m.UndefinedName)
 
+    def test_undefinedFromLambdaInComprehension(self):
+        """
+        Undefined name referenced from a lambda function within a generator
+        expression.
+        """
         self.flakes('''
         any(lambda: id(y) for x in range(10))
         ''', m.UndefinedName)
