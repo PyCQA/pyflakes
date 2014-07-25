@@ -53,12 +53,31 @@ def check(codeString, filename, reporter=None):
     except Exception:
         reporter.unexpectedError(filename, 'problem decoding source')
         return 1
+
+
+    # Some syntax errors are only detected when compiling to bytecode (like
+    # return outside of function), because they aren't encoded in the
+    # grammar. We do this separately because we can still report on other
+    # errors in this case.
+    try:
+        compile(tree, filename, "exec")
+    except SyntaxError:
+        value = sys.exc_info()[1]
+        msg = value.args[0]
+
+        (lineno, offset, text) = value.lineno, value.offset, value.text
+
+        reporter.syntaxError(filename, msg, lineno, offset, text)
+        additional_messages = 1
+    else:
+        additional_messages = 0
+
     # Okay, it's syntactically valid.  Now check it.
     w = checker.Checker(tree, filename)
     w.messages.sort(key=lambda m: m.lineno)
     for warning in w.messages:
         reporter.flake(warning)
-    return len(w.messages)
+    return len(w.messages) + additional_messages
 
 
 def checkPath(filename, reporter=None):
