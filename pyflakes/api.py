@@ -54,7 +54,6 @@ def check(codeString, filename, reporter=None):
         reporter.unexpectedError(filename, 'problem decoding source')
         return 1
 
-
     # Some syntax errors are only detected when compiling to bytecode (like
     # return outside of function), because they aren't encoded in the
     # grammar. We do this separately because we can still report on other
