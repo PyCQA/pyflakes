@@ -401,12 +401,20 @@ foo(bar=baz, bax)
 return
 """
         sourcePath = self.makeTempFile(source)
-        self.assertHasErrors(
-            sourcePath,
-            ["""\
+        if sys.version_info[0] == 3:
+            self.assertHasErrors(
+                sourcePath,
+                ["""\
 %s:1:0: 'return' outside function
 return
      ^
+""" % sourcePath])
+        else:
+            self.assertHasErrors(
+                sourcePath,
+                ["""\
+%s:1: 'return' outside function
+return
 """ % sourcePath])
 
     def test_invalidEscape(self):
