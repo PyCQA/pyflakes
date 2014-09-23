@@ -471,7 +471,7 @@ class Checker(object):
             return
 
         scopes = [scope for scope in self.scopeStack[:-1]
-                  if isinstance(scope, (FunctionScope, ModuleScope))]
+                  if isinstance(scope, (FunctionScope, ModuleScope, GeneratorScope))]
         if isinstance(self.scope, GeneratorScope) and scopes[-1] != self.scopeStack[-2]:
             scopes.append(self.scopeStack[-2])
 
