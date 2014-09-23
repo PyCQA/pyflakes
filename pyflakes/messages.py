@@ -133,3 +133,10 @@ class ReturnWithArgsInsideGenerator(Message):
     Indicates a return statement with arguments inside a generator.
     """
     message = '\'return\' with argument inside generator'
+
+
+class MutableArg(Message):
+    """
+    Indicates that an argument default value value is mutable.
+    """
+    message = 'mutable argument considered harmful'

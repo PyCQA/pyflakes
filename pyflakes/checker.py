@@ -752,6 +752,10 @@ class Checker(object):
         if is_py3_func:
             annotations.append(node.returns)
 
+        for default in defaults:
+            if isinstance(default, (ast.List, ast.Dict)):
+                self.report(messages.MutableArg, node)
+
         if len(set(args)) < len(args):
             for (idx, arg) in enumerate(args):
                 if arg in args[:idx]:
