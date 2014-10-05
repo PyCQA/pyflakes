@@ -348,11 +348,18 @@ class Checker(object):
                 all_names = set(scope['__all__'].names)
                 if not scope.importStarred and \
                    os.path.basename(self.filename) != '__init__.py':
-                    # Look for possible mistakes in the export list
+                    # Look for undefined names in the export list
                     undefined = all_names.difference(scope)
                     for name in undefined:
                         self.report(messages.UndefinedExport,
                                     scope['__all__'].source, name)
+                # Look for duplicates in the export list
+                duplicated = [name for name in all_names
+                              if scope['__all__'].names.count(name) > 1]
+                for name in duplicated:
+                    self.report(messages.DuplicatedExport,
+                                scope['__all__'].source, name)
+
             else:
                 all_names = []
 

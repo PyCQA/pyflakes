@@ -798,6 +798,15 @@ class TestSpecialAll(TestCase):
             __all__ = ["foo"]
             ''', filename=filename)
 
+    def test_duplicateExported(self):
+        """
+        Emit a warning if C{__all__} has the same name more than once.
+        """
+        self.flakes('''
+        __all__ = ["a", "b", "c", "c", "d"]
+        a = b = c = d = True
+        ''', m.DuplicatedExport)
+
     def test_importStarExported(self):
         """
         Do not report undefined if import * is used
