@@ -83,6 +83,14 @@ class UndefinedExport(Message):
         self.message_args = (name,)
 
 
+class DuplicatedExport(Message):
+    message = 'duplicated name %r in __all__'
+
+    def __init__(self, filename, loc, name):
+        Message.__init__(self, filename, loc)
+        self.message_args = (name,)
+
+
 class UndefinedLocal(Message):
     message = ('local variable %r (defined in enclosing scope on line %r) '
                'referenced before assignment')
