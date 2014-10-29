@@ -31,7 +31,25 @@ Useful tips:
   ``python2 -m pyflakes .`` if you have it installed for both versions.
 
 * If you require more options and more flexibility, you could give a
-  look to `Flake8 <https://flake8.readthedocs.org/>`_ too.
+  look to Flake8_ too.
+  
+
+Design Principles
+-----------------
+Pyflakes makes a simple promise: it will never complain about style,
+and it will try very, very hard to never emit false positives.
+
+Pyflakes is also faster than Pylint_
+or Pychecker_. This is
+largely because Pyflakes only examines the syntax tree of each file
+individually. As a consequence, Pyflakes is more limited in the
+types of things it can check.
+
+If you like Pyflakes but also want styleistic checks, you want
+flake8_, which combines
+Pyflakes with style checks against
+`PEP 8`_ and adds
+per-project configuration ability.
 
 
 Mailing-list
@@ -48,3 +66,8 @@ Share your feedback and ideas: `subscribe to the mailing-list
 .. image:: https://pypip.in/wheel/pyflakes/badge.png
    :target: https://pypi.python.org/pypi/pyflakes
    :alt: Wheel Status
+
+.. _Pylint: http://www.pylint.org/
+.. _flake8: https://pypi.python.org/pypi/flake8
+.. _`PEP 8`: http://legacy.python.org/dev/peps/pep-0008/
+.. _Pychecker: http://pychecker.sourceforge.net/
