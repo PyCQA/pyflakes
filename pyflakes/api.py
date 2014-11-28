@@ -73,7 +73,7 @@ def checkPath(filename, reporter=None):
     if reporter is None:
         reporter = modReporter._makeDefaultReporter()
     try:
-        with open(filename, 'rb') as f:
+        with open(filename, 'r') as f:
             codestr = f.read()
         if sys.version_info < (2, 7):
             codestr += '\n'     # Work around for Python <= 2.6
