@@ -631,7 +631,7 @@ class Checker(object):
 
     # "stmt" type nodes
     DELETE = PRINT = FOR = WHILE = IF = WITH = WITHITEM = RAISE = \
-        TRYFINALLY = ASSERT = EXEC = EXPR = ASSIGN = handleChildren
+        TRYFINALLY = EXEC = EXPR = ASSIGN = handleChildren
 
     CONTINUE = BREAK = PASS = ignore
 
@@ -704,6 +704,22 @@ class Checker(object):
     def YIELD(self, node):
         self.scope.isGenerator = True
         self.handleNode(node.value, node)
+
+    def ASSERT(self, node):
+        test = node.test
+
+        if (
+            (
+                isinstance(test, (ast.Tuple, ast.List, ast.Set))
+                and test.elts
+            )
+            or (isinstance(test, (ast.Dict)) and test.keys)
+            or (isinstance(test, ast.Str) and test.s)
+            or (isinstance(test, ast.Num) and test.n)
+        ):
+            self.report(messages.AssertTrivallyTrue, node.test)
+
+        self.handleChildren(node)
 
     YIELDFROM = YIELD
 
