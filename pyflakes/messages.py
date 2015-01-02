@@ -133,3 +133,7 @@ class ReturnWithArgsInsideGenerator(Message):
     Indicates a return statement with arguments inside a generator.
     """
     message = '\'return\' with argument inside generator'
+
+
+class AssertTrivallyTrue(Message):
+    message = '\'assert\' with trivally True expression.'
