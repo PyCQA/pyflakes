@@ -1,6 +1,7 @@
 from pyflakes import messages as m
 from pyflakes.test.harness import TestCase
 
+
 class Test(TestCase):
     def test_Asserts_intentionally_simple_pass(self):
         self.flakes("""
@@ -18,7 +19,7 @@ class Test(TestCase):
         needle = 'needle'
         assert d == {'a': 3}
         assert n == 10
-        assert l == [1, 2]        
+        assert l == [1, 2]
         assert s == {1, 2}
         assert t == (1, 2)
         assert needle in "haystack"
@@ -35,5 +36,4 @@ class Test(TestCase):
         assert 1
         assert 1.0
         """,
-                    *[m.AssertTrivallyTrue]*8)
-
+                    *[m.AssertTrivallyTrue] * 8)

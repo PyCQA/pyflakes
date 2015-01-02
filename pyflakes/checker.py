@@ -708,15 +708,19 @@ class Checker(object):
     def ASSERT(self, node):
         test = node.test
 
-        if ((isinstance(test, (ast.Tuple, ast.List, ast.Set)) and 
-             test.elts) or
-            (isinstance(test, (ast.Dict)) and test.keys) or
-            (isinstance(test, ast.Str) and test.s) or 
-            (isinstance(test, ast.Num) and test.n)):
+        if (
+            (
+                isinstance(test, (ast.Tuple, ast.List, ast.Set))
+                and test.elts
+            )
+            or (isinstance(test, (ast.Dict)) and test.keys)
+            or (isinstance(test, ast.Str) and test.s)
+            or (isinstance(test, ast.Num) and test.n)
+        ):
             self.report(messages.AssertTrivallyTrue, node.test)
 
         self.handleChildren(node)
-            
+
     YIELDFROM = YIELD
 
     def FUNCTIONDEF(self, node):
