@@ -133,3 +133,10 @@ class ReturnWithArgsInsideGenerator(Message):
     Indicates a return statement with arguments inside a generator.
     """
     message = '\'return\' with argument inside generator'
+
+
+class ReturnOutsideFunction(Message):
+    """
+    Indicates a return statement outside of a function/method.
+    """
+    message = '\'return\' outside function'
