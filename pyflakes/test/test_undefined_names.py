@@ -158,7 +158,7 @@ class Test(TestCase):
             foo = 'bar'
             while False:
                 del foo
-            print foo
+            assert(foo)
         ''')
 
     def test_delWhileTestUsage(self):
