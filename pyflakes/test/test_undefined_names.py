@@ -150,25 +150,26 @@ class Test(TestCase):
 
     def test_delWhile(self):
         """
-        Ignore bindings deletion if node is part of while test's left side.
+        Ignore bindings deletion if called inside the body of a while
+        statement.
+        """
+        self.flakes('''
+        def test():
+            foo = 'bar'
+            while False:
+                del foo
+            print foo
+        ''')
+
+    def test_delWhileTestUsage(self):
+        """
+        Ignore bindings deletion if called inside the body of a while
+        statement and name is used inside while's test part.
         """
         self.flakes('''
         def _worker():
             o = True
             while o is not True:
-                del o
-                o = False
-        ''')
-
-    def test_delWhileRightSide(self):
-        """
-        Ignore bindings deletion if node is part of while test's right side.
-        """
-        self.flakes('''
-        def _worker():
-            a = False
-            o = True
-            while a == o:
                 del o
                 o = False
         ''')
