@@ -531,9 +531,47 @@ class Checker(object):
         self.addBinding(node, binding)
 
     def handleNodeDelete(self, node):
+
+        def on_conditional_branch():
+            """
+            Return `True` if node is part of a conditional branch.
+            """
+            current = getattr(node, 'parent', None)
+            while current:
+                if isinstance(current, ast.If):
+                    return True
+                current = getattr(current, 'parent', None)
+            return False
+
+        def is_part_of_while_conditional():
+            """
+            Return `True` if node is part of left or right side of a while
+            test.
+            """
+            current = getattr(node, 'parent', None)
+            while current:
+                if isinstance(current, ast.While):
+                    for descendant in ast.walk(current.test):
+                        if not isinstance(descendant, ast.Name):
+                            continue
+                        if not node.id == descendant.id:
+                            continue
+                        return True
+                current = getattr(current, 'parent', None)
+            return False
+
         name = getNodeName(node)
         if not name:
             return
+
+        if on_conditional_branch():
+            # We can not predict if this conditional branch is going to
+            # be executed.
+            return
+
+        if is_part_of_while_conditional():
+            return
+
         if isinstance(self.scope, FunctionScope) and name in self.scope.globals:
             self.scope.globals.remove(name)
         else:

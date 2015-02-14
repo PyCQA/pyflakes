@@ -122,6 +122,73 @@ class Test(TestCase):
         """Del an undefined name."""
         self.flakes('del a', m.UndefinedName)
 
+    def test_delConditional(self):
+        """
+        Ignores conditional bindings deletion.
+        """
+        self.flakes('''
+        context = None
+        test = True
+        if False:
+            del(test)
+        assert(test)
+        ''')
+
+    def test_delConditionalNested(self):
+        """
+        Ignored conditional bindings deletion even if they are nested in other
+        blocks.
+        """
+        self.flakes('''
+        context = None
+        test = True
+        if False:
+            with context():
+                del(test)
+        assert(test)
+        ''')
+
+    def test_delWhile(self):
+        """
+        Ignore bindings deletion if node is part of while test's left side.
+        """
+        self.flakes('''
+        def _worker():
+            o = True
+            while o is not True:
+                del o
+                o = False
+        ''')
+
+    def test_delWhileRightSide(self):
+        """
+        Ignore bindings deletion if node is part of while test's right side.
+        """
+        self.flakes('''
+        def _worker():
+            a = False
+            o = True
+            while a == o:
+                del o
+                o = False
+        ''')
+
+    def test_delWhileNested(self):
+        """
+        Ignore bindings deletions if node is part of while's test, even when
+        del is in a nested block.
+        """
+        self.flakes('''
+        context = None
+        def _worker():
+            o = True
+            while o is not True:
+                while True:
+                    with context():
+                        del o
+                o = False
+        ''')
+
     def test_globalFromNestedScope(self):
         """Global names are available from nested scopes."""
         self.flakes('''
