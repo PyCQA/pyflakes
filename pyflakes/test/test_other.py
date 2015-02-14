@@ -340,6 +340,15 @@ class Test(TestCase):
             pass
         ''', m.RedefinedWhileUnused)
 
+    def test_classWithReturn(self):
+        """
+        If a return is used inside a class, a warning is emitted.
+        """
+        self.flakes('''
+        class Foo(object):
+            return
+        ''', m.ReturnOutsideFunction)
+
     @skip("todo: Too hard to make this warn but other cases stay silent")
     def test_doubleAssignment(self):
         """

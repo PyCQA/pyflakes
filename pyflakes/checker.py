@@ -693,6 +693,10 @@ class Checker(object):
             raise RuntimeError("Got impossible expression context: %r" % (node.ctx,))
 
     def RETURN(self, node):
+        if isinstance(self.scope, ClassScope):
+            self.report(messages.ReturnOutsideFunction, node)
+            return
+
         if (
             node.value and
             hasattr(self.scope, 'returnValue') and
