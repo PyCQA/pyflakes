@@ -672,7 +672,7 @@ class Checker(object):
         EQ = NOTEQ = LT = LTE = GT = GTE = IS = ISNOT = IN = NOTIN = ignore
 
     # additional node types
-    LISTCOMP = COMPREHENSION = KEYWORD = handleChildren
+    COMPREHENSION = KEYWORD = handleChildren
 
     def GLOBAL(self, node):
         """
@@ -687,6 +687,8 @@ class Checker(object):
         self.pushScope(GeneratorScope)
         self.handleChildren(node)
         self.popScope()
+
+    LISTCOMP = handleChildren if PY2 else GENERATOREXP
 
     DICTCOMP = SETCOMP = GENERATOREXP
 

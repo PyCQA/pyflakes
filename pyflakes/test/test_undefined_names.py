@@ -13,6 +13,15 @@ class Test(TestCase):
     def test_definedInListComp(self):
         self.flakes('[a for a in range(10) if a]')
 
+    @skipIf(version_info < (3,),
+            'in Python 2 list comprehensions execute in the same scope')
+    def test_undefinedInListComp(self):
+        self.flakes('''
+        [a for a in range(10)]
+        a
+        ''',
+                    m.UndefinedName)
+
     def test_functionsNeedGlobalScope(self):
         self.flakes('''
         class a:
