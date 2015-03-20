@@ -473,6 +473,8 @@ class Test(TestCase):
         self.flakes('import fu; [fu for _ in range(1)]')
         self.flakes('import fu; [1 for _ in range(1) if fu]')
 
+    @skipIf(version_info >= (3,),
+            'in Python 3 list comprehensions execute in a separate scope')
     def test_redefinedByListComp(self):
         self.flakes('import fu; [1 for fu in range(1)]',
                     m.RedefinedInListComp)

@@ -21,6 +21,8 @@ class Test(TestCase):
         f()
         ''', m.UndefinedLocal, m.UnusedVariable)
 
+    @skipIf(version_info >= (3,),
+            'in Python 3 list comprehensions execute in a separate scope')
     def test_redefinedInListComp(self):
         """
         Test that shadowing a variable in a list comprehension raises
@@ -220,6 +222,8 @@ class Test(TestCase):
             [a for a in '12']
         ''')
 
+    @skipIf(version_info >= (3,),
+            'in Python 3 list comprehensions execute in a separate scope')
     def test_redefinedElseInListComp(self):
         """
         Test that shadowing a variable in a list comprehension in
