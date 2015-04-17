@@ -130,17 +130,40 @@ def checkRecursive(paths, reporter):
     return warnings
 
 
+def _exitOnSignal(sigName, message):
+    """Handles a signal with sys.exit.
+
+    Some of these signals (SIGPIPE, for example) don't exist or are invalid on
+    Windows. So, ignore errors that might arise.
+    """
+    import signal
+
+    try:
+        sigNumber = getattr(signal, sigName)
+    except AttributeError:
+        # the signal constants defined in the signal module are defined by
+        # whether the C library supports them or not. So, SIGPIPE might not
+        # even be defined.
+        return
+
+    def handler(sig, f):
+        sys.exit(message)
+
+    try:
+        signal.signal(sigNumber, handler)
+    except ValueError:
+        # It's also possible the signal is defined, but then it's invalid. In
+        # this case, signal.signal raises ValueError.
+        pass
+
+
 def main(prog=None):
     """Entry point for the script "pyflakes"."""
     import optparse
-    import signal
 
     # Handle "Keyboard Interrupt" and "Broken pipe" gracefully
-    try:
-        signal.signal(signal.SIGINT, lambda sig, f: sys.exit('... stopped'))
-        signal.signal(signal.SIGPIPE, lambda sig, f: sys.exit(1))
-    except ValueError:
-        pass    # SIGPIPE is not supported on Windows
+    _exitOnSignal('SIGINT', '... stopped')
+    _exitOnSignal('SIGPIPE', 1)
 
     parser = optparse.OptionParser(prog=prog, version=__version__)
     (__, args) = parser.parse_args()
