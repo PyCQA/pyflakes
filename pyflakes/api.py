@@ -139,7 +139,7 @@ def main(prog=None):
     try:
         signal.signal(signal.SIGINT, lambda sig, f: sys.exit('... stopped'))
         signal.signal(signal.SIGPIPE, lambda sig, f: sys.exit(1))
-    except ValueError:
+    except AttributeError:
         pass    # SIGPIPE is not supported on Windows
 
     parser = optparse.OptionParser(prog=prog, version=__version__)
