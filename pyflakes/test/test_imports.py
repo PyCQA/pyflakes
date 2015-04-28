@@ -505,10 +505,25 @@ class Test(TestCase):
         ''')
 
     def test_usedInGlobal(self):
+        """
+        A 'global' statement shadowing an unused import should not prevent it
+        from being reported.
+        """
         self.flakes('''
         import fu
         def f(): global fu
         ''', m.UnusedImport)
+
+    def test_usedAndGlobal(self):
+        """
+        A 'global' statement shadowing a used import should not cause it to be
+        reported as unused.
+        """
+        self.flakes('''
+            import foo
+            def f(): global foo
+            def g(): foo.is_used()
+        ''')
 
     @skipIf(version_info >= (3,), 'deprecated syntax')
     def test_usedInBackquote(self):

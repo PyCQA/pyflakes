@@ -678,8 +678,30 @@ class Checker(object):
         """
         Keep track of globals declarations.
         """
-        if isinstance(self.scope, FunctionScope):
-            self.scope.globals.update(node.names)
+        # In doctests, the global scope is an anonymous function at index 1.
+        global_scope_index = 1 if self.withDoctest else 0
+        global_scope = self.scopeStack[global_scope_index]
+
+        # Ignore 'global' statement in global scope.
+        if self.scope is not global_scope:
+
+            # One 'global' statement can bind multiple (comma-delimited) names.
+            for node_name in node.names:
+                node_value = Assignment(node_name, node)
+
+                # Remove UndefinedName messages already reported for this name.
+                self.messages = [
+                    m for m in self.messages if not
+                    isinstance(m, messages.UndefinedName) and not
+                    m.message_args[0] == node_name]
+
+                # Bind name to global scope if it doesn't exist already.
+                global_scope.setdefault(node_name, node_value)
+
+                # Bind name to non-global scopes, but as already "used".
+                node_value.used = True
+                for scope in self.scopeStack[global_scope_index + 1:]:
+                    scope[node_name] = node_value
 
     NONLOCAL = GLOBAL
 

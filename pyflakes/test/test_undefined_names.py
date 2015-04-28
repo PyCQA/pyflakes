@@ -3,7 +3,7 @@ from _ast import PyCF_ONLY_AST
 from sys import version_info
 
 from pyflakes import messages as m, checker
-from pyflakes.test.harness import TestCase, skip, skipIf
+from pyflakes.test.harness import TestCase, skipIf
 
 
 class Test(TestCase):
@@ -92,7 +92,6 @@ class Test(TestCase):
             bar; baz
         ''')
 
-    @skip("todo")
     def test_definedByGlobal(self):
         """
         "global" can make an otherwise undefined name in another function
@@ -101,6 +100,19 @@ class Test(TestCase):
         self.flakes('''
         def a(): global fu; fu = 1
         def b(): fu
+        ''')
+        self.flakes('''
+        def c(): bar
+        def b(): global bar; bar = 1
+        ''')
+
+    def test_definedByGlobalMultipleNames(self):
+        """
+        "global" can accept multiple names.
+        """
+        self.flakes('''
+        def a(): global fu, bar; fu = 1; bar = 2
+        def b(): fu; bar
         ''')
 
     def test_globalInGlobalScope(self):
