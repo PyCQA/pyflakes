@@ -391,6 +391,18 @@ class Test(TestCase):
 
         self.flakes('''
         while True:
+            if 1:
+                continue
+        ''')
+
+        self.flakes('''
+        for i in range(10):
+            if 1:
+                continue
+        ''')
+
+        self.flakes('''
+        while True:
             while True:
                 pass
             else:
@@ -449,6 +461,18 @@ class Test(TestCase):
         self.flakes('''
         for i in range(10):
             break
+        ''')
+
+        self.flakes('''
+        while True:
+            if 1:
+                break
+        ''')
+
+        self.flakes('''
+        for i in range(10):
+            if 1:
+                break
         ''')
 
         self.flakes('''
