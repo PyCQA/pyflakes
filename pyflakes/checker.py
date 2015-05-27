@@ -746,7 +746,7 @@ class Checker(object):
                     return
         if isinstance(node, ast.Continue):
             self.report(messages.ContinueOutsideLoop, node)
-        else: # ast.Break
+        else:  # ast.Break
             self.report(messages.BreakOutsideLoop, node)
 
     BREAK = CONTINUE

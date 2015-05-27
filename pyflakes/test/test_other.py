@@ -432,8 +432,7 @@ class Test(TestCase):
                 pass
             finally:
                 continue
-        ''', m.ContinueInFinally) # Doesn't exist yet
-
+        ''', m.ContinueInFinally)  # Doesn't exist yet
 
     def test_breakOutsideLoop(self):
         self.flakes('''

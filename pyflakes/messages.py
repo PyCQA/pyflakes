@@ -133,6 +133,7 @@ class ReturnOutsideFunction(Message):
     """
     message = '\'return\' outside function'
 
+
 # For whatever reason, Python gives different error messages for these two. We
 # match the Python error message exactly.
 class ContinueOutsideLoop(Message):
@@ -140,6 +141,7 @@ class ContinueOutsideLoop(Message):
     Indicates a continue statement outside of a while or for loop.
     """
     message = '\'continue\' not properly in loop'
+
 
 class BreakOutsideLoop(Message):
     """
