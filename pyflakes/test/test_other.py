@@ -353,6 +353,14 @@ class Test(TestCase):
             return
         ''', m.ReturnOutsideFunction)
 
+    def test_moduleWithReturn(self):
+        """
+        If a return is used at the module level, a warning is emitted.
+        """
+        self.flakes('''
+        return
+        ''', m.ReturnOutsideFunction)
+
     @skip("todo: Too hard to make this warn but other cases stay silent")
     def test_doubleAssignment(self):
         """
@@ -951,7 +959,3 @@ class TestUnusedAssignment(TestCase):
         def bar():
             yield from foo()
         ''', m.UndefinedName)
-
-    def test_returnOnly(self):
-        """Do not crash on lone "return"."""
-        self.flakes('return 2')

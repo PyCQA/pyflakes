@@ -623,7 +623,7 @@ class Checker(object):
         if not examples:
             return
         node_offset = self.offset or (0, 0)
-        self.pushScope()
+        self.pushScope(ModuleScope)
         underscore_in_builtins = '_' in self.builtIns
         if not underscore_in_builtins:
             self.builtIns.add('_')
@@ -735,7 +735,7 @@ class Checker(object):
             raise RuntimeError("Got impossible expression context: %r" % (node.ctx,))
 
     def RETURN(self, node):
-        if isinstance(self.scope, ClassScope):
+        if isinstance(self.scope, (ClassScope, ModuleScope)):
             self.report(messages.ReturnOutsideFunction, node)
             return
 
