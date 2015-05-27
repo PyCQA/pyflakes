@@ -361,6 +361,120 @@ class Test(TestCase):
         return
         ''', m.ReturnOutsideFunction)
 
+    def test_continueOutsideLoop(self):
+        self.flakes('''
+        continue
+        ''', m.ContinueOutsideLoop)
+
+        self.flakes('''
+        def f():
+            continue
+        ''', m.ContinueOutsideLoop)
+
+        self.flakes('''
+        while True:
+            pass
+        else:
+            continue
+        ''', m.ContinueOutsideLoop)
+
+    def test_continueInsideLoop(self):
+        self.flakes('''
+        while True:
+            continue
+        ''')
+
+        self.flakes('''
+        for i in range(10):
+            continue
+        ''')
+
+        self.flakes('''
+        while True:
+            while True:
+                pass
+            else:
+                continue
+        else:
+            pass
+        ''')
+
+    @skip("todo: the following are invalid but aren't implemented yet")
+    def test_continueOutsideLoopInvalid(self):
+        self.flakes('''
+        while True:
+            def f():
+                continue
+        ''', m.ContinueOutsideLoop)
+
+        self.flakes('''
+        while True:
+            class A:
+                continue
+        ''', m.ContinueOutsideLoop)
+
+        # 'continue' inside 'finally' is a special syntax error
+        self.flakes('''
+        while True:
+            try:
+                pass
+            finally:
+                continue
+        ''', m.ContinueInFinally) # Doesn't exist yet
+
+
+    def test_breakOutsideLoop(self):
+        self.flakes('''
+        break
+        ''', m.BreakOutsideLoop)
+
+        self.flakes('''
+        def f():
+            break
+        ''', m.BreakOutsideLoop)
+
+        self.flakes('''
+        while True:
+            pass
+        else:
+            break
+        ''', m.BreakOutsideLoop)
+
+    def test_breakInsideLoop(self):
+        self.flakes('''
+        while True:
+            break
+        ''')
+
+        self.flakes('''
+        for i in range(10):
+            break
+        ''')
+
+        self.flakes('''
+        while True:
+            while True:
+                pass
+            else:
+                break
+        else:
+            pass
+        ''')
+
+    @skip("todo: the following are invalid but aren't implemented yet")
+    def test_breakOutsideLoopInvalid(self):
+        self.flakes('''
+        while True:
+            def f():
+                break
+        ''', m.BreakOutsideLoop)
+
+        self.flakes('''
+        while True:
+            class A:
+                break
+        ''', m.BreakOutsideLoop)
+
     @skip("todo: Too hard to make this warn but other cases stay silent")
     def test_doubleAssignment(self):
         """

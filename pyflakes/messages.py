@@ -132,3 +132,17 @@ class ReturnOutsideFunction(Message):
     Indicates a return statement outside of a function/method.
     """
     message = '\'return\' outside function'
+
+# For whatever reason, Python gives different error messages for these two. We
+# match the Python error message exactly.
+class ContinueOutsideLoop(Message):
+    """
+    Indicates a continue statement outside of a while or for loop.
+    """
+    message = '\'continue\' not properly in loop'
+
+class BreakOutsideLoop(Message):
+    """
+    Indicates a break statement outside of a while or for loop.
+    """
+    message = '\'break\' outside loop'

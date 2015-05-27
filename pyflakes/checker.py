@@ -651,7 +651,7 @@ class Checker(object):
     DELETE = PRINT = FOR = WHILE = IF = WITH = WITHITEM = RAISE = \
         TRYFINALLY = ASSERT = EXEC = EXPR = ASSIGN = handleChildren
 
-    CONTINUE = BREAK = PASS = ignore
+    PASS = ignore
 
     # "expr" type nodes
     BOOLOP = BINOP = UNARYOP = IFEXP = DICT = SET = \
@@ -733,6 +733,23 @@ class Checker(object):
             # must be a Param context -- this only happens for names in function
             # arguments, but these aren't dispatched through here
             raise RuntimeError("Got impossible expression context: %r" % (node.ctx,))
+
+    def CONTINUE(self, node):
+        n = node
+        while hasattr(n, 'parent'):
+            n = n.parent
+            if isinstance(n, (ast.While, ast.For)):
+                if node in n.orelse:
+                    # doesn't apply unless it's in the loop itself
+                    continue
+                else:
+                    return
+        if isinstance(node, ast.Continue):
+            self.report(messages.ContinueOutsideLoop, node)
+        else: # ast.Break
+            self.report(messages.BreakOutsideLoop, node)
+
+    BREAK = CONTINUE
 
     def RETURN(self, node):
         if isinstance(self.scope, (ClassScope, ModuleScope)):
