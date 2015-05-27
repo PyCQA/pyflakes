@@ -17,3 +17,4 @@ script:
 matrix:
   allow_failures:
     - python: pypy
+sudo: false
