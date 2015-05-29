@@ -739,9 +739,15 @@ class Checker(object):
         while hasattr(n, 'parent'):
             n = n.parent
             if isinstance(n, (ast.While, ast.For)):
-                if node in n.orelse:
-                    # doesn't apply unless it's in the loop itself
-                    continue
+                # doesn't apply unless it's in the loop itself
+                in_else = False
+                for else_node in n.orelse:
+                    for child in ast.walk(else_node):
+                        if child == node:
+                            in_else = True
+                            break
+                    if in_else:
+                        break
                 else:
                     return
             if isinstance(n, (ast.FunctionDef, ast.ClassDef)):

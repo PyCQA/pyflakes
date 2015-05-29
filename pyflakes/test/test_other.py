@@ -380,6 +380,15 @@ class Test(TestCase):
 
         self.flakes('''
         while True:
+            pass
+        else:
+            if 1:
+                if 2:
+                    continue
+        ''', m.ContinueOutsideLoop)
+
+        self.flakes('''
+        while True:
             def f():
                 continue
         ''', m.ContinueOutsideLoop)
@@ -449,6 +458,15 @@ class Test(TestCase):
             pass
         else:
             break
+        ''', m.BreakOutsideLoop)
+
+        self.flakes('''
+        while True:
+            pass
+        else:
+            if 1:
+                if 2:
+                    break
         ''', m.BreakOutsideLoop)
 
         self.flakes('''
