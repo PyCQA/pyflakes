@@ -378,6 +378,18 @@ class Test(TestCase):
             continue
         ''', m.ContinueOutsideLoop)
 
+        self.flakes('''
+        while True:
+            def f():
+                continue
+        ''', m.ContinueOutsideLoop)
+
+        self.flakes('''
+        while True:
+            class A:
+                continue
+        ''', m.ContinueOutsideLoop)
+
     def test_continueInsideLoop(self):
         self.flakes('''
         while True:
@@ -410,18 +422,6 @@ class Test(TestCase):
         else:
             pass
         ''')
-
-        self.flakes('''
-        while True:
-            def f():
-                continue
-        ''', m.ContinueOutsideLoop)
-
-        self.flakes('''
-        while True:
-            class A:
-                continue
-        ''', m.ContinueOutsideLoop)
 
     @skip("todo: the following are invalid but aren't implemented yet")
     def test_continueOutsideLoopInvalid(self):
