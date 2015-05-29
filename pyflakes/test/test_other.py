@@ -411,8 +411,6 @@ class Test(TestCase):
             pass
         ''')
 
-    @skip("todo: the following are invalid but aren't implemented yet")
-    def test_continueOutsideLoopInvalid(self):
         self.flakes('''
         while True:
             def f():
@@ -425,6 +423,8 @@ class Test(TestCase):
                 continue
         ''', m.ContinueOutsideLoop)
 
+    @skip("todo: the following are invalid but aren't implemented yet")
+    def test_continueOutsideLoopInvalid(self):
         # 'continue' inside 'finally' is a special syntax error
         self.flakes('''
         while True:
@@ -449,6 +449,18 @@ class Test(TestCase):
             pass
         else:
             break
+        ''', m.BreakOutsideLoop)
+
+        self.flakes('''
+        while True:
+            def f():
+                break
+        ''', m.BreakOutsideLoop)
+
+        self.flakes('''
+        while True:
+            class A:
+                break
         ''', m.BreakOutsideLoop)
 
     def test_breakInsideLoop(self):
@@ -483,20 +495,6 @@ class Test(TestCase):
         else:
             pass
         ''')
-
-    @skip("todo: the following are invalid but aren't implemented yet")
-    def test_breakOutsideLoopInvalid(self):
-        self.flakes('''
-        while True:
-            def f():
-                break
-        ''', m.BreakOutsideLoop)
-
-        self.flakes('''
-        while True:
-            class A:
-                break
-        ''', m.BreakOutsideLoop)
 
     @skip("todo: Too hard to make this warn but other cases stay silent")
     def test_doubleAssignment(self):

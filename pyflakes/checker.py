@@ -744,6 +744,8 @@ class Checker(object):
                     continue
                 else:
                     return
+            if isinstance(n, (ast.FunctionDef, ast.ClassDef)):
+                break
         if isinstance(node, ast.Continue):
             self.report(messages.ContinueOutsideLoop, node)
         else:  # ast.Break
