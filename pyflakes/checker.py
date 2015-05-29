@@ -739,7 +739,7 @@ class Checker(object):
         while hasattr(n, 'parent'):
             n = n.parent
             if isinstance(n, (ast.While, ast.For)):
-                # doesn't apply unless it's in the loop itself
+                # Doesn't apply unless it's in the loop itself
                 in_else = False
                 for else_node in n.orelse:
                     for child in ast.walk(else_node):
@@ -752,6 +752,17 @@ class Checker(object):
                     return
             if isinstance(n, (ast.FunctionDef, ast.ClassDef)):
                 break
+            # Handle Try/TryFinally difference in Python < and >= 3.3
+            if hasattr(n, 'finalbody') and isinstance(node, ast.Continue):
+                in_finally = False
+                for finally_node in n.finalbody:
+                    for child in ast.walk(finally_node):
+                        if child == node:
+                            in_finally = True
+                            break
+                    if in_finally:
+                        self.report(messages.ContinueInFinally, node)
+                        return
         if isinstance(node, ast.Continue):
             self.report(messages.ContinueOutsideLoop, node)
         else:  # ast.Break

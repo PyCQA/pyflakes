@@ -432,8 +432,16 @@ class Test(TestCase):
             pass
         ''')
 
-    @skip("todo: the following are invalid but aren't implemented yet")
-    def test_continueOutsideLoopInvalid(self):
+        self.flakes('''
+        while True:
+            try:
+                pass
+            finally:
+                while True:
+                    continue
+        ''')
+
+    def test_continueInFinally(self):
         # 'continue' inside 'finally' is a special syntax error
         self.flakes('''
         while True:
@@ -441,7 +449,25 @@ class Test(TestCase):
                 pass
             finally:
                 continue
-        ''', m.ContinueInFinally)  # Doesn't exist yet
+        ''', m.ContinueInFinally)
+
+        self.flakes('''
+        while True:
+            try:
+                pass
+            finally:
+                if 1:
+                    if 2:
+                        continue
+        ''', m.ContinueInFinally)
+
+        # Even when not in a loop, this is the error Python gives
+        self.flakes('''
+        try:
+            pass
+        finally:
+            continue
+        ''', m.ContinueInFinally)
 
     def test_breakOutsideLoop(self):
         self.flakes('''
@@ -481,6 +507,13 @@ class Test(TestCase):
                 break
         ''', m.BreakOutsideLoop)
 
+        self.flakes('''
+        try:
+            pass
+        finally:
+            break
+        ''', m.BreakOutsideLoop)
+
     def test_breakInsideLoop(self):
         self.flakes('''
         while True:
@@ -512,6 +545,33 @@ class Test(TestCase):
                 break
         else:
             pass
+        ''')
+
+        self.flakes('''
+        while True:
+            try:
+                pass
+            finally:
+                while True:
+                    break
+        ''')
+
+        self.flakes('''
+        while True:
+            try:
+                pass
+            finally:
+                break
+        ''')
+
+        self.flakes('''
+        while True:
+            try:
+                pass
+            finally:
+                if 1:
+                    if 2:
+                        break
         ''')
 
     @skip("todo: Too hard to make this warn but other cases stay silent")

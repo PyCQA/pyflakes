@@ -148,3 +148,9 @@ class BreakOutsideLoop(Message):
     Indicates a break statement outside of a while or for loop.
     """
     message = '\'break\' outside loop'
+
+class ContinueInFinally(Message):
+    """
+    Indicates a continue statement in a finally block in a while or for loop.
+    """
+    message = '\'continue\' not supported inside \'finally\' clause'
