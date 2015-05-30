@@ -149,6 +149,7 @@ class BreakOutsideLoop(Message):
     """
     message = '\'break\' outside loop'
 
+
 class ContinueInFinally(Message):
     """
     Indicates a continue statement in a finally block in a while or for loop.
