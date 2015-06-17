@@ -476,6 +476,15 @@ class Test(TestCase):
         foo.bar += foo.baz
         ''')
 
+    def test_globalDeclaredInDifferentScope(self):
+        """
+        A 'global' can be declared in one scope and reused in another.
+        """
+        self.flakes('''
+        def f(): global foo
+        def g(): foo = 'anything'; foo.is_used()
+        ''')
+
 
 class TestUnusedAssignment(TestCase):
     """

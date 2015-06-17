@@ -699,7 +699,7 @@ class Checker(object):
                 global_scope.setdefault(node_name, node_value)
 
                 # Bind name to non-global scopes, but as already "used".
-                node_value.used = True
+                node_value.used = (global_scope, node)
                 for scope in self.scopeStack[global_scope_index + 1:]:
                     scope[node_name] = node_value
 
