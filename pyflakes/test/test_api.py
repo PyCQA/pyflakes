@@ -385,12 +385,18 @@ foo(bar=baz, bax)
         sourcePath = self.makeTempFile(source)
         last_line = '            ^\n' if sys.version_info >= (3, 2) else ''
         column = '13:' if sys.version_info >= (3, 2) else ''
+
+        if sys.version_info >= (3, 5):
+            message = 'positional argument follows keyword argument'
+        else:
+            message = 'non-keyword arg after keyword arg'
+
         self.assertHasErrors(
             sourcePath,
             ["""\
-%s:1:%s non-keyword arg after keyword arg
+%s:1:%s %s
 foo(bar=baz, bax)
-%s""" % (sourcePath, column, last_line)])
+%s""" % (sourcePath, column, message, last_line)])
 
     def test_invalidEscape(self):
         """
