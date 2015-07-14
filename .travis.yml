@@ -5,6 +5,7 @@ python:
   - 3.2
   - 3.3
   - 3.4
+  - nightly
   - pypy
 install:
   - pip install flake8==2.1.0 pep8==1.5.6
