@@ -101,11 +101,11 @@ class DuplicateArgument(Message):
 
 
 class LateFutureImport(Message):
-    message = 'future import(s) %r after other statements'
+    message = 'from __future__ imports must occur at the beginning of the file'
 
     def __init__(self, filename, loc, names):
         Message.__init__(self, filename, loc)
-        self.message_args = (names,)
+        self.message_args = ()
 
 
 class UnusedVariable(Message):
