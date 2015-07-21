@@ -932,12 +932,15 @@ class Checker(object):
     def TRY(self, node):
         handler_names = []
         # List the exception handlers
-        for handler in node.handlers:
+        for i, handler in enumerate(node.handlers):
             if isinstance(handler.type, ast.Tuple):
                 for exc_type in handler.type.elts:
                     handler_names.append(getNodeName(exc_type))
             elif handler.type:
                 handler_names.append(getNodeName(handler.type))
+
+            if handler.type is None and i < len(node.handlers) - 1:
+                self.report(messages.DefaultExceptNotLast, handler)
         # Memorize the except handlers and process the body
         self.exceptHandlers.append(handler_names)
         for child in node.body:

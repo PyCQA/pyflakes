@@ -574,6 +574,250 @@ class Test(TestCase):
                         break
         ''')
 
+    def test_defaultExceptLast(self):
+        """
+        A default except block should be last.
+
+        YES:
+
+        try:
+            ...
+        except Exception:
+            ...
+        except:
+            ...
+
+        NO:
+
+        try:
+            ...
+        except:
+            ...
+        except Exception:
+            ...
+        """
+        self.flakes('''
+        try:
+            pass
+        except ValueError:
+            pass
+        ''')
+
+        self.flakes('''
+        try:
+            pass
+        except ValueError:
+            pass
+        except:
+            pass
+        ''')
+
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        ''')
+
+        self.flakes('''
+        try:
+            pass
+        except ValueError:
+            pass
+        else:
+            pass
+        ''')
+
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        else:
+            pass
+        ''')
+
+        self.flakes('''
+        try:
+            pass
+        except ValueError:
+            pass
+        except:
+            pass
+        else:
+            pass
+        ''')
+
+    def test_defaultExceptNotLast(self):
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except ValueError:
+            pass
+        ''', m.DefaultExceptNotLast)
+
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except:
+            pass
+        ''', m.DefaultExceptNotLast)
+
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except ValueError:
+            pass
+        except:
+            pass
+        else:
+            pass
+        ''', m.DefaultExceptNotLast)
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except ValueError:
+            pass
+        else:
+            pass
+        ''', m.DefaultExceptNotLast)
+
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except:
+            pass
+        else:
+            pass
+        ''', m.DefaultExceptNotLast)
+
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except ValueError:
+            pass
+        except:
+            pass
+        finally:
+            pass
+        ''', m.DefaultExceptNotLast)
+
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except ValueError:
+            pass
+        except:
+            pass
+        finally:
+            pass
+        ''', m.DefaultExceptNotLast)
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except ValueError:
+            pass
+        finally:
+            pass
+        ''', m.DefaultExceptNotLast)
+
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except:
+            pass
+        finally:
+            pass
+        ''', m.DefaultExceptNotLast)
+
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except ValueError:
+            pass
+        except:
+            pass
+        else:
+            pass
+        finally:
+            pass
+        ''', m.DefaultExceptNotLast)
+
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except ValueError:
+            pass
+        except:
+            pass
+        else:
+            pass
+        finally:
+            pass
+        ''', m.DefaultExceptNotLast)
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except ValueError:
+            pass
+        else:
+            pass
+        finally:
+            pass
+        ''', m.DefaultExceptNotLast)
+
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except:
+            pass
+        else:
+            pass
+        finally:
+            pass
+        ''', m.DefaultExceptNotLast)
+
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except ValueError:
+            pass
+        except:
+            pass
+        else:
+            pass
+        finally:
+            pass
+        ''', m.DefaultExceptNotLast)
+
     @skip("todo: Too hard to make this warn but other cases stay silent")
     def test_doubleAssignment(self):
         """
