@@ -676,9 +676,20 @@ class Test(TestCase):
             pass
         except:
             pass
-        else:
-            pass
         ''', m.DefaultExceptNotLast)
+
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except ValueError:
+            pass
+        except:
+            pass
+        except ValueError:
+            pass
+        ''', m.DefaultExceptNotLast, m.DefaultExceptNotLast)
 
         self.flakes('''
         try:
@@ -711,6 +722,43 @@ class Test(TestCase):
             pass
         except:
             pass
+        else:
+            pass
+        ''', m.DefaultExceptNotLast)
+
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except ValueError:
+            pass
+        except:
+            pass
+        except ValueError:
+            pass
+        else:
+            pass
+        ''', m.DefaultExceptNotLast, m.DefaultExceptNotLast)
+
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except ValueError:
+            pass
+        finally:
+            pass
+        ''', m.DefaultExceptNotLast)
+
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except:
+            pass
         finally:
             pass
         ''', m.DefaultExceptNotLast)
@@ -727,12 +775,30 @@ class Test(TestCase):
         finally:
             pass
         ''', m.DefaultExceptNotLast)
+
         self.flakes('''
         try:
             pass
         except:
             pass
         except ValueError:
+            pass
+        except:
+            pass
+        except ValueError:
+            pass
+        finally:
+            pass
+        ''', m.DefaultExceptNotLast, m.DefaultExceptNotLast)
+
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except ValueError:
+            pass
+        else:
             pass
         finally:
             pass
@@ -742,19 +808,6 @@ class Test(TestCase):
         try:
             pass
         except:
-            pass
-        except:
-            pass
-        finally:
-            pass
-        ''', m.DefaultExceptNotLast)
-
-        self.flakes('''
-        try:
-            pass
-        except:
-            pass
-        except ValueError:
             pass
         except:
             pass
@@ -778,31 +831,6 @@ class Test(TestCase):
         finally:
             pass
         ''', m.DefaultExceptNotLast)
-        self.flakes('''
-        try:
-            pass
-        except:
-            pass
-        except ValueError:
-            pass
-        else:
-            pass
-        finally:
-            pass
-        ''', m.DefaultExceptNotLast)
-
-        self.flakes('''
-        try:
-            pass
-        except:
-            pass
-        except:
-            pass
-        else:
-            pass
-        finally:
-            pass
-        ''', m.DefaultExceptNotLast)
 
         self.flakes('''
         try:
@@ -813,11 +841,13 @@ class Test(TestCase):
             pass
         except:
             pass
+        except ValueError:
+            pass
         else:
             pass
         finally:
             pass
-        ''', m.DefaultExceptNotLast)
+        ''', m.DefaultExceptNotLast, m.DefaultExceptNotLast)
 
     @skip("todo: Too hard to make this warn but other cases stay silent")
     def test_doubleAssignment(self):
