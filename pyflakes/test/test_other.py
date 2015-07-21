@@ -679,6 +679,7 @@ class Test(TestCase):
         else:
             pass
         ''', m.DefaultExceptNotLast)
+
         self.flakes('''
         try:
             pass
