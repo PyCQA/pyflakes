@@ -156,6 +156,7 @@ class ContinueInFinally(Message):
     """
     message = '\'continue\' not supported inside \'finally\' clause'
 
+
 class DefaultExceptNotLast(Message):
     """
     Indicates an except: block as not the last exception handler.
