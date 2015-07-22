@@ -735,34 +735,23 @@ class Checker(object):
             raise RuntimeError("Got impossible expression context: %r" % (node.ctx,))
 
     def CONTINUE(self, node):
+        # Walk the tree up until we see a loop (OK), a function or class
+        # definition (not OK), for 'continue', a finally block (not OK), or
+        # the top module scope (not OK)
         n = node
         while hasattr(n, 'parent'):
-            n = n.parent
+            n, n_child = n.parent, n
             if isinstance(n, (ast.While, ast.For)):
                 # Doesn't apply unless it's in the loop itself
-                in_else = False
-                for else_node in n.orelse:
-                    for child in ast.walk(else_node):
-                        if child == node:
-                            in_else = True
-                            break
-                    if in_else:
-                        break
-                else:
+                if n_child not in n.orelse:
                     return
             if isinstance(n, (ast.FunctionDef, ast.ClassDef)):
                 break
             # Handle Try/TryFinally difference in Python < and >= 3.3
             if hasattr(n, 'finalbody') and isinstance(node, ast.Continue):
-                in_finally = False
-                for finally_node in n.finalbody:
-                    for child in ast.walk(finally_node):
-                        if child == node:
-                            in_finally = True
-                            break
-                    if in_finally:
-                        self.report(messages.ContinueInFinally, node)
-                        return
+                if n_child in n.finalbody:
+                    self.report(messages.ContinueInFinally, node)
+                    return
         if isinstance(node, ast.Continue):
             self.report(messages.ContinueOutsideLoop, node)
         else:  # ast.Break
