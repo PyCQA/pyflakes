@@ -361,6 +361,42 @@ class Test(TestCase):
         return
         ''', m.ReturnOutsideFunction)
 
+    def test_classWithYield(self):
+        """
+        If a yield is used inside a class, a warning is emitted.
+        """
+        self.flakes('''
+        class Foo(object):
+            yield
+        ''', m.YieldOutsideFunction)
+
+    def test_moduleWithYield(self):
+        """
+        If a yield is used at the module level, a warning is emitted.
+        """
+        self.flakes('''
+        yield
+        ''', m.YieldOutsideFunction)
+
+    @skipIf(version_info < (3, 3), "Python >= 3.3 only")
+    def test_classWithYieldFrom(self):
+        """
+        If a yield from is used inside a class, a warning is emitted.
+        """
+        self.flakes('''
+        class Foo(object):
+            yield from range(10)
+        ''', m.YieldFromOutsideFunction)
+
+    @skipIf(version_info < (3, 3), "Python >= 3.3 only")
+    def test_moduleWithYieldFrom(self):
+        """
+        If a yield from is used at the module level, a warning is emitted.
+        """
+        self.flakes('''
+        yield from range(10)
+        ''', m.YieldFromOutsideFunction)
+
     def test_continueOutsideLoop(self):
         self.flakes('''
         continue
