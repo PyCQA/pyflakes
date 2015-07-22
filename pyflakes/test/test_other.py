@@ -386,7 +386,7 @@ class Test(TestCase):
         self.flakes('''
         class Foo(object):
             yield from range(10)
-        ''', m.YieldFromOutsideFunction)
+        ''', m.YieldOutsideFunction)
 
     @skipIf(version_info < (3, 3), "Python >= 3.3 only")
     def test_moduleWithYieldFrom(self):
@@ -395,7 +395,7 @@ class Test(TestCase):
         """
         self.flakes('''
         yield from range(10)
-        ''', m.YieldFromOutsideFunction)
+        ''', m.YieldOutsideFunction)
 
     def test_continueOutsideLoop(self):
         self.flakes('''

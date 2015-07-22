@@ -136,16 +136,9 @@ class ReturnOutsideFunction(Message):
 
 class YieldOutsideFunction(Message):
     """
-    Indicates a yield statement outside of a function/method.
+    Indicates a yield or yield from statement outside of a function/method.
     """
     message = '\'yield\' outside function'
-
-
-class YieldFromOutsideFunction(Message):
-    """
-    Indicates a yield from statement outside of a function/method.
-    """
-    message = '\'yield from\' outside function'
 
 
 # For whatever reason, Python gives different error messages for these two. We

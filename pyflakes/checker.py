@@ -791,13 +791,7 @@ class Checker(object):
         self.scope.isGenerator = True
         self.handleNode(node.value, node)
 
-    def YIELDFROM(self, node):
-        if isinstance(self.scope, (ClassScope, ModuleScope)):
-            self.report(messages.YieldFromOutsideFunction, node)
-            return
-
-        self.scope.isGenerator = True
-        self.handleNode(node.value, node)
+    YIELDFROM = YIELD
 
     def FUNCTIONDEF(self, node):
         for deco in node.decorator_list:
