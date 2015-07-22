@@ -849,6 +849,122 @@ class Test(TestCase):
             pass
         ''', m.DefaultExceptNotLast, m.DefaultExceptNotLast)
 
+    @skipIf(version_info < (3,), "Python 3 only")
+    def test_starredAssignmentNoError(self):
+        """
+        Python 3 extended iterable unpacking
+        """
+        self.flakes('''
+        a, *b = range(10)
+        ''')
+
+        self.flakes('''
+        *a, b = range(10)
+        ''')
+
+        self.flakes('''
+        a, *b, c = range(10)
+        ''')
+
+        self.flakes('''
+        (a, *b) = range(10)
+        ''')
+
+        self.flakes('''
+        (*a, b) = range(10)
+        ''')
+
+        self.flakes('''
+        (a, *b, c) = range(10)
+        ''')
+
+        self.flakes('''
+        [a, *b] = range(10)
+        ''')
+
+        self.flakes('''
+        [*a, b] = range(10)
+        ''')
+
+        self.flakes('''
+        [a, *b, c] = range(10)
+        ''')
+
+        # Taken from test_unpack_ex.py in the cPython source
+        s = ", ".join("a%d" % i for i in range(1<<8 - 1)) + ", *rest = range(1<<8)"
+        self.flakes(s)
+
+        s = "(" + ", ".join("a%d" % i for i in range(1<<8 - 1)) + ", *rest) = range(1<<8)"
+        self.flakes(s)
+
+        s = "[" + ", ".join("a%d" % i for i in range(1<<8 - 1)) + ", *rest] = range(1<<8)"
+        self.flakes(s)
+
+    @skipIf(version_info < (3, ), "Python 3 only")
+    def test_starredAssignmentErrors(self):
+        """
+        SyntaxErrors (not encoded in the ast) surrounding Python 3 extended
+        iterable unpacking
+        """
+        # Taken from test_unpack_ex.py in the cPython source
+        s = ", ".join("a%d" % i for i in range(1<<8)) + ", *rest = range(1<<8 + 1)"
+        self.flakes(s, m.TooManyExpressionsInStarredAssignment)
+
+        s = "(" + ", ".join("a%d" % i for i in range(1<<8)) + ", *rest) = range(1<<8 + 1)"
+        self.flakes(s, m.TooManyExpressionsInStarredAssignment)
+
+        s = "[" + ", ".join("a%d" % i for i in range(1<<8)) + ", *rest] = range(1<<8 + 1)"
+        self.flakes(s, m.TooManyExpressionsInStarredAssignment)
+
+        s = ", ".join("a%d" % i for i in range(1<<8 + 1)) + ", *rest = range(1<<8 + 2)"
+        self.flakes(s, m.TooManyExpressionsInStarredAssignment)
+
+        s = "(" + ", ".join("a%d" % i for i in range(1<<8 + 1)) + ", *rest) = range(1<<8 + 2)"
+        self.flakes(s, m.TooManyExpressionsInStarredAssignment)
+
+        s = "[" + ", ".join("a%d" % i for i in range(1<<8 + 1)) + ", *rest] = range(1<<8 + 2)"
+        self.flakes(s, m.TooManyExpressionsInStarredAssignment)
+
+        # No way we can actually test this!
+        # s = "*rest, " + ", ".join("a%d" % i for i in range(1<<24)) + ", *rest = range(1<<24 + 1)"
+        # self.flakes(s, m.TooManyExpressionsInStarredAssignment)
+
+        self.flakes('''
+        a, *b, *c = range(10)
+        ''', m.TwoStarredExpressions)
+
+        self.flakes('''
+        a, *b, c, *d = range(10)
+        ''', m.TwoStarredExpressions)
+
+        self.flakes('''
+        *a, *b, *c = range(10)
+        ''', m.TwoStarredExpressions)
+
+        self.flakes('''
+        (a, *b, *c) = range(10)
+        ''', m.TwoStarredExpressions)
+
+        self.flakes('''
+        (a, *b, c, *d) = range(10)
+        ''', m.TwoStarredExpressions)
+
+        self.flakes('''
+        (*a, *b, *c) = range(10)
+        ''', m.TwoStarredExpressions)
+
+        self.flakes('''
+        [a, *b, *c] = range(10)
+        ''', m.TwoStarredExpressions)
+
+        self.flakes('''
+        [a, *b, c, *d] = range(10)
+        ''', m.TwoStarredExpressions)
+
+        self.flakes('''
+        [*a, *b, *c] = range(10)
+        ''', m.TwoStarredExpressions)
+
     @skip("todo: Too hard to make this warn but other cases stay silent")
     def test_doubleAssignment(self):
         """

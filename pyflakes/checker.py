@@ -655,7 +655,7 @@ class Checker(object):
 
     # "expr" type nodes
     BOOLOP = BINOP = UNARYOP = IFEXP = DICT = SET = \
-        COMPARE = CALL = REPR = ATTRIBUTE = SUBSCRIPT = LIST = TUPLE = \
+        COMPARE = CALL = REPR = ATTRIBUTE = SUBSCRIPT = \
         STARRED = NAMECONSTANT = handleChildren
 
     NUM = STR = BYTES = ELLIPSIS = ignore
@@ -903,6 +903,31 @@ class Checker(object):
         self.handleNodeLoad(node.target)
         self.handleNode(node.value, node)
         self.handleNode(node.target, node)
+
+    def TUPLE(self, node):
+        if not PY2 and isinstance(node.ctx, ast.Store):
+            # Python 3 advanced tuple unpacking: a, *b, c = d.
+            # Only one starred expression is allowed, and no more than 1<<8
+            # assignments are allowed before a stared expression. There is
+            # also a limit of 1<<24 expressions after the starred expression,
+            # which is impossible to test due to memory restrictions, but we
+            # add it here anyway
+            has_starred = False
+            star_loc = -1
+            for i, n in enumerate(node.elts):
+                if isinstance(n, ast.Starred):
+                    if has_starred:
+                        self.report(messages.TwoStarredExpressions, node)
+                        # The SyntaxError doesn't distinguish two from more
+                        # than two.
+                        break
+                    has_starred = True
+                    star_loc = i
+            if star_loc >= 1 << 8 or len(node.elts) - star_loc - 1 >= 1 << 24:
+                self.report(messages.TooManyExpressionsInStarredAssignment, node)
+        self.handleChildren(node)
+
+    LIST = TUPLE
 
     def IMPORT(self, node):
         for alias in node.names:

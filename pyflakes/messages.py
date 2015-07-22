@@ -162,3 +162,17 @@ class DefaultExceptNotLast(Message):
     Indicates an except: block as not the last exception handler.
     """
     message = 'default \'except:\' must be last'
+
+
+class TwoStarredExpressions(Message):
+    """
+    Two or more starred expressions in an assignment (a, *b, *c = d).
+    """
+    message = 'two starred expressions in assignment'
+
+
+class TooManyExpressionsInStarredAssignment(Message):
+    """
+    Too many expressions in an assignment with star-unpacking
+    """
+    message = 'too many expressions in star-unpacking assignment'
