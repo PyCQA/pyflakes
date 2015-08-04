@@ -22,6 +22,8 @@ class Reporter(object):
             written to.  The stream's C{write} method must accept unicode.
             C{sys.stderr} is a good value.
         """
+        self.warnings = []
+        self.errors = []
         self._stdout = warningStream
         self._stderr = errorStream
 
@@ -35,6 +37,7 @@ class Reporter(object):
         @ptype msg: C{unicode}
         """
         self._stderr.write("%s: %s\n" % (filename, msg))
+        self.errors.append(filename)
 
     def syntaxError(self, filename, msg, lineno, offset, text):
         """
@@ -63,6 +66,7 @@ class Reporter(object):
         if offset is not None:
             self._stderr.write(re.sub(r'\S', ' ', line[:offset]) +
                                "^\n")
+        self.errors.append(filename)
 
     def flake(self, message):
         """
@@ -72,7 +76,7 @@ class Reporter(object):
         """
         self._stdout.write(str(message))
         self._stdout.write('\n')
-
+        self.warnings.append(message)
 
 def _makeDefaultReporter():
     """

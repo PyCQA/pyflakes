@@ -172,4 +172,10 @@ def main(prog=None):
         warnings = checkRecursive(args, reporter)
     else:
         warnings = check(sys.stdin.read(), '<stdin>', reporter)
-    raise SystemExit(warnings > 0)
+    if reporter.errors:
+        code = 2
+    elif reporter.warnings:
+        code = 1
+    else:
+        code = 0
+    sys.exit(code)

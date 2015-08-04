@@ -593,7 +593,7 @@ class IntegrationTests(TestCase):
         """
         d = self.runPyflakes([self.tempfilepath])
         error_msg = '%s: No such file or directory\n' % (self.tempfilepath,)
-        self.assertEqual(d, ('', error_msg, 1))
+        self.assertEqual(d, ('', error_msg, 2))
 
     def test_readFromStdin(self):
         """
