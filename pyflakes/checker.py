@@ -448,6 +448,10 @@ class Checker(object):
             elif isinstance(existing, Importation) and value.redefines(existing):
                 existing.redefined.append(node)
 
+        if value.name in self.scope:
+            # then assume the rebound name is used as a global or within a loop
+            value.used = self.scope[value.name].used
+
         self.scope[value.name] = value
 
     def getNodeHandler(self, node_class):
@@ -526,9 +530,6 @@ class Checker(object):
             binding = ExportBinding(name, node.parent, self.scope)
         else:
             binding = Assignment(name, node)
-        if name in self.scope:
-            # then assume the rebound name is used as a global or within a loop
-            binding.used = self.scope[name].used
         self.addBinding(node, binding)
 
     def handleNodeDelete(self, node):
