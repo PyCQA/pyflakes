@@ -193,7 +193,7 @@ class Test(TestCase):
             while o is not True:
                 del o
                 o = False
-        ''')
+        ''', m.UnusedVariable)
 
     def test_delWhileNested(self):
         """
@@ -209,7 +209,7 @@ class Test(TestCase):
                     with context():
                         del o
                 o = False
-        ''')
+        ''', m.UnusedVariable)
 
     def test_globalFromNestedScope(self):
         """Global names are available from nested scopes."""
@@ -315,6 +315,7 @@ class Test(TestCase):
                 d += 4
                 e[any] = 5
             ''',
+            m.UnusedVariable,   # a
             m.UndefinedName,    # b
             m.UndefinedName,    # c
             m.UndefinedName, m.UnusedVariable,  # d

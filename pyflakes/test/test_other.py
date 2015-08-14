@@ -523,6 +523,17 @@ class TestUnusedAssignment(TestCase):
                 return
         ''', m.UnusedVariable)
 
+    def test_unusedReassignedVariable(self):
+        """
+        Shadowing a used variable can still raise an UnusedVariable warning.
+        """
+        self.flakes('''
+        def a():
+            b = 1
+            b.foo()
+            b = 2
+        ''', m.UnusedVariable)
+
     def test_assignToGlobal(self):
         """
         Assigning to a global and then not using that global is perfectly
@@ -604,7 +615,7 @@ class TestUnusedAssignment(TestCase):
                 if i > 2:
                     return x
                 x = i * 2
-        ''')
+        ''', m.UnusedVariable)
 
     def test_tupleUnpacking(self):
         """

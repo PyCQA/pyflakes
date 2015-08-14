@@ -96,10 +96,11 @@ class Binding(object):
                 line number that this binding was last used
     """
 
-    def __init__(self, name, source):
+    def __init__(self, name, source, isglobal=False):
         self.name = name
         self.source = source
         self.used = False
+        self.isglobal = isglobal
 
     def __str__(self):
         return self.name
@@ -526,7 +527,7 @@ class Checker(object):
             binding = ExportBinding(name, node.parent, self.scope)
         else:
             binding = Assignment(name, node)
-        if name in self.scope:
+        if name in self.scope and self.scope[name].isglobal:
             binding.used = self.scope[name].used
         self.addBinding(node, binding)
 
@@ -687,7 +688,7 @@ class Checker(object):
 
             # One 'global' statement can bind multiple (comma-delimited) names.
             for node_name in node.names:
-                node_value = Assignment(node_name, node)
+                node_value = Assignment(node_name, node, isglobal=True)
 
                 # Remove UndefinedName messages already reported for this name.
                 self.messages = [
