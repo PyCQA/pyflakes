@@ -523,6 +523,30 @@ class TestUnusedAssignment(TestCase):
                 return
         ''', m.UnusedVariable)
 
+    @skip("todo: Difficult because it does't apply in the context of a loop")
+    def test_unusedReassignedVariable(self):
+        """
+        Shadowing a used variable can still raise an UnusedVariable warning.
+        """
+        self.flakes('''
+        def a():
+            b = 1
+            b.foo()
+            b = 2
+        ''', m.UnusedVariable)
+
+    def test_variableUsedInLoop(self):
+        """
+        Shadowing a used variable cannot raise an UnusedVariable warning in the
+        context of a loop.
+        """
+        self.flakes('''
+        def a():
+            b = True
+            while b:
+                b = False
+        ''')
+
     def test_assignToGlobal(self):
         """
         Assigning to a global and then not using that global is perfectly

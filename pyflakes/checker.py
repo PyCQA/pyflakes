@@ -527,6 +527,7 @@ class Checker(object):
         else:
             binding = Assignment(name, node)
         if name in self.scope:
+            # then assume the rebound name is used as a global or within a loop
             binding.used = self.scope[name].used
         self.addBinding(node, binding)
 
