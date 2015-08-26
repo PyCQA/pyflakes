@@ -649,8 +649,9 @@ class Checker(object):
         pass
 
     # "stmt" type nodes
-    DELETE = PRINT = FOR = WHILE = IF = WITH = WITHITEM = RAISE = \
-        TRYFINALLY = ASSERT = EXEC = EXPR = ASSIGN = handleChildren
+    DELETE = PRINT = FOR = ASYNCFOR = WHILE = IF = WITH = WITHITEM = \
+        ASYNCWITH = ASYNCWITHITEM = RAISE = TRYFINALLY = ASSERT = EXEC = \
+        EXPR = ASSIGN = handleChildren
 
     CONTINUE = BREAK = PASS = ignore
 
@@ -752,7 +753,7 @@ class Checker(object):
         self.scope.isGenerator = True
         self.handleNode(node.value, node)
 
-    YIELDFROM = YIELD
+    AWAIT = YIELDFROM = YIELD
 
     def FUNCTIONDEF(self, node):
         for deco in node.decorator_list:
@@ -761,6 +762,8 @@ class Checker(object):
         self.addBinding(node, FunctionDefinition(node.name, node))
         if self.withDoctest:
             self.deferFunction(lambda: self.handleDoctests(node))
+
+    ASYNCFUNCTIONDEF = FUNCTIONDEF
 
     def LAMBDA(self, node):
         args = []

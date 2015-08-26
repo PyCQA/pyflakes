@@ -988,3 +988,55 @@ class TestUnusedAssignment(TestCase):
     def test_returnOnly(self):
         """Do not crash on lone "return"."""
         self.flakes('return 2')
+
+
+class TestAsyncStatements(TestCase):
+
+    @skipIf(version_info < (3, 5), 'new in Python 3.5')
+    def test_asyncDef(self):
+        self.flakes('''
+        async def bar():
+            return 42
+        ''')
+
+    @skipIf(version_info < (3, 5), 'new in Python 3.5')
+    def test_asyncDefAwait(self):
+        self.flakes('''
+        async def read_data(db):
+            await db.fetch('SELECT ...')
+        ''')
+
+    @skipIf(version_info < (3, 5), 'new in Python 3.5')
+    def test_asyncDefUndefined(self):
+        self.flakes('''
+        async def bar():
+            return foo()
+        ''', m.UndefinedName)
+
+    @skipIf(version_info < (3, 5), 'new in Python 3.5')
+    def test_asyncFor(self):
+        self.flakes('''
+        async def read_data(db):
+            output = []
+            async for row in db.cursor():
+                output.append(row)
+            return output
+        ''')
+
+    @skipIf(version_info < (3, 5), 'new in Python 3.5')
+    def test_asyncWith(self):
+        self.flakes('''
+        async def commit(session, data):
+            async with session.transaction():
+                await session.update(data)
+        ''')
+
+    @skipIf(version_info < (3, 5), 'new in Python 3.5')
+    def test_asyncWithItem(self):
+        self.flakes('''
+        async def commit(session, data):
+            async with session.transaction() as trans:
+                await trans.begin()
+                ...
+                await trans.end()
+        ''')
