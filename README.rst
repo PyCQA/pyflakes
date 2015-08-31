@@ -63,7 +63,7 @@ Share your feedback and ideas: `subscribe to the mailing-list
    :target: https://travis-ci.org/pyflakes/pyflakes
    :alt: Build status
 
-.. image:: https://pypip.in/wheel/pyflakes/badge.png
+.. image:: https://img.shields.io/pypi/wheel/pyflakes.svg
    :target: https://pypi.python.org/pypi/pyflakes
    :alt: Wheel Status
 
