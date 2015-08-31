@@ -63,10 +63,6 @@ Share your feedback and ideas: `subscribe to the mailing-list
    :target: https://travis-ci.org/pyflakes/pyflakes
    :alt: Build status
 
-.. image:: https://pypip.in/wheel/pyflakes/badge.png
-   :target: https://pypi.python.org/pypi/pyflakes
-   :alt: Wheel Status
-
 .. _Pylint: http://www.pylint.org/
 .. _flake8: https://pypi.python.org/pypi/flake8
 .. _`PEP 8`: http://legacy.python.org/dev/peps/pep-0008/
