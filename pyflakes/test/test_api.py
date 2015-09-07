@@ -15,7 +15,7 @@ from pyflakes.api import (
     checkRecursive,
     iterSourceCode,
 )
-from pyflakes.test.harness import TestCase
+from pyflakes.test.harness import TestCase, skipIf
 
 if sys.version_info < (3,):
     from cStringIO import StringIO
@@ -419,6 +419,7 @@ foo = '\\xyz'
         self.assertHasErrors(
             sourcePath, [decoding_error])
 
+    @skipIf(sys.platform == 'win32', 'unsupported on Windows')
     def test_permissionDenied(self):
         """
         If the source file is not readable, this is reported on standard
@@ -583,7 +584,7 @@ class IntegrationTests(TestCase):
         fd.close()
         d = self.runPyflakes([self.tempfilepath])
         expected = UnusedImport(self.tempfilepath, Node(1), 'contraband')
-        self.assertEqual(d, ("%s\n" % expected, '', 1))
+        self.assertEqual(d, ("%s%s" % (expected, os.linesep), '', 1))
 
     def test_errors(self):
         """
@@ -592,7 +593,8 @@ class IntegrationTests(TestCase):
         printed to stderr.
         """
         d = self.runPyflakes([self.tempfilepath])
-        error_msg = '%s: No such file or directory\n' % (self.tempfilepath,)
+        error_msg = '%s: No such file or directory%s' % (self.tempfilepath,
+                                                         os.linesep)
         self.assertEqual(d, ('', error_msg, 1))
 
     def test_readFromStdin(self):
@@ -601,4 +603,4 @@ class IntegrationTests(TestCase):
         """
         d = self.runPyflakes([], stdin='import contraband'.encode('ascii'))
         expected = UnusedImport('<stdin>', Node(1), 'contraband')
-        self.assertEqual(d, ("%s\n" % expected, '', 1))
+        self.assertEqual(d, ("%s%s" % (expected, os.linesep), '', 1))
