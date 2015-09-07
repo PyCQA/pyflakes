@@ -15,7 +15,7 @@ from pyflakes.api import (
     checkRecursive,
     iterSourceCode,
 )
-from pyflakes.test.harness import TestCase
+from pyflakes.test.harness import TestCase, skipIf
 
 if sys.version_info < (3,):
     from cStringIO import StringIO
@@ -419,6 +419,7 @@ foo = '\\xyz'
         self.assertHasErrors(
             sourcePath, [decoding_error])
 
+    @skipIf(sys.platform == 'win32', 'unsupported on Windows')
     def test_permissionDenied(self):
         """
         If the source file is not readable, this is reported on standard
