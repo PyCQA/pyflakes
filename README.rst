@@ -45,7 +45,7 @@ largely because Pyflakes only examines the syntax tree of each file
 individually. As a consequence, Pyflakes is more limited in the
 types of things it can check.
 
-If you like Pyflakes but also want styleistic checks, you want
+If you like Pyflakes but also want stylistic checks, you want
 flake8_, which combines
 Pyflakes with style checks against
 `PEP 8`_ and adds
