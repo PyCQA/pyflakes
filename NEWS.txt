@@ -126,7 +126,7 @@
   - Recognize __builtins__ as a defined name.
   - Improve pyflakes support for python versions 2.3-2.5
   - Support for if-else expressions and with statements.
-  - Warn instead of error on non-existant file paths.
+  - Warn instead of error on non-existent file paths.
   - Check for __future__ imports after other statements.
   - Add reporting for some types of import shadowing.
   - Improve reporting of unbound locals
