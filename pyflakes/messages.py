@@ -110,7 +110,7 @@ class LateFutureImport(Message):
 
 class UnusedVariable(Message):
     """
-    Indicates that a variable has been explicity assigned to but not actually
+    Indicates that a variable has been explicitly assigned to but not actually
     used.
     """
     message = 'local variable %r is assigned to but never used'
