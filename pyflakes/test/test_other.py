@@ -927,13 +927,16 @@ class Test(TestCase):
         ''')
 
         # Taken from test_unpack_ex.py in the cPython source
-        s = ", ".join("a%d" % i for i in range(1<<8 - 1)) + ", *rest = range(1<<8)"
+        s = ", ".join("a%d" % i for i in range(1 << 8 - 1)) + \
+            ", *rest = range(1<<8)"
         self.flakes(s)
 
-        s = "(" + ", ".join("a%d" % i for i in range(1<<8 - 1)) + ", *rest) = range(1<<8)"
+        s = "(" + ", ".join("a%d" % i for i in range(1 << 8 - 1)) + \
+            ", *rest) = range(1<<8)"
         self.flakes(s)
 
-        s = "[" + ", ".join("a%d" % i for i in range(1<<8 - 1)) + ", *rest] = range(1<<8)"
+        s = "[" + ", ".join("a%d" % i for i in range(1 << 8 - 1)) + \
+            ", *rest] = range(1<<8)"
         self.flakes(s)
 
     @skipIf(version_info < (3, ), "Python 3 only")
@@ -943,26 +946,33 @@ class Test(TestCase):
         iterable unpacking
         """
         # Taken from test_unpack_ex.py in the cPython source
-        s = ", ".join("a%d" % i for i in range(1<<8)) + ", *rest = range(1<<8 + 1)"
+        s = ", ".join("a%d" % i for i in range(1 << 8)) + \
+            ", *rest = range(1<<8 + 1)"
         self.flakes(s, m.TooManyExpressionsInStarredAssignment)
 
-        s = "(" + ", ".join("a%d" % i for i in range(1<<8)) + ", *rest) = range(1<<8 + 1)"
+        s = "(" + ", ".join("a%d" % i for i in range(1 << 8)) + \
+            ", *rest) = range(1<<8 + 1)"
         self.flakes(s, m.TooManyExpressionsInStarredAssignment)
 
-        s = "[" + ", ".join("a%d" % i for i in range(1<<8)) + ", *rest] = range(1<<8 + 1)"
+        s = "[" + ", ".join("a%d" % i for i in range(1 << 8)) + \
+            ", *rest] = range(1<<8 + 1)"
         self.flakes(s, m.TooManyExpressionsInStarredAssignment)
 
-        s = ", ".join("a%d" % i for i in range(1<<8 + 1)) + ", *rest = range(1<<8 + 2)"
+        s = ", ".join("a%d" % i for i in range(1 << 8 + 1)) + \
+            ", *rest = range(1<<8 + 2)"
         self.flakes(s, m.TooManyExpressionsInStarredAssignment)
 
-        s = "(" + ", ".join("a%d" % i for i in range(1<<8 + 1)) + ", *rest) = range(1<<8 + 2)"
+        s = "(" + ", ".join("a%d" % i for i in range(1 << 8 + 1)) + \
+            ", *rest) = range(1<<8 + 2)"
         self.flakes(s, m.TooManyExpressionsInStarredAssignment)
 
-        s = "[" + ", ".join("a%d" % i for i in range(1<<8 + 1)) + ", *rest] = range(1<<8 + 2)"
+        s = "[" + ", ".join("a%d" % i for i in range(1 << 8 + 1)) + \
+            ", *rest] = range(1<<8 + 2)"
         self.flakes(s, m.TooManyExpressionsInStarredAssignment)
 
         # No way we can actually test this!
-        # s = "*rest, " + ", ".join("a%d" % i for i in range(1<<24)) + ", *rest = range(1<<24 + 1)"
+        # s = "*rest, " + ", ".join("a%d" % i for i in range(1<<24)) + \
+        #    ", *rest = range(1<<24 + 1)"
         # self.flakes(s, m.TooManyExpressionsInStarredAssignment)
 
         self.flakes('''
