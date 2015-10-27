@@ -5,15 +5,18 @@ python:
   - 3.2
   - 3.3
   - 3.4
+  - 3.5
+  - nightly
   - pypy
 install:
   - pip install flake8==2.1.0 pep8==1.5.6
   - python setup.py install
   - pip list
-  - flake8 --version
+  - if [ "$TRAVIS_PYTHON_VERSION" != "nightly" ]; then flake8 --version; fi
 script:
   - python setup.py test -q
-  - flake8 pyflakes setup.py
+  - if [ "$TRAVIS_PYTHON_VERSION" != "nightly" ]; then flake8 pyflakes setup.py; fi
 matrix:
   allow_failures:
     - python: pypy
+sudo: false
