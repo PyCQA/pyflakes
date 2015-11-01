@@ -129,6 +129,10 @@ class Test(TestCase):
         """Del deletes bindings."""
         self.flakes('a = 1; del a; a', m.UndefinedName)
 
+    # def test_del_func(self):
+    #     """Del deletes bindings."""
+    #     self.flakes('def f(): return 1; del f; f()', m.UndefinedName)  # recursion
+
     def test_delGlobal(self):
         """Del a global binding from a function."""
         self.flakes('''
@@ -210,6 +214,103 @@ class Test(TestCase):
                         del o
                 o = False
         ''')
+
+    def test_del_multiple_vars(self):
+        """Del multiple variables."""
+        self.flakes('''
+        a = '1'
+        b = '2'
+        c = b
+
+        del a, b
+        ''')
+
+    def test_del_dependent_function_in_module_scope(self):
+        """Del dependent function."""
+        self.flakes('''
+        def a(): return '1'
+        def b(): a()
+        b()
+        c = b
+        del b, a
+        ''')
+
+    def test_del_dependent_function_in_module_scope_with_lambda(self):
+        """Del dependent function used within lambda."""
+        self.flakes('''
+        def a(): return '1'
+        def b(): a()
+        c = lambda: b()
+        del b, a
+        ''',
+        m.UndefinedName)
+
+    def test_del_interdependent_functions(self):
+        """Del interdependent functions."""
+        self.flakes('''
+        def foo(a):
+            if a == 1:
+                return a
+            else:
+                return bar()
+
+        def bar():
+            return foo(1)
+
+        c = lambda: bar()
+        del foo, bar
+        print(c())
+        ''',
+        m.UndefinedName)
+
+    def test_del_interdependent_functions_with_undefined_name(self):
+        """Del interdependent functions with syntax error."""
+        self.flakes('''
+        def a(): return '1'
+        def b(): a(); f()
+        b()
+        c = b
+        del a
+        del b
+        ''',
+        m.UndefinedName, m.UndefinedName)
+
+    def test_del_dependent_function_from_class(self):
+        """Del multiple dependant functions."""
+        self.flakes('''
+            def meth():
+                return 'foo'
+
+            class test():
+                def bar():
+                    return meth()
+                baz = bar()
+                del bar
+
+            del meth
+        ''')
+
+    def test_del_dependent_function_nested(self):
+        """
+        Del dependant function nested in a function.
+
+        This is a SyntaxError on Python 3.2 and lower only.
+        """
+        if checker.PY32:
+            expect = [m.DeleteNestedUsage, m.UndefinedName]
+        else:
+            expect = [m.UndefinedName]
+        self.flakes('''
+        def foo():
+            def bar():
+                return 'a'
+            def baz():
+                return bar()
+            b = baz()
+            del bar
+            return b
+        ''',
+        *expect)
 
     def test_globalFromNestedScope(self):
         """Global names are available from nested scopes."""

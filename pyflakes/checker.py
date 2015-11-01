@@ -5,6 +5,7 @@ Implement the central Checker class.
 Also, it models the Bindings and Scopes.
 """
 import doctest
+import functools
 import os
 import sys
 
@@ -92,8 +93,8 @@ class Binding(object):
     which names have not. See L{Assignment} for a special type of binding that
     is checked with stricter rules.
 
-    @ivar used: pair of (L{Scope}, line-number) indicating the scope and
-                line number that this binding was last used
+    @ivar used: pair of (L{Scope}, node) indicating the scope and
+                the node that this binding was last used
     """
 
     def __init__(self, name, source):
@@ -240,6 +241,14 @@ class ModuleScope(Scope):
     pass
 
 
+# Doctest are similar to ModuleScope,
+# and on Python 3.2 and below need to allow
+# 'del' of nodes used in nested functions
+# like ModuleScope.
+class DoctestScope(FunctionScope):
+    pass
+
+
 # Globally defined names which are not attributes of the builtins module, or
 # are only present on some platforms.
 _MAGIC_GLOBALS = ['__file__', '__builtins__', 'WindowsError']
@@ -304,7 +313,7 @@ class Checker(object):
         self.popScope()
         self.checkDeadScopes()
 
-    def deferFunction(self, callable):
+    def deferFunction(self, callable, node=None):
         """
         Schedule a function handler to be called just before completion.
 
@@ -313,7 +322,7 @@ class Checker(object):
         `callable` is called, the scope at the time this is called will be
         restored, however it will contain any new bindings added to it.
         """
-        self._deferredFunctions.append((callable, self.scopeStack[:], self.offset))
+        self._deferredFunctions.append((callable, self.scopeStack[:], self.offset, node))
 
     def deferAssignment(self, callable):
         """
@@ -326,10 +335,54 @@ class Checker(object):
         """
         Run the callables in C{deferred} using their associated scope stack.
         """
-        for handler, scope, offset in deferred:
+        for record in deferred:
+            # node is an optional part of the tuple
+            # deferAssignment does not use it, and
+            # deferFunction does not require it
+            if len(record) == 3:
+                handler, scope, offset = record
+            else:
+                handler, scope, offset, node = record
+                if node:
+                    handler = functools.partial(handler, node)
+
             self.scopeStack = scope
             self.offset = offset
             handler()
+
+    def runDeferredFunctionImmediate(self, name):
+        """Handle any deferred functions for `name` immediately."""
+        if not self._deferredFunctions:
+            return
+
+        saved_offset = self.offset
+
+        for method, scope, offset, node in self._deferredFunctions:
+            if not node:
+                continue
+
+            if hasattr(node, 'name') and node.name == name:
+                if scope[-1] == self.scope:
+                    self.offset = offset
+                    method(node)
+                    break
+        else:
+            # node not found with that name
+            return
+
+        self.offset = saved_offset
+
+        before = len(self._deferredFunctions)
+
+        # here, `node` refers to the identified node in the for loop above
+        self._deferredFunctions[:] = [
+            (method, scope, offset, this_node)
+            for (method, scope, offset, this_node) in self._deferredFunctions
+            if this_node != node or scope[-1] != self.scope]
+
+        after = len(self._deferredFunctions)
+        if before != after - 1:
+            raise RuntimeException('more than one removed for %r' % name)
 
     @property
     def scope(self):
@@ -454,6 +507,26 @@ class Checker(object):
 
         self.scope[value.name] = value
 
+    def addBindingsWithinNestedScope(self, parent):
+        """Add bindings occuring in nested objects of current scope."""
+        saved_offset = self.offset
+
+        nodes_done = set()
+
+        children = list(iter_child_nodes(parent))
+
+        # FIXME: this isnt recursive.
+        # Need to add test case with usage only in extra level of nesting.
+        # Could be implemented without misusing self._deferredFunctions
+        for method, scope, offset, node in self._deferredFunctions[:]:
+            if scope[-1] == self.scope and node not in nodes_done and node in children:
+                nodes_done.add(node)
+                self.offset = offset
+                self.handleFunction(node,
+                                    register_deferred_assignments_checks=False)
+
+        self.offset = saved_offset
+
     def getNodeHandler(self, node_class):
         try:
             return self._nodeHandlers[node_class]
@@ -532,13 +605,13 @@ class Checker(object):
             binding = Assignment(name, node)
         self.addBinding(node, binding)
 
-    def handleNodeDelete(self, node):
+    def handleNodeDelete(self, node, parent=None, remove=True):
 
         def on_conditional_branch():
             """
             Return `True` if node is part of a conditional body.
             """
-            current = getattr(node, 'parent', None)
+            current = getattr(parent, 'parent', None)
             while current:
                 if isinstance(current, (ast.If, ast.While, ast.IfExp)):
                     return True
@@ -555,12 +628,21 @@ class Checker(object):
             return
 
         if isinstance(self.scope, FunctionScope) and name in self.scope.globals:
-            self.scope.globals.remove(name)
+            if remove:
+                self.scope.globals.remove(name)
+            return True
         else:
             try:
-                del self.scope[name]
+                try:
+                    self.runDeferredFunctionImmediate(name)
+                except:
+                    pass
+                if remove:
+                    del self.scope[name]
             except KeyError:
                 self.report(messages.UndefinedName, node, name)
+
+            return True
 
     def handleChildren(self, tree, omit=None):
         for node in iter_child_nodes(tree, omit=omit):
@@ -625,7 +707,7 @@ class Checker(object):
         if not examples:
             return
         node_offset = self.offset or (0, 0)
-        self.pushScope()
+        self.pushScope(DoctestScope)
         underscore_in_builtins = '_' in self.builtIns
         if not underscore_in_builtins:
             self.builtIns.add('_')
@@ -650,7 +732,7 @@ class Checker(object):
         pass
 
     # "stmt" type nodes
-    DELETE = PRINT = FOR = ASYNCFOR = WHILE = IF = WITH = WITHITEM = \
+    PRINT = FOR = ASYNCFOR = WHILE = IF = WITH = WITHITEM = \
         ASYNCWITH = ASYNCWITHITEM = RAISE = TRYFINALLY = ASSERT = EXEC = \
         EXPR = ASSIGN = handleChildren
 
@@ -682,6 +764,7 @@ class Checker(object):
         Keep track of globals declarations.
         """
         # In doctests, the global scope is an anonymous function at index 1.
+        # TODO: use DoctestScope
         global_scope_index = 1 if self.withDoctest else 0
         global_scope = self.scopeStack[global_scope_index]
 
@@ -719,7 +802,9 @@ class Checker(object):
 
     def NAME(self, node):
         """
-        Handle occurrence of Name (which can be a load/store/delete access.)
+        Handle occurrence of Name (which can be a load or store access.)
+
+        Delete are handled in DELETE.
         """
         # Locate the name in locals / function / globals scopes.
         if isinstance(node.ctx, (ast.Load, ast.AugLoad)):
@@ -731,11 +816,53 @@ class Checker(object):
         elif isinstance(node.ctx, (ast.Store, ast.AugStore)):
             self.handleNodeStore(node)
         elif isinstance(node.ctx, ast.Del):
-            self.handleNodeDelete(node)
+            pass
         else:
             # must be a Param context -- this only happens for names in function
             # arguments, but these aren't dispatched through here
             raise RuntimeError("Got impossible expression context: %r" % (node.ctx,))
+
+    def DELETE(self, node):
+        """
+        Handle delete statements.
+
+        First process all deleted nodes, including functions,
+        without deleting any of them from the scope.
+
+        Python 3.2 and below do not allow deletion within functions
+        if the node has been used in a nested function.
+
+        Finally remove all deleted nodes from the scope.
+        """
+        nodes = list(iter_child_nodes(node))
+
+        to_remove = []
+        for child in nodes:
+            remove = self.handleNodeDelete(child, parent=node, remove=False)
+            if remove:
+                to_remove.append(child)
+
+        parent = node.parent
+        if isinstance(parent, ast.FunctionDef) and PY32:
+            self.addBindingsWithinNestedScope(parent)
+
+        for child in to_remove:
+            name = getNodeName(child)
+            if not name:
+                continue
+
+            if isinstance(self.scope, FunctionScope) and not isinstance(self.scope, DoctestScope) and self.scope[name].used:
+                # TODO: test that the scope of the usage is 'lower' than the current scope
+                if isinstance(self.scope[name].used[0], FunctionScope) and not isinstance(self.scope[name].used[0], DoctestScope) and self.scope[name].used[0] != self.scope:
+                    self.report(messages.DeleteNestedUsage, node, name)
+
+            if isinstance(self.scope, FunctionScope) and name in self.scope.globals:
+                self.scope.globals.remove(name)
+            else:
+                try:
+                    del self.scope[name]
+                except KeyError:
+                    self.report(messages.UndefinedName, child, name)
 
     def RETURN(self, node):
         if isinstance(self.scope, ClassScope):
@@ -762,11 +889,11 @@ class Checker(object):
         self.LAMBDA(node)
         self.addBinding(node, FunctionDefinition(node.name, node))
         if self.withDoctest:
-            self.deferFunction(lambda: self.handleDoctests(node))
+            self.deferFunction(self.handleDoctests, node)
 
     ASYNCFUNCTIONDEF = FUNCTIONDEF
 
-    def LAMBDA(self, node):
+    def getSpec(self, node):
         args = []
         annotations = []
 
@@ -803,6 +930,11 @@ class Checker(object):
         if is_py3_func:
             annotations.append(node.returns)
 
+        return args, defaults, annotations
+
+    def LAMBDA(self, node):
+        args, defaults, annotations = self.getSpec(node)
+
         if len(set(args)) < len(args):
             for (idx, arg) in enumerate(args):
                 if arg in args[:idx]:
@@ -812,8 +944,17 @@ class Checker(object):
             if child:
                 self.handleNode(child, node)
 
-        def runFunction():
+        node._args = args
 
+        self.deferFunction(self.handleFunction, node)
+
+    def handleFunction(self, node, register_deferred_assignments_checks=True):
+        scope = None
+        args = node._args
+
+        # Nested function runFunction only added to assist diff tools
+        # align old code with new code during code review.
+        def runFunction():
             self.pushScope()
             for name in args:
                 self.addBinding(node, Argument(name, node))
@@ -824,6 +965,24 @@ class Checker(object):
             else:
                 # case for Lambdas
                 self.handleNode(node.body, node)
+
+            scope = self.scope
+
+            if register_deferred_assignments_checks:
+                self.registerDeferredFunctionAssignmentChecks()
+
+            self.popScope()
+
+        runFunction()
+
+        return scope
+
+    def registerDeferredFunctionAssignmentChecks(self):
+        """Register deferred function assignment checks."""
+
+        # Nested function do only added to assist diff tools
+        # align old code with new code during code review.
+        def do():
 
             def checkUnusedAssignments():
                 """
@@ -843,9 +1002,8 @@ class Checker(object):
                         self.report(messages.ReturnWithArgsInsideGenerator,
                                     self.scope.returnValue)
                 self.deferAssignment(checkReturnWithArgumentInsideGenerator)
-            self.popScope()
 
-        self.deferFunction(runFunction)
+        do()
 
     def CLASSDEF(self, node):
         """
@@ -862,7 +1020,7 @@ class Checker(object):
                 self.handleNode(keywordNode, node)
         self.pushScope(ClassScope)
         if self.withDoctest:
-            self.deferFunction(lambda: self.handleDoctests(node))
+            self.deferFunction(self.handleDoctests, node)
         for stmt in node.body:
             self.handleNode(stmt, node)
         self.popScope()
