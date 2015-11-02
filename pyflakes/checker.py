@@ -240,6 +240,10 @@ class ModuleScope(Scope):
     pass
 
 
+class DoctestScope(ModuleScope):
+    pass
+
+
 # Globally defined names which are not attributes of the builtins module, or
 # are only present on some platforms.
 _MAGIC_GLOBALS = ['__file__', '__builtins__', 'WindowsError']
@@ -625,7 +629,7 @@ class Checker(object):
         if not examples:
             return
         node_offset = self.offset or (0, 0)
-        self.pushScope()
+        self.pushScope(DoctestScope)
         underscore_in_builtins = '_' in self.builtIns
         if not underscore_in_builtins:
             self.builtIns.add('_')
@@ -681,9 +685,14 @@ class Checker(object):
         """
         Keep track of globals declarations.
         """
-        # In doctests, the global scope is an anonymous function at index 1.
-        global_scope_index = 1 if self.withDoctest else 0
-        global_scope = self.scopeStack[global_scope_index]
+        for i, scope in enumerate(self.scopeStack):
+            if isinstance(scope, DoctestScope):
+                global_scope_index = i
+                global_scope = scope
+                break
+        else:
+            global_scope_index = 0
+            global_scope = self.scopeStack[0]
 
         # Ignore 'global' statement in global scope.
         if self.scope is not global_scope:
@@ -763,7 +772,9 @@ class Checker(object):
             self.handleNode(deco, node)
         self.LAMBDA(node)
         self.addBinding(node, FunctionDefinition(node.name, node))
-        if self.withDoctest:
+        # doctest does not process doctest within a doctest
+        if self.withDoctest and not any(
+                isinstance(scope, DoctestScope) for scope in self.scopeStack):
             self.deferFunction(lambda: self.handleDoctests(node))
 
     ASYNCFUNCTIONDEF = FUNCTIONDEF
