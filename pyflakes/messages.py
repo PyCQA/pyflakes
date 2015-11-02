@@ -120,6 +120,17 @@ class UnusedVariable(Message):
         self.message_args = (names,)
 
 
+class DeleteNestedUsage(Message):
+    """
+    Indicates variable can not be deleted due to use in nested scope.
+    """
+    message = 'can not delete variable %r referenced in nested scope'
+
+    def __init__(self, filename, loc, name):
+        Message.__init__(self, filename, loc)
+        self.message_args = (name,)
+
+
 class ReturnWithArgsInsideGenerator(Message):
     """
     Indicates a return statement with arguments inside a generator.
