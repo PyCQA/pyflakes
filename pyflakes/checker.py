@@ -92,8 +92,8 @@ class Binding(object):
     which names have not. See L{Assignment} for a special type of binding that
     is checked with stricter rules.
 
-    @ivar used: pair of (L{Scope}, line-number) indicating the scope and
-                line number that this binding was last used
+    @ivar used: pair of (L{Scope}, node) indicating the scope and
+                the node that this binding was last used.
     """
 
     def __init__(self, name, source):
