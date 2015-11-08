@@ -675,7 +675,7 @@ class Checker(object):
         EQ = NOTEQ = LT = LTE = GT = GTE = IS = ISNOT = IN = NOTIN = ignore
 
     # additional node types
-    COMPREHENSION = KEYWORD = handleChildren
+    COMPREHENSION = KEYWORD = FORMATTEDVALUE = handleChildren
 
     def GLOBAL(self, node):
         """

@@ -989,6 +989,14 @@ class TestUnusedAssignment(TestCase):
         """Do not crash on lone "return"."""
         self.flakes('return 2')
 
+    @skipIf(version_info < (3, 6), 'new in Python 3.6')
+    def test_f_string(self):
+        """Test PEP 498 f-strings are treated as a usage."""
+        self.flakes('''
+        baz = 0
+        print(f'\x7b4*baz\N{RIGHT CURLY BRACKET}')
+        ''')
+
 
 class TestAsyncStatements(TestCase):
 
