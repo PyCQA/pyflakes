@@ -92,8 +92,8 @@ class Binding(object):
     which names have not. See L{Assignment} for a special type of binding that
     is checked with stricter rules.
 
-    @ivar used: pair of (L{Scope}, line-number) indicating the scope and
-                line number that this binding was last used
+    @ivar used: pair of (L{Scope}, node) indicating the scope and
+                the node that this binding was last used.
     """
 
     def __init__(self, name, source):
@@ -237,6 +237,10 @@ class GeneratorScope(Scope):
 
 
 class ModuleScope(Scope):
+    pass
+
+
+class DoctestScope(ModuleScope):
     pass
 
 
@@ -625,7 +629,7 @@ class Checker(object):
         if not examples:
             return
         node_offset = self.offset or (0, 0)
-        self.pushScope(ModuleScope)
+        self.pushScope(DoctestScope)
         underscore_in_builtins = '_' in self.builtIns
         if not underscore_in_builtins:
             self.builtIns.add('_')
@@ -675,15 +679,20 @@ class Checker(object):
         EQ = NOTEQ = LT = LTE = GT = GTE = IS = ISNOT = IN = NOTIN = ignore
 
     # additional node types
-    COMPREHENSION = KEYWORD = handleChildren
+    COMPREHENSION = KEYWORD = FORMATTEDVALUE = handleChildren
 
     def GLOBAL(self, node):
         """
         Keep track of globals declarations.
         """
-        # In doctests, the global scope is an anonymous function at index 1.
-        global_scope_index = 1 if self.withDoctest else 0
-        global_scope = self.scopeStack[global_scope_index]
+        for i, scope in enumerate(self.scopeStack):
+            if isinstance(scope, DoctestScope):
+                global_scope_index = i
+                global_scope = scope
+                break
+        else:
+            global_scope_index = 0
+            global_scope = self.scopeStack[0]
 
         # Ignore 'global' statement in global scope.
         if self.scope is not global_scope:
@@ -693,10 +702,12 @@ class Checker(object):
                 node_value = Assignment(node_name, node)
 
                 # Remove UndefinedName messages already reported for this name.
+                # TODO: if the global is not used in this scope, it does not
+                # become a globally defined name.  See test_unused_global.
                 self.messages = [
                     m for m in self.messages if not
-                    isinstance(m, messages.UndefinedName) and not
-                    m.message_args[0] == node_name]
+                    isinstance(m, messages.UndefinedName) or
+                    m.message_args[0] != node_name]
 
                 # Bind name to global scope if it doesn't exist already.
                 global_scope.setdefault(node_name, node_value)
@@ -790,7 +801,9 @@ class Checker(object):
             self.handleNode(deco, node)
         self.LAMBDA(node)
         self.addBinding(node, FunctionDefinition(node.name, node))
-        if self.withDoctest:
+        # doctest does not process doctest within a doctest
+        if self.withDoctest and not any(
+                isinstance(scope, DoctestScope) for scope in self.scopeStack):
             self.deferFunction(lambda: self.handleDoctests(node))
 
     ASYNCFUNCTIONDEF = FUNCTIONDEF

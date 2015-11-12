@@ -3,7 +3,7 @@ from _ast import PyCF_ONLY_AST
 from sys import version_info
 
 from pyflakes import messages as m, checker
-from pyflakes.test.harness import TestCase, skipIf
+from pyflakes.test.harness import TestCase, skipIf, skip
 
 
 class Test(TestCase):
@@ -123,6 +123,29 @@ class Test(TestCase):
         global x
         def foo():
             print(x)
+        ''', m.UndefinedName)
+
+    def test_global_reset_name_only(self):
+        """A global statement does not prevent other names being undefined."""
+        # Only different undefined names are reported.
+        # See following test that fails where the same name is used.
+        self.flakes('''
+        def f1():
+            s
+
+        def f2():
+            global m
+        ''', m.UndefinedName)
+
+    @skip("todo")
+    def test_unused_global(self):
+        """An unused global statement does not define the name."""
+        self.flakes('''
+        def f1():
+            m
+
+        def f2():
+            global m
         ''', m.UndefinedName)
 
     def test_del(self):

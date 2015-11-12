@@ -1644,6 +1644,15 @@ class TestUnusedAssignment(TestCase):
         ''', m.UndefinedName)
 
 
+    @skipIf(version_info < (3, 6), 'new in Python 3.6')
+    def test_f_string(self):
+        """Test PEP 498 f-strings are treated as a usage."""
+        self.flakes('''
+        baz = 0
+        print(f'\x7b4*baz\N{RIGHT CURLY BRACKET}')
+        ''')
+
+
 class TestAsyncStatements(TestCase):
 
     @skipIf(version_info < (3, 5), 'new in Python 3.5')
