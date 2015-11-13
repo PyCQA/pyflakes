@@ -353,6 +353,664 @@ class Test(TestCase):
             return
         ''', m.ReturnOutsideFunction)
 
+    def test_moduleWithReturn(self):
+        """
+        If a return is used at the module level, a warning is emitted.
+        """
+        self.flakes('''
+        return
+        ''', m.ReturnOutsideFunction)
+
+    def test_classWithYield(self):
+        """
+        If a yield is used inside a class, a warning is emitted.
+        """
+        self.flakes('''
+        class Foo(object):
+            yield
+        ''', m.YieldOutsideFunction)
+
+    def test_moduleWithYield(self):
+        """
+        If a yield is used at the module level, a warning is emitted.
+        """
+        self.flakes('''
+        yield
+        ''', m.YieldOutsideFunction)
+
+    @skipIf(version_info < (3, 3), "Python >= 3.3 only")
+    def test_classWithYieldFrom(self):
+        """
+        If a yield from is used inside a class, a warning is emitted.
+        """
+        self.flakes('''
+        class Foo(object):
+            yield from range(10)
+        ''', m.YieldOutsideFunction)
+
+    @skipIf(version_info < (3, 3), "Python >= 3.3 only")
+    def test_moduleWithYieldFrom(self):
+        """
+        If a yield from is used at the module level, a warning is emitted.
+        """
+        self.flakes('''
+        yield from range(10)
+        ''', m.YieldOutsideFunction)
+
+    def test_continueOutsideLoop(self):
+        self.flakes('''
+        continue
+        ''', m.ContinueOutsideLoop)
+
+        self.flakes('''
+        def f():
+            continue
+        ''', m.ContinueOutsideLoop)
+
+        self.flakes('''
+        while True:
+            pass
+        else:
+            continue
+        ''', m.ContinueOutsideLoop)
+
+        self.flakes('''
+        while True:
+            pass
+        else:
+            if 1:
+                if 2:
+                    continue
+        ''', m.ContinueOutsideLoop)
+
+        self.flakes('''
+        while True:
+            def f():
+                continue
+        ''', m.ContinueOutsideLoop)
+
+        self.flakes('''
+        while True:
+            class A:
+                continue
+        ''', m.ContinueOutsideLoop)
+
+    def test_continueInsideLoop(self):
+        self.flakes('''
+        while True:
+            continue
+        ''')
+
+        self.flakes('''
+        for i in range(10):
+            continue
+        ''')
+
+        self.flakes('''
+        while True:
+            if 1:
+                continue
+        ''')
+
+        self.flakes('''
+        for i in range(10):
+            if 1:
+                continue
+        ''')
+
+        self.flakes('''
+        while True:
+            while True:
+                pass
+            else:
+                continue
+        else:
+            pass
+        ''')
+
+        self.flakes('''
+        while True:
+            try:
+                pass
+            finally:
+                while True:
+                    continue
+        ''')
+
+    def test_continueInFinally(self):
+        # 'continue' inside 'finally' is a special syntax error
+        self.flakes('''
+        while True:
+            try:
+                pass
+            finally:
+                continue
+        ''', m.ContinueInFinally)
+
+        self.flakes('''
+        while True:
+            try:
+                pass
+            finally:
+                if 1:
+                    if 2:
+                        continue
+        ''', m.ContinueInFinally)
+
+        # Even when not in a loop, this is the error Python gives
+        self.flakes('''
+        try:
+            pass
+        finally:
+            continue
+        ''', m.ContinueInFinally)
+
+    def test_breakOutsideLoop(self):
+        self.flakes('''
+        break
+        ''', m.BreakOutsideLoop)
+
+        self.flakes('''
+        def f():
+            break
+        ''', m.BreakOutsideLoop)
+
+        self.flakes('''
+        while True:
+            pass
+        else:
+            break
+        ''', m.BreakOutsideLoop)
+
+        self.flakes('''
+        while True:
+            pass
+        else:
+            if 1:
+                if 2:
+                    break
+        ''', m.BreakOutsideLoop)
+
+        self.flakes('''
+        while True:
+            def f():
+                break
+        ''', m.BreakOutsideLoop)
+
+        self.flakes('''
+        while True:
+            class A:
+                break
+        ''', m.BreakOutsideLoop)
+
+        self.flakes('''
+        try:
+            pass
+        finally:
+            break
+        ''', m.BreakOutsideLoop)
+
+    def test_breakInsideLoop(self):
+        self.flakes('''
+        while True:
+            break
+        ''')
+
+        self.flakes('''
+        for i in range(10):
+            break
+        ''')
+
+        self.flakes('''
+        while True:
+            if 1:
+                break
+        ''')
+
+        self.flakes('''
+        for i in range(10):
+            if 1:
+                break
+        ''')
+
+        self.flakes('''
+        while True:
+            while True:
+                pass
+            else:
+                break
+        else:
+            pass
+        ''')
+
+        self.flakes('''
+        while True:
+            try:
+                pass
+            finally:
+                while True:
+                    break
+        ''')
+
+        self.flakes('''
+        while True:
+            try:
+                pass
+            finally:
+                break
+        ''')
+
+        self.flakes('''
+        while True:
+            try:
+                pass
+            finally:
+                if 1:
+                    if 2:
+                        break
+        ''')
+
+    def test_defaultExceptLast(self):
+        """
+        A default except block should be last.
+
+        YES:
+
+        try:
+            ...
+        except Exception:
+            ...
+        except:
+            ...
+
+        NO:
+
+        try:
+            ...
+        except:
+            ...
+        except Exception:
+            ...
+        """
+        self.flakes('''
+        try:
+            pass
+        except ValueError:
+            pass
+        ''')
+
+        self.flakes('''
+        try:
+            pass
+        except ValueError:
+            pass
+        except:
+            pass
+        ''')
+
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        ''')
+
+        self.flakes('''
+        try:
+            pass
+        except ValueError:
+            pass
+        else:
+            pass
+        ''')
+
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        else:
+            pass
+        ''')
+
+        self.flakes('''
+        try:
+            pass
+        except ValueError:
+            pass
+        except:
+            pass
+        else:
+            pass
+        ''')
+
+    def test_defaultExceptNotLast(self):
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except ValueError:
+            pass
+        ''', m.DefaultExceptNotLast)
+
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except:
+            pass
+        ''', m.DefaultExceptNotLast)
+
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except ValueError:
+            pass
+        except:
+            pass
+        ''', m.DefaultExceptNotLast)
+
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except ValueError:
+            pass
+        except:
+            pass
+        except ValueError:
+            pass
+        ''', m.DefaultExceptNotLast, m.DefaultExceptNotLast)
+
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except ValueError:
+            pass
+        else:
+            pass
+        ''', m.DefaultExceptNotLast)
+
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except:
+            pass
+        else:
+            pass
+        ''', m.DefaultExceptNotLast)
+
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except ValueError:
+            pass
+        except:
+            pass
+        else:
+            pass
+        ''', m.DefaultExceptNotLast)
+
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except ValueError:
+            pass
+        except:
+            pass
+        except ValueError:
+            pass
+        else:
+            pass
+        ''', m.DefaultExceptNotLast, m.DefaultExceptNotLast)
+
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except ValueError:
+            pass
+        finally:
+            pass
+        ''', m.DefaultExceptNotLast)
+
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except:
+            pass
+        finally:
+            pass
+        ''', m.DefaultExceptNotLast)
+
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except ValueError:
+            pass
+        except:
+            pass
+        finally:
+            pass
+        ''', m.DefaultExceptNotLast)
+
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except ValueError:
+            pass
+        except:
+            pass
+        except ValueError:
+            pass
+        finally:
+            pass
+        ''', m.DefaultExceptNotLast, m.DefaultExceptNotLast)
+
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except ValueError:
+            pass
+        else:
+            pass
+        finally:
+            pass
+        ''', m.DefaultExceptNotLast)
+
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except:
+            pass
+        else:
+            pass
+        finally:
+            pass
+        ''', m.DefaultExceptNotLast)
+
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except ValueError:
+            pass
+        except:
+            pass
+        else:
+            pass
+        finally:
+            pass
+        ''', m.DefaultExceptNotLast)
+
+        self.flakes('''
+        try:
+            pass
+        except:
+            pass
+        except ValueError:
+            pass
+        except:
+            pass
+        except ValueError:
+            pass
+        else:
+            pass
+        finally:
+            pass
+        ''', m.DefaultExceptNotLast, m.DefaultExceptNotLast)
+
+    @skipIf(version_info < (3,), "Python 3 only")
+    def test_starredAssignmentNoError(self):
+        """
+        Python 3 extended iterable unpacking
+        """
+        self.flakes('''
+        a, *b = range(10)
+        ''')
+
+        self.flakes('''
+        *a, b = range(10)
+        ''')
+
+        self.flakes('''
+        a, *b, c = range(10)
+        ''')
+
+        self.flakes('''
+        (a, *b) = range(10)
+        ''')
+
+        self.flakes('''
+        (*a, b) = range(10)
+        ''')
+
+        self.flakes('''
+        (a, *b, c) = range(10)
+        ''')
+
+        self.flakes('''
+        [a, *b] = range(10)
+        ''')
+
+        self.flakes('''
+        [*a, b] = range(10)
+        ''')
+
+        self.flakes('''
+        [a, *b, c] = range(10)
+        ''')
+
+        # Taken from test_unpack_ex.py in the cPython source
+        s = ", ".join("a%d" % i for i in range(1 << 8 - 1)) + \
+            ", *rest = range(1<<8)"
+        self.flakes(s)
+
+        s = "(" + ", ".join("a%d" % i for i in range(1 << 8 - 1)) + \
+            ", *rest) = range(1<<8)"
+        self.flakes(s)
+
+        s = "[" + ", ".join("a%d" % i for i in range(1 << 8 - 1)) + \
+            ", *rest] = range(1<<8)"
+        self.flakes(s)
+
+    @skipIf(version_info < (3, ), "Python 3 only")
+    def test_starredAssignmentErrors(self):
+        """
+        SyntaxErrors (not encoded in the ast) surrounding Python 3 extended
+        iterable unpacking
+        """
+        # Taken from test_unpack_ex.py in the cPython source
+        s = ", ".join("a%d" % i for i in range(1 << 8)) + \
+            ", *rest = range(1<<8 + 1)"
+        self.flakes(s, m.TooManyExpressionsInStarredAssignment)
+
+        s = "(" + ", ".join("a%d" % i for i in range(1 << 8)) + \
+            ", *rest) = range(1<<8 + 1)"
+        self.flakes(s, m.TooManyExpressionsInStarredAssignment)
+
+        s = "[" + ", ".join("a%d" % i for i in range(1 << 8)) + \
+            ", *rest] = range(1<<8 + 1)"
+        self.flakes(s, m.TooManyExpressionsInStarredAssignment)
+
+        s = ", ".join("a%d" % i for i in range(1 << 8 + 1)) + \
+            ", *rest = range(1<<8 + 2)"
+        self.flakes(s, m.TooManyExpressionsInStarredAssignment)
+
+        s = "(" + ", ".join("a%d" % i for i in range(1 << 8 + 1)) + \
+            ", *rest) = range(1<<8 + 2)"
+        self.flakes(s, m.TooManyExpressionsInStarredAssignment)
+
+        s = "[" + ", ".join("a%d" % i for i in range(1 << 8 + 1)) + \
+            ", *rest] = range(1<<8 + 2)"
+        self.flakes(s, m.TooManyExpressionsInStarredAssignment)
+
+        # No way we can actually test this!
+        # s = "*rest, " + ", ".join("a%d" % i for i in range(1<<24)) + \
+        #    ", *rest = range(1<<24 + 1)"
+        # self.flakes(s, m.TooManyExpressionsInStarredAssignment)
+
+        self.flakes('''
+        a, *b, *c = range(10)
+        ''', m.TwoStarredExpressions)
+
+        self.flakes('''
+        a, *b, c, *d = range(10)
+        ''', m.TwoStarredExpressions)
+
+        self.flakes('''
+        *a, *b, *c = range(10)
+        ''', m.TwoStarredExpressions)
+
+        self.flakes('''
+        (a, *b, *c) = range(10)
+        ''', m.TwoStarredExpressions)
+
+        self.flakes('''
+        (a, *b, c, *d) = range(10)
+        ''', m.TwoStarredExpressions)
+
+        self.flakes('''
+        (*a, *b, *c) = range(10)
+        ''', m.TwoStarredExpressions)
+
+        self.flakes('''
+        [a, *b, *c] = range(10)
+        ''', m.TwoStarredExpressions)
+
+        self.flakes('''
+        [a, *b, c, *d] = range(10)
+        ''', m.TwoStarredExpressions)
+
+        self.flakes('''
+        [*a, *b, *c] = range(10)
+        ''', m.TwoStarredExpressions)
+
     @skip("todo: Too hard to make this warn but other cases stay silent")
     def test_doubleAssignment(self):
         """
@@ -984,10 +1642,6 @@ class TestUnusedAssignment(TestCase):
         def bar():
             yield from foo()
         ''', m.UndefinedName)
-
-    def test_returnOnly(self):
-        """Do not crash on lone "return"."""
-        self.flakes('return 2')
 
     @skipIf(version_info < (3, 6), 'new in Python 3.6')
     def test_f_string(self):

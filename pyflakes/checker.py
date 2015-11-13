@@ -658,11 +658,11 @@ class Checker(object):
         ASYNCWITH = ASYNCWITHITEM = RAISE = TRYFINALLY = ASSERT = EXEC = \
         EXPR = ASSIGN = handleChildren
 
-    CONTINUE = BREAK = PASS = ignore
+    PASS = ignore
 
     # "expr" type nodes
     BOOLOP = BINOP = UNARYOP = IFEXP = DICT = SET = \
-        COMPARE = CALL = REPR = ATTRIBUTE = SUBSCRIPT = LIST = TUPLE = \
+        COMPARE = CALL = REPR = ATTRIBUTE = SUBSCRIPT = \
         STARRED = NAMECONSTANT = handleChildren
 
     NUM = STR = BYTES = ELLIPSIS = ignore
@@ -748,8 +748,33 @@ class Checker(object):
             # arguments, but these aren't dispatched through here
             raise RuntimeError("Got impossible expression context: %r" % (node.ctx,))
 
+    def CONTINUE(self, node):
+        # Walk the tree up until we see a loop (OK), a function or class
+        # definition (not OK), for 'continue', a finally block (not OK), or
+        # the top module scope (not OK)
+        n = node
+        while hasattr(n, 'parent'):
+            n, n_child = n.parent, n
+            if isinstance(n, (ast.While, ast.For)):
+                # Doesn't apply unless it's in the loop itself
+                if n_child not in n.orelse:
+                    return
+            if isinstance(n, (ast.FunctionDef, ast.ClassDef)):
+                break
+            # Handle Try/TryFinally difference in Python < and >= 3.3
+            if hasattr(n, 'finalbody') and isinstance(node, ast.Continue):
+                if n_child in n.finalbody:
+                    self.report(messages.ContinueInFinally, node)
+                    return
+        if isinstance(node, ast.Continue):
+            self.report(messages.ContinueOutsideLoop, node)
+        else:  # ast.Break
+            self.report(messages.BreakOutsideLoop, node)
+
+    BREAK = CONTINUE
+
     def RETURN(self, node):
-        if isinstance(self.scope, ClassScope):
+        if isinstance(self.scope, (ClassScope, ModuleScope)):
             self.report(messages.ReturnOutsideFunction, node)
             return
 
@@ -762,6 +787,10 @@ class Checker(object):
         self.handleNode(node.value, node)
 
     def YIELD(self, node):
+        if isinstance(self.scope, (ClassScope, ModuleScope)):
+            self.report(messages.YieldOutsideFunction, node)
+            return
+
         self.scope.isGenerator = True
         self.handleNode(node.value, node)
 
@@ -886,6 +915,31 @@ class Checker(object):
         self.handleNode(node.value, node)
         self.handleNode(node.target, node)
 
+    def TUPLE(self, node):
+        if not PY2 and isinstance(node.ctx, ast.Store):
+            # Python 3 advanced tuple unpacking: a, *b, c = d.
+            # Only one starred expression is allowed, and no more than 1<<8
+            # assignments are allowed before a stared expression. There is
+            # also a limit of 1<<24 expressions after the starred expression,
+            # which is impossible to test due to memory restrictions, but we
+            # add it here anyway
+            has_starred = False
+            star_loc = -1
+            for i, n in enumerate(node.elts):
+                if isinstance(n, ast.Starred):
+                    if has_starred:
+                        self.report(messages.TwoStarredExpressions, node)
+                        # The SyntaxError doesn't distinguish two from more
+                        # than two.
+                        break
+                    has_starred = True
+                    star_loc = i
+            if star_loc >= 1 << 8 or len(node.elts) - star_loc - 1 >= 1 << 24:
+                self.report(messages.TooManyExpressionsInStarredAssignment, node)
+        self.handleChildren(node)
+
+    LIST = TUPLE
+
     def IMPORT(self, node):
         for alias in node.names:
             name = alias.asname or alias.name
@@ -914,12 +968,15 @@ class Checker(object):
     def TRY(self, node):
         handler_names = []
         # List the exception handlers
-        for handler in node.handlers:
+        for i, handler in enumerate(node.handlers):
             if isinstance(handler.type, ast.Tuple):
                 for exc_type in handler.type.elts:
                     handler_names.append(getNodeName(exc_type))
             elif handler.type:
                 handler_names.append(getNodeName(handler.type))
+
+            if handler.type is None and i < len(node.handlers) - 1:
+                self.report(messages.DefaultExceptNotLast, handler)
         # Memorize the except handlers and process the body
         self.exceptHandlers.append(handler_names)
         for child in node.body:

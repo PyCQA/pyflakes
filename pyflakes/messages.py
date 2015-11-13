@@ -101,11 +101,11 @@ class DuplicateArgument(Message):
 
 
 class LateFutureImport(Message):
-    message = 'future import(s) %r after other statements'
+    message = 'from __future__ imports must occur at the beginning of the file'
 
     def __init__(self, filename, loc, names):
         Message.__init__(self, filename, loc)
-        self.message_args = (names,)
+        self.message_args = ()
 
 
 class UnusedVariable(Message):
@@ -132,3 +132,54 @@ class ReturnOutsideFunction(Message):
     Indicates a return statement outside of a function/method.
     """
     message = '\'return\' outside function'
+
+
+class YieldOutsideFunction(Message):
+    """
+    Indicates a yield or yield from statement outside of a function/method.
+    """
+    message = '\'yield\' outside function'
+
+
+# For whatever reason, Python gives different error messages for these two. We
+# match the Python error message exactly.
+class ContinueOutsideLoop(Message):
+    """
+    Indicates a continue statement outside of a while or for loop.
+    """
+    message = '\'continue\' not properly in loop'
+
+
+class BreakOutsideLoop(Message):
+    """
+    Indicates a break statement outside of a while or for loop.
+    """
+    message = '\'break\' outside loop'
+
+
+class ContinueInFinally(Message):
+    """
+    Indicates a continue statement in a finally block in a while or for loop.
+    """
+    message = '\'continue\' not supported inside \'finally\' clause'
+
+
+class DefaultExceptNotLast(Message):
+    """
+    Indicates an except: block as not the last exception handler.
+    """
+    message = 'default \'except:\' must be last'
+
+
+class TwoStarredExpressions(Message):
+    """
+    Two or more starred expressions in an assignment (a, *b, *c = d).
+    """
+    message = 'two starred expressions in assignment'
+
+
+class TooManyExpressionsInStarredAssignment(Message):
+    """
+    Too many expressions in an assignment with star-unpacking
+    """
+    message = 'too many expressions in star-unpacking assignment'
