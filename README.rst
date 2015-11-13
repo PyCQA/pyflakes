@@ -58,6 +58,17 @@ Mailing-list
 Share your feedback and ideas: `subscribe to the mailing-list
 <https://mail.python.org/mailman/listinfo/code-quality>`_
 
+Contributing
+------------
+
+Patches may be submitted via a `GitHub pull request`_ or via the mailing list
+if you prefer. If you are comfortable doing so, please `rebase your changes`_
+so they may be applied to master with a fast-forward merge, and each commit is
+a coherent unit of work with a well-written log message.  If you are not
+comfortable with this rebase workflow, the project maintainers will be happy to
+rebase your commits for you.
+
+All changes should be include tests and pass flake8_.
 
 .. image:: https://api.travis-ci.org/pyflakes/pyflakes.png
    :target: https://travis-ci.org/pyflakes/pyflakes
@@ -67,3 +78,5 @@ Share your feedback and ideas: `subscribe to the mailing-list
 .. _flake8: https://pypi.python.org/pypi/flake8
 .. _`PEP 8`: http://legacy.python.org/dev/peps/pep-0008/
 .. _Pychecker: http://pychecker.sourceforge.net/
+.. _`rebase your changes`: https://git-scm.com/book/en/v2/Git-Branching-Rebasing
+.. _`GitHub pull request`: https://github.com/pyflakes/pyflakes/pulls
