@@ -309,7 +309,11 @@ class Test(TestCase):
                     return x
                 return x
         ''', m.UndefinedLocal).messages[0]
-        self.assertEqual(exc.message_args, ('x', 5))
+
+        # _DoctestMixin.flakes adds two lines preceding the code above.
+        expected_line_num = 7 if self.withDoctest else 5
+
+        self.assertEqual(exc.message_args, ('x', expected_line_num))
 
     def test_laterRedefinedGlobalFromNestedScope3(self):
         """

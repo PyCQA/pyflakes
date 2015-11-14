@@ -376,22 +376,5 @@ class TestImports(_DoctestMixin, TestImports):
 
 
 class TestUndefinedNames(_DoctestMixin, TestUndefinedNames):
-
-    def test_doubleNestingReportsClosestName(self):
-        """
-        Lines in doctest are a bit different so we can't use the test
-        from TestUndefinedNames
-        """
-        exc = self.flakes('''
-        def a():
-            x = 1
-            def b():
-                x = 2 # line 7 in the file
-                def c():
-                    x
-                    x = 3
-                    return x
-                return x
-            return x
-        ''', m.UndefinedLocal).messages[0]
-        self.assertEqual(exc.message_args, ('x', 7))
+    """Run TestUndefinedNames with each test wrapped in a doctest."""
+    pass
