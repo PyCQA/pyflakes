@@ -348,6 +348,10 @@ class Checker(object):
         which were imported but unused.
         """
         for scope in self.deadScopes:
+            # imports in classes are public members
+            if isinstance(scope, ClassScope):
+                continue
+
             if isinstance(scope.get('__all__'), ExportBinding):
                 all_names = set(scope['__all__'].names)
                 if not scope.importStarred and \

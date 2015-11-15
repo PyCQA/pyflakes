@@ -236,6 +236,22 @@ class Test(TestCase):
         print(fu)
         ''')
 
+    def test_importInClass(self):
+        """
+        Test that import within class is a locally scoped attribute.
+        """
+        self.flakes('''
+        class bar:
+            import fu
+        ''')
+
+        self.flakes('''
+        class bar:
+            import fu
+
+        fu
+        ''', m.UndefinedName)
+
     def test_usedInFunction(self):
         self.flakes('''
         import fu
@@ -570,7 +586,7 @@ class Test(TestCase):
             import fu
             def fun(self):
                 fu
-        ''', m.UnusedImport, m.UndefinedName)
+        ''', m.UndefinedName)
 
     def test_nestedFunctionsNestScope(self):
         self.flakes('''
@@ -689,7 +705,6 @@ class Test(TestCase):
             pass
         ''')
 
-    @skip("todo: requires evaluating attribute access")
     def test_importedInClass(self):
         """Imports in class scope can be used through self."""
         self.flakes('''
@@ -760,12 +775,11 @@ class TestSpecialAll(TestCase):
 
     def test_ignoredInClass(self):
         """
-        An C{__all__} definition does not suppress unused import warnings in a
-        class scope.
+        An C{__all__} definition in a class does not suppress unused import warnings.
         """
         self.flakes('''
+        import bar
         class foo:
-            import bar
             __all__ = ["bar"]
         ''', m.UnusedImport)
 
