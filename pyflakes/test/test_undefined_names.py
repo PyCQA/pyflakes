@@ -481,8 +481,20 @@ class Test(TestCase):
         Using the loop variable of a generator expression results in no
         warnings.
         """
-        self.flakes('(a for a in %srange(10) if a)' %
-                    ('x' if version_info < (3,) else ''))
+        self.flakes('(a for a in [1, 2, 3] if a)')
+
+        self.flakes('(b for b in (a for a in [1, 2, 3] if a) if b)')
+
+    def test_undefinedInGenExpNested(self):
+        """
+        The loop variables of generator expressions nested together are
+        not defined in the other generator.
+        """
+        self.flakes('(b for b in (a for a in [1, 2, 3] if b) if b)',
+                    m.UndefinedName)
+
+        self.flakes('(b for b in (a for a in [1, 2, 3] if a) if a)',
+                    m.UndefinedName)
 
     def test_undefinedWithErrorHandler(self):
         """
@@ -536,6 +548,15 @@ class Test(TestCase):
                 X = {x for x in T}
                 Y = {x:x for x in T}
             ''')
+
+    def test_definedInClassNested(self):
+        """Defined name for nested generator expressions in a class."""
+        self.flakes('''
+        class A:
+            T = range(10)
+
+            Z = (x for x in (a for a in T))
+        ''')
 
     def test_undefinedInLoop(self):
         """

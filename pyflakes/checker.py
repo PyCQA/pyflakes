@@ -480,29 +480,28 @@ class Checker(object):
         name = getNodeName(node)
         if not name:
             return
-        # try local scope
-        try:
-            self.scope[name].used = (self.scope, node)
-        except KeyError:
-            pass
-        else:
-            return
 
-        scopes = [scope for scope in self.scopeStack[:-1]
-                  if isinstance(scope, (FunctionScope, ModuleScope, GeneratorScope))]
-        if isinstance(self.scope, GeneratorScope) and scopes[-1] != self.scopeStack[-2]:
-            scopes.append(self.scopeStack[-2])
+        in_generators = None
+        importStarred = None
 
         # try enclosing function scopes and global scope
-        importStarred = self.scope.importStarred
-        for scope in reversed(scopes):
-            importStarred = importStarred or scope.importStarred
+        for scope in self.scopeStack[-1::-1]:
+            # only generators used in a class scope can access the names
+            # of the class. this is skipped during the first iteration
+            if in_generators is False and isinstance(scope, ClassScope):
+                continue
+
             try:
                 scope[name].used = (self.scope, node)
             except KeyError:
                 pass
             else:
                 return
+
+            importStarred = importStarred or scope.importStarred
+
+            if in_generators is not False:
+                in_generators = isinstance(scope, GeneratorScope)
 
         # look in the built-ins
         if importStarred or name in self.builtIns:
