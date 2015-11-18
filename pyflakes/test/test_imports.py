@@ -606,7 +606,27 @@ class Test(TestCase):
         ''')
 
     def test_importStar(self):
+        """Use of import * at module level is reported."""
         self.flakes('from fu import *', m.ImportStarUsed)
+        self.flakes('''
+        try:
+            from fu import *
+        except:
+            pass
+        ''', m.ImportStarUsed)
+
+    @skipIf(version_info < (3,),
+            'import * below module level is a warning on Python 2')
+    def test_localImportStar(self):
+        """import * is only allowed at module level."""
+        self.flakes('''
+        def a():
+            from fu import *
+        ''', m.ImportStarNotPermitted)
+        self.flakes('''
+        class a:
+            from fu import *
+        ''', m.ImportStarNotPermitted)
 
     def test_packageImport(self):
         """

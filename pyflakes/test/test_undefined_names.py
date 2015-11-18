@@ -73,6 +73,7 @@ class Test(TestCase):
         """Can't find undefined names with import *."""
         self.flakes('from fu import *; bar', m.ImportStarUsed)
 
+    @skipIf(version_info >= (3,), 'obsolete syntax')
     def test_localImportStar(self):
         """
         A local import * still allows undefined names to be found

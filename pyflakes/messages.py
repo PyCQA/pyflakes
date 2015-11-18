@@ -49,6 +49,14 @@ class ImportShadowedByLoopVar(Message):
         self.message_args = (name, orig_loc.lineno)
 
 
+class ImportStarNotPermitted(Message):
+    message = "'from %s import *' only allowed at module level"
+
+    def __init__(self, filename, loc, modname):
+        Message.__init__(self, filename, loc)
+        self.message_args = (modname,)
+
+
 class ImportStarUsed(Message):
     message = "'from %s import *' used; unable to detect undefined names"
 

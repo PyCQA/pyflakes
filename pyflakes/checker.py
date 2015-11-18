@@ -960,6 +960,11 @@ class Checker(object):
 
         for alias in node.names:
             if alias.name == '*':
+                # Only Python 2, local import * is a SyntaxWarning
+                if not PY2 and not isinstance(self.scope, ModuleScope):
+                    self.report(messages.ImportStarNotPermitted,
+                                node, node.module)
+                    continue
                 self.scope.importStarred = True
                 self.report(messages.ImportStarUsed, node, node.module)
                 continue
