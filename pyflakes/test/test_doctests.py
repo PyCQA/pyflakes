@@ -1,3 +1,4 @@
+import sys
 import textwrap
 
 from pyflakes import messages as m
@@ -10,6 +11,12 @@ from pyflakes.test.test_other import Test as TestOther
 from pyflakes.test.test_imports import Test as TestImports
 from pyflakes.test.test_undefined_names import Test as TestUndefinedNames
 from pyflakes.test.harness import TestCase, skip
+
+try:
+    sys.pypy_version_info
+    PYPY = True
+except AttributeError:
+    PYPY = False
 
 
 class _DoctestMixin(object):
@@ -273,12 +280,22 @@ class Test(TestCase):
         exc = exceptions[0]
         self.assertEqual(exc.lineno, 4)
         self.assertEqual(exc.col, 26)
+
+        # PyPy error column offset is 0,
+        # for the second and third line of the doctest
+        # i.e. at the beginning of the line
         exc = exceptions[1]
         self.assertEqual(exc.lineno, 5)
-        self.assertEqual(exc.col, 16)
+        if PYPY:
+            self.assertEqual(exc.col, 13)
+        else:
+            self.assertEqual(exc.col, 16)
         exc = exceptions[2]
         self.assertEqual(exc.lineno, 6)
-        self.assertEqual(exc.col, 18)
+        if PYPY:
+            self.assertEqual(exc.col, 13)
+        else:
+            self.assertEqual(exc.col, 18)
 
     def test_indentationErrorInDoctest(self):
         exc = self.flakes('''
@@ -289,7 +306,10 @@ class Test(TestCase):
             """
         ''', m.DoctestSyntaxError).messages[0]
         self.assertEqual(exc.lineno, 5)
-        self.assertEqual(exc.col, 16)
+        if PYPY:
+            self.assertEqual(exc.col, 13)
+        else:
+            self.assertEqual(exc.col, 16)
 
     def test_offsetWithMultiLineArgs(self):
         (exc1, exc2) = self.flakes(

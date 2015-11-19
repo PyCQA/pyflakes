@@ -23,6 +23,14 @@ else:
     from io import StringIO
     unichr = chr
 
+try:
+    sys.pypy_version_info
+    PYPY = True
+except AttributeError:
+    PYPY = False
+
+ERROR_HAS_COL_NUM = ERROR_HAS_LAST_LINE = sys.version_info >= (3, 2) or PYPY
+
 
 def withStderrTo(stderr, f, *args, **kwargs):
     """
@@ -312,18 +320,25 @@ def baz():
             evaluate(source)
         except SyntaxError:
             e = sys.exc_info()[1]
-            self.assertTrue(e.text.count('\n') > 1)
+            if not PYPY:
+                self.assertTrue(e.text.count('\n') > 1)
         else:
             self.fail()
 
         sourcePath = self.makeTempFile(source)
+
+        if PYPY:
+            message = 'EOF while scanning triple-quoted string literal'
+        else:
+            message = 'invalid syntax'
+
         self.assertHasErrors(
             sourcePath,
             ["""\
-%s:8:11: invalid syntax
+%s:8:11: %s
     '''quux'''
           ^
-""" % (sourcePath,)])
+""" % (sourcePath, message)])
 
     def test_eofSyntaxError(self):
         """
@@ -331,13 +346,22 @@ def baz():
         syntax error reflects the cause for the syntax error.
         """
         sourcePath = self.makeTempFile("def foo(")
-        self.assertHasErrors(
-            sourcePath,
-            ["""\
+        if PYPY:
+            result = """\
+%s:1:7: parenthesis is never closed
+def foo(
+      ^
+""" % (sourcePath,)
+        else:
+            result = """\
 %s:1:9: unexpected EOF while parsing
 def foo(
         ^
-""" % (sourcePath,)])
+""" % (sourcePath,)
+
+        self.assertHasErrors(
+            sourcePath,
+            [result])
 
     def test_eofSyntaxErrorWithTab(self):
         """
@@ -345,13 +369,16 @@ def foo(
         syntax error reflects the cause for the syntax error.
         """
         sourcePath = self.makeTempFile("if True:\n\tfoo =")
+        column = 5 if PYPY else 7
+        last_line = '\t   ^' if PYPY else '\t     ^'
+
         self.assertHasErrors(
             sourcePath,
             ["""\
-%s:2:7: invalid syntax
+%s:2:%s: invalid syntax
 \tfoo =
-\t     ^
-""" % (sourcePath,)])
+%s
+""" % (sourcePath, column, last_line)])
 
     def test_nonDefaultFollowsDefaultSyntaxError(self):
         """
@@ -364,8 +391,8 @@ def foo(bar=baz, bax):
     pass
 """
         sourcePath = self.makeTempFile(source)
-        last_line = '       ^\n' if sys.version_info >= (3, 2) else ''
-        column = '8:' if sys.version_info >= (3, 2) else ''
+        last_line = '       ^\n' if ERROR_HAS_LAST_LINE else ''
+        column = '8:' if ERROR_HAS_COL_NUM else ''
         self.assertHasErrors(
             sourcePath,
             ["""\
@@ -383,8 +410,8 @@ def foo(bar=baz, bax):
 foo(bar=baz, bax)
 """
         sourcePath = self.makeTempFile(source)
-        last_line = '            ^\n' if sys.version_info >= (3, 2) else ''
-        column = '13:' if sys.version_info >= (3, 2) else ''
+        last_line = '            ^\n' if ERROR_HAS_LAST_LINE else ''
+        column = '13:' if ERROR_HAS_COL_NUM or PYPY else ''
 
         if sys.version_info >= (3, 5):
             message = 'positional argument follows keyword argument'
@@ -407,8 +434,15 @@ foo(bar=baz, bax)
         sourcePath = self.makeTempFile(r"foo = '\xyz'")
         if ver < (3,):
             decoding_error = "%s: problem decoding source\n" % (sourcePath,)
+        elif PYPY:
+            # pypy3 only
+            decoding_error = """\
+%s:1:6: %s: ('unicodeescape', b'\\\\xyz', 0, 2, 'truncated \\\\xXX escape')
+foo = '\\xyz'
+     ^
+""" % (sourcePath, 'UnicodeDecodeError')
         else:
-            last_line = '      ^\n' if ver >= (3, 2) else ''
+            last_line = '      ^\n' if ERROR_HAS_LAST_LINE else ''
             # Column has been "fixed" since 3.2.4 and 3.3.1
             col = 1 if ver >= (3, 3, 1) or ((3, 2, 4) <= ver < (3, 3)) else 2
             decoding_error = """\
@@ -474,8 +508,21 @@ x = "%s"
 x = "%s"
 """ % SNOWMAN).encode('utf-8')
         sourcePath = self.makeTempFile(source)
+
+        if PYPY and sys.version_info < (3, ):
+            message = ('\'ascii\' codec can\'t decode byte 0xe2 '
+                       'in position 21: ordinal not in range(128)')
+            result = """\
+%s:0:0: %s
+x = "\xe2\x98\x83"
+        ^\n""" % (sourcePath, message)
+
+        else:
+            message = 'problem decoding source'
+            result = "%s: problem decoding source\n" % (sourcePath,)
+
         self.assertHasErrors(
-            sourcePath, ["%s: problem decoding source\n" % (sourcePath,)])
+            sourcePath, [result])
 
     def test_misencodedFileUTF16(self):
         """

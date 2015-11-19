@@ -11,6 +11,12 @@ import sys
 PY2 = sys.version_info < (3, 0)
 PY32 = sys.version_info < (3, 3)    # Python 2.5 to 3.2
 PY33 = sys.version_info < (3, 4)    # Python 2.5 to 3.3
+try:
+    sys.pypy_version_info
+    PYPY = True
+except AttributeError:
+    PYPY = False
+
 builtin_vars = dir(__import__('__builtin__' if PY2 else 'builtins'))
 
 try:
@@ -594,8 +600,13 @@ class Checker(object):
             node = node.value
         if not isinstance(node, ast.Str):
             return (None, None)
-        # Computed incorrectly if the docstring has backslash
-        doctest_lineno = node.lineno - node.s.count('\n') - 1
+
+        if PYPY:
+            doctest_lineno = node.lineno - 1
+        else:
+            # Computed incorrectly if the docstring has backslash
+            doctest_lineno = node.lineno - node.s.count('\n') - 1
+
         return (node.s, doctest_lineno)
 
     def handleNode(self, node, parent):
@@ -642,6 +653,8 @@ class Checker(object):
                 tree = compile(example.source, "<doctest>", "exec", ast.PyCF_ONLY_AST)
             except SyntaxError:
                 e = sys.exc_info()[1]
+                if PYPY:
+                    e.offset += 1
                 position = (node_lineno + example.lineno + e.lineno,
                             example.indent + 4 + (e.offset or 0))
                 self.report(messages.DoctestSyntaxError, node, position)
