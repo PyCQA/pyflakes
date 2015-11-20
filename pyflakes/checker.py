@@ -671,7 +671,7 @@ class Checker(object):
 
     # "stmt" type nodes
     DELETE = PRINT = FOR = ASYNCFOR = WHILE = IF = WITH = WITHITEM = \
-        ASYNCWITH = ASYNCWITHITEM = RAISE = TRYFINALLY = ASSERT = EXEC = \
+        ASYNCWITH = ASYNCWITHITEM = RAISE = TRYFINALLY = EXEC = \
         EXPR = ASSIGN = handleChildren
 
     PASS = ignore
@@ -696,6 +696,11 @@ class Checker(object):
 
     # additional node types
     COMPREHENSION = KEYWORD = FORMATTEDVALUE = handleChildren
+
+    def ASSERT(self, node):
+        if isinstance(node.test, ast.Tuple) and node.test.elts != []:
+            self.report(messages.AssertTuple, node)
+        self.handleChildren(node)
 
     def GLOBAL(self, node):
         """
