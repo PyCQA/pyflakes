@@ -31,6 +31,7 @@ class Test(TestCase):
         self.flakes('''
         a = 1
         [1 for a, b in [(1, 2)]]
+        a
         ''', m.RedefinedInListComp)
         self.flakes('''
         class A:
@@ -60,6 +61,7 @@ class Test(TestCase):
         self.flakes('''
         a = 1
         (1 for a, b in [(1, 2)])
+        a
         ''')
         self.flakes('''
         class A:
@@ -90,11 +92,13 @@ class Test(TestCase):
         self.flakes('''
         a = 1
         {1 for a, b in [(1, 2)]}
+        a
         ''')
         self.flakes('''
         class A:
             a = 1
             {1 for a, b in [(1, 2)]}
+            a
         ''')
         self.flakes('''
         def f():
@@ -120,6 +124,7 @@ class Test(TestCase):
         self.flakes('''
         a = 1
         {1: 42 for a, b in [(1, 2)]}
+        a
         ''')
         self.flakes('''
         class A:
@@ -220,6 +225,7 @@ class Test(TestCase):
             a = 1
         else:
             [a for a in '12']
+        a
         ''')
 
     @skipIf(version_info >= (3,),
@@ -1020,6 +1026,7 @@ class Test(TestCase):
         self.flakes('''
         x = 10
         x = 20
+        x
         ''', m.RedefinedWhileUnused)
 
     def test_doubleAssignmentConditionally(self):
@@ -1031,6 +1038,7 @@ class Test(TestCase):
         x = 10
         if True:
             x = 20
+        x
         ''')
 
     def test_doubleAssignmentWithUse(self):
@@ -1042,6 +1050,7 @@ class Test(TestCase):
         x = 10
         y = x * 2
         x = 20
+        y
         ''')
 
     def test_comparison(self):

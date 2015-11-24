@@ -62,6 +62,8 @@ class Test(TestCase):
         def doctest_stuff():
             '''
                 >>> d = doctest_stuff()
+                >>> d
+                None
             '''
             f = m
             return f
@@ -238,6 +240,24 @@ class Test(TestCase):
             m = 1
         """, m.UndefinedName)
 
+    def test_assignment_unused(self):
+        """Report unused assignments."""
+        self.flakes("""
+        def doctest_stuff():
+            '''
+                >>> foo = 1
+            '''
+        """, m.UnusedVariable)
+
+    def test_assignment_underscore(self):
+        """Assign to underscore (_) to avoid a doctest output."""
+        self.flakes("""
+        def doctest_stuff():
+            '''
+                >>> _ = 1
+            '''
+        """)
+
     def test_importBeforeDoctest(self):
         self.flakes("""
         import foo
@@ -304,12 +324,14 @@ class Test(TestCase):
         def doctest_stuff():
             """
                 >>> x = 5
+                >>> x
+                5
             """
 
         x
 
         ''', m.UndefinedName).messages[0]
-        self.assertEqual(exc.lineno, 8)
+        self.assertEqual(exc.lineno, 10)
         self.assertEqual(exc.col, 0)
 
     def test_syntaxErrorInDoctest(self):
