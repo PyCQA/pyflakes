@@ -607,13 +607,13 @@ class Test(TestCase):
 
     def test_importStar(self):
         """Use of import * at module level is reported."""
-        self.flakes('from fu import *', m.ImportStarUsed)
+        self.flakes('from fu import *', m.ImportStarUsed, m.UnusedImport)
         self.flakes('''
         try:
             from fu import *
         except:
             pass
-        ''', m.ImportStarUsed)
+        ''', m.ImportStarUsed, m.UnusedImport)
 
     @skipIf(version_info < (3,),
             'import * below module level is a warning on Python 2')
@@ -627,6 +627,17 @@ class Test(TestCase):
         class a:
             from fu import *
         ''', m.ImportStarNotPermitted)
+
+    @skipIf(version_info > (3,),
+            'import * below module level is an error on Python 3')
+    def test_importStarNested(self):
+        """All star imports are marked as used by an undefined variable."""
+        self.flakes('''
+        from fu import *
+        def f():
+            from bar import *
+            x
+        ''', m.ImportStarUsed, m.ImportStarUsed, m.ImportStarUsage)
 
     def test_packageImport(self):
         """
@@ -867,6 +878,14 @@ class TestSpecialAll(TestCase):
         from foolib import *
         __all__ = ["foo"]
         ''', m.ImportStarUsed)
+
+    def test_importStarNotExported(self):
+        """Report unused import when not needed to satisfy __all__."""
+        self.flakes('''
+        from foolib import *
+        a = 1
+        __all__ = ['a']
+        ''', m.ImportStarUsed, m.UnusedImport)
 
     def test_usedInGenExp(self):
         """

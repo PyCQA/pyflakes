@@ -147,6 +147,17 @@ class Importation(Definition):
         return isinstance(other, Definition) and self.name == other.name
 
 
+class StarImportation(Importation):
+    """A binding created by an 'from x import *' statement."""
+
+    def __init__(self, name, source):
+        super(StarImportation, self).__init__('*', source)
+        # Each star importation needs a unique name, and
+        # may not be the module name otherwise it will be deemed imported
+        self.name = name + '.*'
+        self.fullName = name
+
+
 class Argument(Binding):
     """
     Represents binding a name as an argument.
@@ -358,17 +369,29 @@ class Checker(object):
             if isinstance(scope, ClassScope):
                 continue
 
-            if isinstance(scope.get('__all__'), ExportBinding):
-                all_names = set(scope['__all__'].names)
+            all_binding = scope.get('__all__')
+            if all_binding and not isinstance(all_binding, ExportBinding):
+                all_binding = None
+
+            if all_binding:
+                all_names = set(all_binding.names)
+                undefined = all_names.difference(scope)
+            else:
+                all_names = undefined = []
+
+            if undefined:
                 if not scope.importStarred and \
                    os.path.basename(self.filename) != '__init__.py':
                     # Look for possible mistakes in the export list
-                    undefined = all_names.difference(scope)
                     for name in undefined:
                         self.report(messages.UndefinedExport,
                                     scope['__all__'].source, name)
-            else:
-                all_names = []
+
+                # mark all import '*' as used by the undefined in __all__
+                if scope.importStarred:
+                    for binding in scope.values():
+                        if isinstance(binding, StarImportation):
+                            binding.used = all_binding
 
             # Look for imported names that aren't used.
             for value in scope.values():
@@ -504,8 +527,24 @@ class Checker(object):
                 in_generators = isinstance(scope, GeneratorScope)
 
         # look in the built-ins
-        if importStarred or name in self.builtIns:
+        if name in self.builtIns:
             return
+
+        if importStarred:
+            from_list = []
+
+            for scope in self.scopeStack[-1::-1]:
+                for binding in scope.values():
+                    if isinstance(binding, StarImportation):
+                        # mark '*' imports as used for each scope
+                        binding.used = (self.scope, node)
+                        from_list.append(binding.fullName)
+
+            # report * usage, with a list of possible sources
+            from_list = ', '.join(sorted(from_list))
+            self.report(messages.ImportStarUsage, node, name, from_list)
+            return
+
         if name == '__path__' and os.path.basename(self.filename) == '__init__.py':
             # the special name __path__ is valid only in packages
             return
@@ -976,17 +1015,19 @@ class Checker(object):
             self.futuresAllowed = False
 
         for alias in node.names:
+            name = alias.asname or alias.name
             if alias.name == '*':
                 # Only Python 2, local import * is a SyntaxWarning
                 if not PY2 and not isinstance(self.scope, ModuleScope):
                     self.report(messages.ImportStarNotPermitted,
                                 node, node.module)
                     continue
+
                 self.scope.importStarred = True
                 self.report(messages.ImportStarUsed, node, node.module)
-                continue
-            name = alias.asname or alias.name
-            importation = Importation(name, node)
+                importation = StarImportation(node.module, node)
+            else:
+                importation = Importation(name, node)
             if node.module == '__future__':
                 importation.used = (self.scope, node)
             self.addBinding(node, importation)

@@ -71,7 +71,8 @@ class Test(TestCase):
 
     def test_globalImportStar(self):
         """Can't find undefined names with import *."""
-        self.flakes('from fu import *; bar', m.ImportStarUsed)
+        self.flakes('from fu import *; bar',
+                    m.ImportStarUsed, m.ImportStarUsage)
 
     @skipIf(version_info >= (3,), 'obsolete syntax')
     def test_localImportStar(self):
@@ -83,7 +84,7 @@ class Test(TestCase):
         def a():
             from fu import *
         bar
-        ''', m.ImportStarUsed, m.UndefinedName)
+        ''', m.ImportStarUsed, m.UndefinedName, m.UnusedImport)
 
     @skipIf(version_info >= (3,), 'obsolete syntax')
     def test_unpackedParameter(self):
