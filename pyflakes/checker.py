@@ -158,6 +158,18 @@ class StarImportation(Importation):
         self.fullName = name
 
 
+class FutureImportation(Importation):
+    """
+    A binding created by a from `__future__` import statement.
+
+    `__future__` imports are implicitly used.
+    """
+
+    def __init__(self, name, source, scope):
+        super(FutureImportation, self).__init__(name, source)
+        self.used = (scope, source)
+
+
 class Argument(Binding):
     """
     Represents binding a name as an argument.
@@ -255,6 +267,7 @@ class GeneratorScope(Scope):
 
 class ModuleScope(Scope):
     """Scope for a module."""
+    _futures_allowed = True
 
 
 class DoctestScope(ModuleScope):
@@ -310,7 +323,6 @@ class Checker(object):
         self.withDoctest = withDoctest
         self.scopeStack = [ModuleScope()]
         self.exceptHandlers = [()]
-        self.futuresAllowed = True
         self.root = tree
         self.handleChildren(tree)
         self.runDeferred(self._deferredFunctions)
@@ -355,6 +367,20 @@ class Checker(object):
     def _in_doctest(self):
         return (len(self.scopeStack) >= 2 and
                 isinstance(self.scopeStack[1], DoctestScope))
+
+    @property
+    def futuresAllowed(self):
+        if not all(isinstance(scope, ModuleScope)
+                   for scope in self.scopeStack):
+            return False
+
+        return self.scope._futures_allowed
+
+    @futuresAllowed.setter
+    def futuresAllowed(self, value):
+        assert value is False
+        if isinstance(self.scope, ModuleScope):
+            self.scope._futures_allowed = False
 
     @property
     def scope(self):
@@ -1025,7 +1051,9 @@ class Checker(object):
 
         for alias in node.names:
             name = alias.asname or alias.name
-            if alias.name == '*':
+            if node.module == '__future__':
+                importation = FutureImportation(name, node, self.scope)
+            elif alias.name == '*':
                 # Only Python 2, local import * is a SyntaxWarning
                 if not PY2 and not isinstance(self.scope, ModuleScope):
                     self.report(messages.ImportStarNotPermitted,
@@ -1037,8 +1065,6 @@ class Checker(object):
                 importation = StarImportation(node.module, node)
             else:
                 importation = Importation(name, node)
-            if node.module == '__future__':
-                importation.used = (self.scope, node)
             self.addBinding(node, importation)
 
     def TRY(self, node):
