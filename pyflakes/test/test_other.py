@@ -1633,6 +1633,40 @@ class TestUnusedAssignment(TestCase):
         baz += bar()
         ''')
 
+    def test_assert_without_message(self):
+        """An assert without a message is not an error."""
+        self.flakes('''
+        a = 1
+        assert a
+        ''')
+
+    def test_assert_with_message(self):
+        """An assert with a message is not an error."""
+        self.flakes('''
+        a = 1
+        assert a, 'x'
+        ''')
+
+    def test_assert_tuple(self):
+        """An assert of a non-empty tuple is always True."""
+        self.flakes('''
+        assert (False, 'x')
+        assert (False, )
+        ''', m.AssertTuple, m.AssertTuple)
+
+    def test_assert_tuple_empty(self):
+        """An assert of an empty tuple is always False."""
+        self.flakes('''
+        assert ()
+        ''')
+
+    def test_assert_static(self):
+        """An assert of a static value is not an error."""
+        self.flakes('''
+        assert True
+        assert 1
+        ''')
+
     @skipIf(version_info < (3, 3), 'new in Python 3.3')
     def test_yieldFromUndefined(self):
         """
