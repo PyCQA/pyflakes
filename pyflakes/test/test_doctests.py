@@ -190,6 +190,54 @@ class Test(TestCase):
             '''
         """, m.UndefinedName)
 
+    def test_nested_class(self):
+        """Doctest within nested class are processed."""
+        self.flakes("""
+        class C:
+            class D:
+                '''
+                    >>> m
+                '''
+                def doctest_stuff(self):
+                    '''
+                        >>> m
+                    '''
+                    return 1
+        """, m.UndefinedName, m.UndefinedName)
+
+    def test_ignore_nested_function(self):
+        """Doctest module does not process doctest in nested functions."""
+        # 'syntax error' would cause a SyntaxError if the doctest was processed.
+        # However doctest does not find doctest in nested functions
+        # (https://bugs.python.org/issue1650090). If nested functions were
+        # processed, this use of m should cause UndefinedName, and the
+        # name inner_function should probably exist in the doctest scope.
+        self.flakes("""
+        def doctest_stuff():
+            def inner_function():
+                '''
+                    >>> syntax error
+                    >>> inner_function()
+                    1
+                    >>> m
+                '''
+                return 1
+            m = inner_function()
+            return m
+        """)
+
+    def test_inaccessible_scope_class(self):
+        """Doctest may not access class scope."""
+        self.flakes("""
+        class C:
+            def doctest_stuff(self):
+                '''
+                    >>> m
+                '''
+                return 1
+            m = 1
+        """, m.UndefinedName)
+
     def test_importBeforeDoctest(self):
         self.flakes("""
         import foo

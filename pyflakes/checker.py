@@ -254,11 +254,11 @@ class GeneratorScope(Scope):
 
 
 class ModuleScope(Scope):
-    pass
+    """Scope for a module."""
 
 
 class DoctestScope(ModuleScope):
-    pass
+    """Scope for a doctest."""
 
 
 # Globally defined names which are not attributes of the builtins module, or
@@ -351,6 +351,10 @@ class Checker(object):
             self.scopeStack = scope
             self.offset = offset
             handler()
+
+    def _in_doctest(self):
+        return (len(self.scopeStack) >= 2 and
+                isinstance(self.scopeStack[1], DoctestScope))
 
     @property
     def scope(self):
@@ -681,6 +685,10 @@ class Checker(object):
             return
         if not examples:
             return
+
+        # Place doctest in module scope
+        saved_stack = self.scopeStack
+        self.scopeStack = [self.scopeStack[0]]
         node_offset = self.offset or (0, 0)
         self.pushScope(DoctestScope)
         underscore_in_builtins = '_' in self.builtIns
@@ -704,6 +712,7 @@ class Checker(object):
         if not underscore_in_builtins:
             self.builtIns.remove('_')
         self.popScope()
+        self.scopeStack = saved_stack
 
     def ignore(self, node):
         pass
@@ -745,14 +754,8 @@ class Checker(object):
         """
         Keep track of globals declarations.
         """
-        for i, scope in enumerate(self.scopeStack):
-            if isinstance(scope, DoctestScope):
-                global_scope_index = i
-                global_scope = scope
-                break
-        else:
-            global_scope_index = 0
-            global_scope = self.scopeStack[0]
+        global_scope_index = 1 if self._in_doctest() else 0
+        global_scope = self.scopeStack[global_scope_index]
 
         # Ignore 'global' statement in global scope.
         if self.scope is not global_scope:
@@ -861,9 +864,11 @@ class Checker(object):
             self.handleNode(deco, node)
         self.LAMBDA(node)
         self.addBinding(node, FunctionDefinition(node.name, node))
-        # doctest does not process doctest within a doctest
-        if self.withDoctest and not any(
-                isinstance(scope, DoctestScope) for scope in self.scopeStack):
+        # doctest does not process doctest within a doctest,
+        # or in nested functions.
+        if (self.withDoctest and
+                not self._in_doctest() and
+                not isinstance(self.scope, FunctionScope)):
             self.deferFunction(lambda: self.handleDoctests(node))
 
     ASYNCFUNCTIONDEF = FUNCTIONDEF
@@ -963,7 +968,11 @@ class Checker(object):
             for keywordNode in node.keywords:
                 self.handleNode(keywordNode, node)
         self.pushScope(ClassScope)
-        if self.withDoctest:
+        # doctest does not process doctest within a doctest
+        # classes within classes are processed.
+        if (self.withDoctest and
+                not self._in_doctest() and
+                not isinstance(self.scope, FunctionScope)):
             self.deferFunction(lambda: self.handleDoctests(node))
         for stmt in node.body:
             self.handleNode(stmt, node)
