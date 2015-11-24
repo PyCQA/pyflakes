@@ -124,6 +124,15 @@ class LateFutureImport(Message):
         self.message_args = ()
 
 
+class FutureFeatureNotDefined(Message):
+    """An undefined __future__ feature name was imported."""
+    message = 'future feature %s is not defined'
+
+    def __init__(self, filename, loc, name):
+        Message.__init__(self, filename, loc)
+        self.message_args = (name,)
+
+
 class UnusedVariable(Message):
     """
     Indicates that a variable has been explicitly assigned to but not actually

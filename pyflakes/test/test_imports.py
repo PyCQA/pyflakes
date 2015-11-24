@@ -788,6 +788,18 @@ class Test(TestCase):
         assert print_function is not division
         ''')
 
+    def test_futureImportUndefined(self):
+        """Importing undefined names from __future__ fails."""
+        self.flakes('''
+        from __future__ import print_statement
+        ''', m.FutureFeatureNotDefined)
+
+    def test_futureImportStar(self):
+        """Importing '*' from __future__ fails."""
+        self.flakes('''
+        from __future__ import *
+        ''', m.FutureFeatureNotDefined)
+
 
 class TestSpecialAll(TestCase):
     """
