@@ -136,16 +136,83 @@ class Importation(Definition):
     @type fullName: C{str}
     """
 
-    def __init__(self, name, source):
-        self.fullName = name
+    def __init__(self, name, source, full_name=None):
+        self.fullName = full_name or name
         self.redefined = []
-        name = name.split('.')[0]
         super(Importation, self).__init__(name, source)
+
+    def redefines(self, other):
+        return isinstance(other, Definition) and self.name == other.name
+
+    def _has_alias(self):
+        """Return whether importation needs an as clause."""
+        return not self.fullName.split('.')[-1] == self.name
+
+    @property
+    def source_statement(self):
+        """Generate a source statement equivalent to the import."""
+        if self._has_alias():
+            return 'import %s as %s' % (self.fullName, self.name)
+        else:
+            return 'import %s' % self.fullName
+
+    def __str__(self):
+        """Return import full name with alias."""
+        if self._has_alias():
+            return self.fullName + ' as ' + self.name
+        else:
+            return self.fullName
+
+
+class SubmoduleImportation(Importation):
+
+    def __init__(self, name, source):
+        # A dot should only appear in the name when it is a submodule import
+        # without an 'as' clause, which is a special type of import where the
+        # root module is implicitly imported, and the submodules are also
+        # accessible because Python does not restrict which attributes of the
+        # root module may be used.
+        assert '.' in name and (not source or isinstance(source, ast.Import))
+        package_name = name.split('.')[0]
+        super(SubmoduleImportation, self).__init__(package_name, source)
+        self.fullName = name
 
     def redefines(self, other):
         if isinstance(other, Importation):
             return self.fullName == other.fullName
-        return isinstance(other, Definition) and self.name == other.name
+        return super(SubmoduleImportation, self).redefines(other)
+
+    def __str__(self):
+        return self.fullName
+
+    @property
+    def source_statement(self):
+        return 'import ' + self.fullName
+
+
+class ImportationFrom(Importation):
+
+    def __init__(self, name, source, module, real_name=None):
+        self.module = module
+        self.real_name = real_name or name
+        full_name = module + '.' + self.real_name
+        super(ImportationFrom, self).__init__(name, source, full_name)
+
+    def __str__(self):
+        """Return import full name with alias."""
+        if self.real_name != self.name:
+            return self.fullName + ' as ' + self.name
+        else:
+            return self.fullName
+
+    @property
+    def source_statement(self):
+        if self.real_name != self.name:
+            return 'from %s import %s as %s' % (self.module,
+                                                self.real_name,
+                                                self.name)
+        else:
+            return 'from %s import %s' % (self.module, self.name)
 
 
 class StarImportation(Importation):
@@ -158,8 +225,15 @@ class StarImportation(Importation):
         self.name = name + '.*'
         self.fullName = name
 
+    @property
+    def source_statement(self):
+        return 'from ' + self.fullName + ' import *'
 
-class FutureImportation(Importation):
+    def __str__(self):
+        return self.name
+
+
+class FutureImportation(ImportationFrom):
     """
     A binding created by a from `__future__` import statement.
 
@@ -167,7 +241,7 @@ class FutureImportation(Importation):
     """
 
     def __init__(self, name, source, scope):
-        super(FutureImportation, self).__init__(name, source)
+        super(FutureImportation, self).__init__(name, source, '__future__')
         self.used = (scope, source)
 
 
@@ -430,7 +504,7 @@ class Checker(object):
                     used = value.used or value.name in all_names
                     if not used:
                         messg = messages.UnusedImport
-                        self.report(messg, value.source, value.name)
+                        self.report(messg, value.source, str(value))
                     for node in value.redefined:
                         if isinstance(self.getParent(node), ast.For):
                             messg = messages.ImportShadowedByLoopVar
@@ -1039,8 +1113,11 @@ class Checker(object):
 
     def IMPORT(self, node):
         for alias in node.names:
-            name = alias.asname or alias.name
-            importation = Importation(name, node)
+            if '.' in alias.name and not alias.asname:
+                importation = SubmoduleImportation(alias.name, node)
+            else:
+                name = alias.asname or alias.name
+                importation = Importation(name, node, alias.name)
             self.addBinding(node, importation)
 
     def IMPORTFROM(self, node):
@@ -1069,7 +1146,8 @@ class Checker(object):
                 self.report(messages.ImportStarUsed, node, node.module)
                 importation = StarImportation(node.module, node)
             else:
-                importation = Importation(name, node)
+                importation = ImportationFrom(name, node,
+                                              node.module, alias.name)
             self.addBinding(node, importation)
 
     def TRY(self, node):

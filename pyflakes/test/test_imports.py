@@ -2,7 +2,73 @@
 from sys import version_info
 
 from pyflakes import messages as m
+from pyflakes.checker import (
+    FutureImportation,
+    Importation,
+    ImportationFrom,
+    StarImportation,
+    SubmoduleImportation,
+)
 from pyflakes.test.harness import TestCase, skip, skipIf
+
+
+class TestImportationObject(TestCase):
+
+    def test_import_basic(self):
+        binding = Importation('a', None, 'a')
+        assert binding.source_statement == 'import a'
+        assert str(binding) == 'a'
+
+    def test_import_as(self):
+        binding = Importation('c', None, 'a')
+        assert binding.source_statement == 'import a as c'
+        assert str(binding) == 'a as c'
+
+    def test_import_submodule(self):
+        binding = SubmoduleImportation('a.b', None)
+        assert binding.source_statement == 'import a.b'
+        assert str(binding) == 'a.b'
+
+    def test_import_submodule_as(self):
+        # A submodule import with an as clause is not a SubmoduleImportation
+        binding = Importation('c', None, 'a.b')
+        assert binding.source_statement == 'import a.b as c'
+        assert str(binding) == 'a.b as c'
+
+    def test_import_submodule_as_source_name(self):
+        binding = Importation('a', None, 'a.b')
+        assert binding.source_statement == 'import a.b as a'
+        assert str(binding) == 'a.b as a'
+
+    def test_importfrom_member(self):
+        binding = ImportationFrom('b', None, 'a', 'b')
+        assert binding.source_statement == 'from a import b'
+        assert str(binding) == 'a.b'
+
+    def test_importfrom_submodule_member(self):
+        binding = ImportationFrom('c', None, 'a.b', 'c')
+        assert binding.source_statement == 'from a.b import c'
+        assert str(binding) == 'a.b.c'
+
+    def test_importfrom_member_as(self):
+        binding = ImportationFrom('c', None, 'a', 'b')
+        assert binding.source_statement == 'from a import b as c'
+        assert str(binding) == 'a.b as c'
+
+    def test_importfrom_submodule_member_as(self):
+        binding = ImportationFrom('d', None, 'a.b', 'c')
+        assert binding.source_statement == 'from a.b import c as d'
+        assert str(binding) == 'a.b.c as d'
+
+    def test_importfrom_star(self):
+        binding = StarImportation('a.b', None)
+        assert binding.source_statement == 'from a.b import *'
+        assert str(binding) == 'a.b.*'
+
+    def test_importfrom_future(self):
+        binding = FutureImportation('print_function', None, None)
+        assert binding.source_statement == 'from __future__ import print_function'
+        assert str(binding) == '__future__.print_function'
 
 
 class Test(TestCase):
@@ -16,6 +82,12 @@ class Test(TestCase):
                     m.RedefinedWhileUnused, m.UnusedImport)
         self.flakes('from moo import fu as FU, bar as FU',
                     m.RedefinedWhileUnused, m.UnusedImport)
+
+    def test_aliasedImportShadowModule(self):
+        """Imported aliases can shadow the source of the import."""
+        self.flakes('from moo import fu as moo; moo')
+        self.flakes('import fu as fu; fu')
+        self.flakes('import fu.bar as fu; fu')
 
     def test_usedImport(self):
         self.flakes('import fu; print(fu)')
@@ -684,6 +756,29 @@ class Test(TestCase):
         import fu.baz
         fu.bar, fu.baz
         ''')
+
+    def test_used_package_with_submodule_import(self):
+        """
+        Usage of package marks submodule imports as used.
+        """
+        self.flakes('''
+        import fu
+        import fu.bar
+        fu.x
+        ''')
+
+    def test_unused_package_with_submodule_import(self):
+        """
+        When a package and its submodule are imported, only report once.
+        """
+        checker = self.flakes('''
+        import fu
+        import fu.bar
+        ''', m.UnusedImport)
+        error = checker.messages[0]
+        assert error.message == '%r imported but unused'
+        assert error.message_args == ('fu.bar', )
+        assert error.lineno == 5 if self.withDoctest else 3
 
     def test_assignRHSFirst(self):
         self.flakes('import fu; fu = fu')
