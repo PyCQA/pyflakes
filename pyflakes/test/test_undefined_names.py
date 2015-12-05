@@ -11,13 +11,13 @@ class Test(TestCase):
         self.flakes('bar', m.UndefinedName)
 
     def test_definedInListComp(self):
-        self.flakes('[a for a in range(10) if a]')
+        self.flakes('x = [a for a in range(10) if a]')
 
     @skipIf(version_info < (3,),
             'in Python 2 list comprehensions execute in the same scope')
     def test_undefinedInListComp(self):
         self.flakes('''
-        [a for a in range(10)]
+        x = [a for a in range(10)]
         a
         ''',
                     m.UndefinedName)
@@ -482,19 +482,19 @@ class Test(TestCase):
         Using the loop variable of a generator expression results in no
         warnings.
         """
-        self.flakes('(a for a in [1, 2, 3] if a)')
+        self.flakes('x = (a for a in [1, 2, 3] if a)')
 
-        self.flakes('(b for b in (a for a in [1, 2, 3] if a) if b)')
+        self.flakes('x = (b for b in (a for a in [1, 2, 3] if a) if b)')
 
     def test_undefinedInGenExpNested(self):
         """
         The loop variables of generator expressions nested together are
         not defined in the other generator.
         """
-        self.flakes('(b for b in (a for a in [1, 2, 3] if b) if b)',
+        self.flakes('x = (b for b in (a for a in [1, 2, 3] if b) if b)',
                     m.UndefinedName)
 
-        self.flakes('(b for b in (a for a in [1, 2, 3] if a) if a)',
+        self.flakes('x = (b for b in (a for a in [1, 2, 3] if a) if a)',
                     m.UndefinedName)
 
     def test_undefinedWithErrorHandler(self):
@@ -568,10 +568,10 @@ class Test(TestCase):
             print(i)
         ''', m.UndefinedName)
         self.flakes('''
-        [42 for i in range(i)]
+        x = [42 for i in range(i)]
         ''', m.UndefinedName)
         self.flakes('''
-        (42 for i in range(i))
+        x = (42 for i in range(i))
         ''', m.UndefinedName)
 
     @skipIf(version_info < (2, 7), 'Dictionary comprehensions do not exist')
@@ -581,7 +581,7 @@ class Test(TestCase):
         comprehension.
         """
         self.flakes('''
-        {lambda: id(x) for x in range(10)}
+        x = {lambda: id(x) for x in range(10)}
         ''')
 
     def test_definedFromLambdaInGenerator(self):
@@ -590,7 +590,7 @@ class Test(TestCase):
         expression.
         """
         self.flakes('''
-        any(lambda: id(x) for x in range(10))
+        x = any(lambda: id(x) for x in range(10))
         ''')
 
     @skipIf(version_info < (2, 7), 'Dictionary comprehensions do not exist')
@@ -600,7 +600,7 @@ class Test(TestCase):
         comprehension.
         """
         self.flakes('''
-        {lambda: id(y) for x in range(10)}
+        x = {lambda: id(y) for x in range(10)}
         ''', m.UndefinedName)
 
     def test_undefinedFromLambdaInComprehension(self):
@@ -609,7 +609,7 @@ class Test(TestCase):
         expression.
         """
         self.flakes('''
-        any(lambda: id(y) for x in range(10))
+        x = any(lambda: id(y) for x in range(10))
         ''', m.UndefinedName)
 
 

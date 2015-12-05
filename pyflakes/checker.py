@@ -12,6 +12,7 @@ import sys
 PY2 = sys.version_info < (3, 0)
 PY32 = sys.version_info < (3, 3)    # Python 2.5 to 3.2
 PY33 = sys.version_info < (3, 4)    # Python 2.5 to 3.3
+PY34 = sys.version_info < (3, 5)    # Python 2.5 to 3.4
 try:
     sys.pypy_version_info
     PYPY = True
@@ -32,6 +33,20 @@ except ImportError:     # Python 2.5
 
 from pyflakes import messages
 
+
+ALLOWED_EXPR_NODE_TYPE = (
+    ast.Str, ast.Yield, ast.Call,
+    ast.Name, ast.Attribute,
+    ast.Ellipsis,
+)
+
+if not PY32:
+    ALLOWED_EXPR_NODE_TYPE = ALLOWED_EXPR_NODE_TYPE + (
+        ast.YieldFrom, )
+
+if not PY34:
+    ALLOWED_EXPR_NODE_TYPE = ALLOWED_EXPR_NODE_TYPE + (
+        ast.Await, )
 
 if PY2:
     def getNodeType(node_class):
@@ -771,6 +786,15 @@ class Checker(object):
 
     # additional node types
     COMPREHENSION = KEYWORD = FORMATTEDVALUE = handleChildren
+
+    def EXPR(self, node):
+        value = node.value
+
+        if (not self._in_doctest() and
+                not isinstance(value, ALLOWED_EXPR_NODE_TYPE)):
+            self.report(messages.UnusedExpression, node)
+
+        self.handleNode(value, node)
 
     def ASSERT(self, node):
         if isinstance(node.test, ast.Tuple) and node.test.elts != []:

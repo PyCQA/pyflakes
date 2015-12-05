@@ -30,26 +30,26 @@ class Test(TestCase):
         """
         self.flakes('''
         a = 1
-        [1 for a, b in [(1, 2)]]
+        x = [1 for a, b in [(1, 2)]]
         ''', m.RedefinedInListComp)
         self.flakes('''
         class A:
             a = 1
-            [1 for a, b in [(1, 2)]]
+            x = [1 for a, b in [(1, 2)]]
         ''', m.RedefinedInListComp)
         self.flakes('''
         def f():
             a = 1
-            [1 for a, b in [(1, 2)]]
+            return [1 for a, b in [(1, 2)]]
         ''', m.RedefinedInListComp)
         self.flakes('''
-        [1 for a, b in [(1, 2)]]
-        [1 for a, b in [(1, 2)]]
+        x = [1 for a, b in [(1, 2)]]
+        y = [1 for a, b in [(1, 2)]]
         ''')
         self.flakes('''
         for a, b in [(1, 2)]:
             pass
-        [1 for a, b in [(1, 2)]]
+        x = [1 for a, b in [(1, 2)]]
         ''')
 
     def test_redefinedInGenerator(self):
@@ -59,26 +59,26 @@ class Test(TestCase):
         """
         self.flakes('''
         a = 1
-        (1 for a, b in [(1, 2)])
+        x = (1 for a, b in [(1, 2)])
         ''')
         self.flakes('''
         class A:
             a = 1
-            list(1 for a, b in [(1, 2)])
+            x = list(1 for a, b in [(1, 2)])
         ''')
         self.flakes('''
         def f():
             a = 1
-            (1 for a, b in [(1, 2)])
+            return (1 for a, b in [(1, 2)])
         ''', m.UnusedVariable)
         self.flakes('''
-        (1 for a, b in [(1, 2)])
-        (1 for a, b in [(1, 2)])
+        x = (1 for a, b in [(1, 2)])
+        y = (1 for a, b in [(1, 2)])
         ''')
         self.flakes('''
         for a, b in [(1, 2)]:
             pass
-        (1 for a, b in [(1, 2)])
+        x = (1 for a, b in [(1, 2)])
         ''')
 
     @skipIf(version_info < (2, 7), "Python >= 2.7 only")
@@ -89,26 +89,26 @@ class Test(TestCase):
         """
         self.flakes('''
         a = 1
-        {1 for a, b in [(1, 2)]}
+        x = {1 for a, b in [(1, 2)]}
         ''')
         self.flakes('''
         class A:
             a = 1
-            {1 for a, b in [(1, 2)]}
+            x = {1 for a, b in [(1, 2)]}
         ''')
         self.flakes('''
         def f():
             a = 1
-            {1 for a, b in [(1, 2)]}
+            return {1 for a, b in [(1, 2)]}
         ''', m.UnusedVariable)
         self.flakes('''
-        {1 for a, b in [(1, 2)]}
-        {1 for a, b in [(1, 2)]}
+        x = {1 for a, b in [(1, 2)]}
+        y = {1 for a, b in [(1, 2)]}
         ''')
         self.flakes('''
         for a, b in [(1, 2)]:
             pass
-        {1 for a, b in [(1, 2)]}
+        x = {1 for a, b in [(1, 2)]}
         ''')
 
     @skipIf(version_info < (2, 7), "Python >= 2.7 only")
@@ -119,26 +119,26 @@ class Test(TestCase):
         """
         self.flakes('''
         a = 1
-        {1: 42 for a, b in [(1, 2)]}
+        x = {1: 42 for a, b in [(1, 2)]}
         ''')
         self.flakes('''
         class A:
             a = 1
-            {1: 42 for a, b in [(1, 2)]}
+            x = {1: 42 for a, b in [(1, 2)]}
         ''')
         self.flakes('''
         def f():
             a = 1
-            {1: 42 for a, b in [(1, 2)]}
+            return {1: 42 for a, b in [(1, 2)]}
         ''', m.UnusedVariable)
         self.flakes('''
-        {1: 42 for a, b in [(1, 2)]}
-        {1: 42 for a, b in [(1, 2)]}
+        x = {1: 42 for a, b in [(1, 2)]}
+        y = {1: 42 for a, b in [(1, 2)]}
         ''')
         self.flakes('''
         for a, b in [(1, 2)]:
             pass
-        {1: 42 for a, b in [(1, 2)]}
+        x = {1: 42 for a, b in [(1, 2)]}
         ''')
 
     def test_redefinedFunction(self):
@@ -219,7 +219,7 @@ class Test(TestCase):
         if False:
             a = 1
         else:
-            [a for a in '12']
+            x = [a for a in '12']
         ''')
 
     @skipIf(version_info >= (3,),
@@ -234,7 +234,7 @@ class Test(TestCase):
             pass
         else:
             a = 1
-            [a for a in '12']
+            x = [a for a in '12']
         ''', m.RedefinedInListComp)
 
     def test_functionDecorator(self):
@@ -277,7 +277,10 @@ class Test(TestCase):
 
     def test_unaryPlus(self):
         """Don't die on unary +."""
-        self.flakes('+1')
+        if self.withDoctest:
+            self.flakes('+1')
+        else:
+            self.flakes('+1', m.UnusedExpression)
 
     def test_undefinedBaseClass(self):
         """
@@ -1052,12 +1055,12 @@ class Test(TestCase):
         self.flakes('''
         x = 10
         y = 20
-        x < y
-        x <= y
-        x == y
-        x != y
-        x >= y
-        x > y
+        if x < y: pass
+        if x <= y: pass
+        if x == y: pass
+        if x != y: pass
+        if x >= y: pass
+        if x > y: pass
         ''')
 
     def test_identity(self):
@@ -1068,8 +1071,8 @@ class Test(TestCase):
         self.flakes('''
         x = 10
         y = 20
-        x is y
-        x is not y
+        if x is y: pass
+        if x is not y: pass
         ''')
 
     def test_containment(self):
@@ -1080,8 +1083,8 @@ class Test(TestCase):
         self.flakes('''
         x = 10
         y = 20
-        x in y
-        x not in y
+        if x in y: pass
+        if x not in y: pass
         ''')
 
     def test_loopControl(self):
@@ -1102,7 +1105,7 @@ class Test(TestCase):
         Ellipsis in a slice is supported.
         """
         self.flakes('''
-        [1, 2][...]
+        x = [1, 2][...]
         ''')
 
     def test_extendedSlice(self):
@@ -1111,7 +1114,7 @@ class Test(TestCase):
         """
         self.flakes('''
         x = 3
-        [1, 2][x,:]
+        y = [1, 2][x,:]
         ''')
 
     def test_varAugmentedAssignment(self):
@@ -1262,7 +1265,7 @@ class TestUnusedAssignment(TestCase):
         """
         self.flakes('''
         def f():
-            [None for i in range(10)]
+            return [None for i in range(10)]
         ''')
 
     def test_generatorExpression(self):
@@ -1272,7 +1275,7 @@ class TestUnusedAssignment(TestCase):
         """
         self.flakes('''
         def f():
-            (None for i in range(10))
+            return (None for i in range(10))
         ''')
 
     def test_assignmentInsideLoop(self):
@@ -1443,8 +1446,8 @@ class TestUnusedAssignment(TestCase):
         self.flakes('''
         from __future__ import with_statement
         with open('foo') as (bar, baz):
-            bar, baz
-        bar, baz
+            x = bar, baz
+        x = bar, baz
         ''')
 
     def test_withStatementListNames(self):
@@ -1455,8 +1458,8 @@ class TestUnusedAssignment(TestCase):
         self.flakes('''
         from __future__ import with_statement
         with open('foo') as [bar, baz]:
-            bar, baz
-        bar, baz
+            x = bar, baz
+        x = bar, baz
         ''')
 
     def test_withStatementComplicatedTarget(self):
@@ -1471,8 +1474,8 @@ class TestUnusedAssignment(TestCase):
         from __future__ import with_statement
         c = d = e = g = h = i = None
         with open('foo') as [(a, b), c[d], e.f, g[h:i]]:
-            a, b, c, d, e, g, h, i
-        a, b, c, d, e, g, h, i
+            x = a, b, c, d, e, g, h, i
+        x = a, b, c, d, e, g, h, i
         ''')
 
     def test_withStatementSingleNameUndefined(self):
