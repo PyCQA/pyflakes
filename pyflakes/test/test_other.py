@@ -1736,3 +1736,10 @@ class TestAsyncStatements(TestCase):
                 ...
                 await trans.end()
         ''')
+
+    @skipIf(version_info < (3, 5), 'new in Python 3.5')
+    def test_matmul(self):
+        self.flakes('''
+        def foo(a, b):
+            return a @ b
+        ''')
