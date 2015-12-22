@@ -189,6 +189,13 @@ class ContinueInFinally(Message):
     message = '\'continue\' not supported inside \'finally\' clause'
 
 
+class ReraiseOutsideExcept(Message):
+    """
+    A bare raise used outside an except clause.
+    """
+    message = '\'raise\' not supported outside \'except\' clause'
+
+
 class DefaultExceptNotLast(Message):
     """
     Indicates an except: block as not the last exception handler.

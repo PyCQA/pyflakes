@@ -885,6 +885,69 @@ class Test(TestCase):
             pass
         ''', m.DefaultExceptNotLast, m.DefaultExceptNotLast)
 
+    def test_raise_name(self):
+        self.flakes('''
+        raise Exception
+        ''')
+
+    def test_raise_object(self):
+        self.flakes('''
+        raise Exception()
+        ''')
+
+    def test_raise_object_in_try(self):
+        self.flakes('''
+        try:
+            raise Exception()
+        except Exception:
+            pass
+        ''')
+
+    def test_reraise_in_except(self):
+        self.flakes('''
+        try:
+            int('x')
+        except ValueError:
+            raise
+        ''')
+
+    def test_reraise_in_except_with_if(self):
+        self.flakes('''
+        try:
+            int('x')
+        except ValueError as e:
+            if True:
+                raise
+        ''')
+
+    def test_reraise_in_try(self):
+        self.flakes('''
+        try:
+            raise
+        except Exception:
+            pass
+        ''', m.ReraiseOutsideExcept)
+
+    def test_reraise_in_finally(self):
+        self.flakes('''
+        try:
+            int('x')
+        except ValueError:
+            pass
+        finally:
+            raise
+        ''', m.ReraiseOutsideExcept)
+
+    def test_reraise_in_else(self):
+        self.flakes('''
+        try:
+            int('x')
+        except ValueError:
+            pass
+        else:
+            raise
+        ''', m.ReraiseOutsideExcept)
+
     @skipIf(version_info < (3,), "Python 3 only")
     def test_starredAssignmentNoError(self):
         """
