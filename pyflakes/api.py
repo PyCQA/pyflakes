@@ -169,7 +169,7 @@ def _exitOnSignal(sigName, message):
         pass
 
 
-def main(prog=None):
+def main(prog=None, args=None):
     """Entry point for the script "pyflakes"."""
     import optparse
 
@@ -178,7 +178,7 @@ def main(prog=None):
     _exitOnSignal('SIGPIPE', 1)
 
     parser = optparse.OptionParser(prog=prog, version=__version__)
-    (__, args) = parser.parse_args()
+    (__, args) = parser.parse_args(args=args)
     reporter = modReporter._makeDefaultReporter()
     if args:
         warnings = checkRecursive(args, reporter)
