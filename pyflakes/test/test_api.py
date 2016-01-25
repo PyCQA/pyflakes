@@ -11,6 +11,7 @@ import tempfile
 from pyflakes.messages import UnusedImport
 from pyflakes.reporter import Reporter
 from pyflakes.api import (
+    main,
     checkPath,
     checkRecursive,
     iterSourceCode,
@@ -50,6 +51,33 @@ class Node(object):
     def __init__(self, lineno, col_offset=0):
         self.lineno = lineno
         self.col_offset = col_offset
+
+
+class SysStreamCapturing(object):
+
+    """Replaces sys.stdin, sys.stdout and sys.stderr with StringIO objects."""
+
+    def __init__(self, stdin):
+        self._stdin = StringIO(stdin or '')
+
+    def __enter__(self):
+        self._orig_stdin = sys.stdin
+        self._orig_stdout = sys.stdout
+        self._orig_stderr = sys.stderr
+
+        sys.stdin = self._stdin
+        sys.stdout = self._stdout_stringio = StringIO()
+        sys.stderr = self._stderr_stringio = StringIO()
+
+        return self
+
+    def __exit__(self, *args):
+        self.output = self._stdout_stringio.getvalue()
+        self.error = self._stderr_stringio.getvalue()
+
+        sys.stdin = self._orig_stdin
+        sys.stdout = self._orig_stdout
+        sys.stderr = self._orig_stderr
 
 
 class LoggingReporter(object):
@@ -588,8 +616,8 @@ class IntegrationTests(TestCase):
         """
         Launch a subprocess running C{pyflakes}.
 
-        @param args: Command-line arguments to pass to pyflakes.
-        @param kwargs: Options passed on to C{subprocess.Popen}.
+        @param paths: Command-line arguments to pass to pyflakes.
+        @param stdin: Text to use as stdin.
         @return: C{(returncode, stdout, stderr)} of the completed pyflakes
             process.
         """
@@ -600,7 +628,7 @@ class IntegrationTests(TestCase):
         if stdin:
             p = subprocess.Popen(command, env=env, stdin=subprocess.PIPE,
                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            (stdout, stderr) = p.communicate(stdin)
+            (stdout, stderr) = p.communicate(stdin.encode('ascii'))
         else:
             p = subprocess.Popen(command, env=env,
                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -648,6 +676,21 @@ class IntegrationTests(TestCase):
         """
         If no arguments are passed to C{pyflakes} then it reads from stdin.
         """
-        d = self.runPyflakes([], stdin='import contraband'.encode('ascii'))
+        d = self.runPyflakes([], stdin='import contraband')
         expected = UnusedImport('<stdin>', Node(1), 'contraband')
         self.assertEqual(d, ("%s%s" % (expected, os.linesep), '', 1))
+
+
+class TestMain(IntegrationTests):
+    """
+    Tests of the pyflakes main function.
+    """
+
+    def runPyflakes(self, paths, stdin=None):
+        try:
+            with SysStreamCapturing(stdin) as capture:
+                main(args=paths)
+        except SystemExit as e:
+            return (capture.output, capture.error, e.code)
+        else:
+            raise RuntimeError('SystemExit not raised')
