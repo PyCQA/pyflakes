@@ -22,6 +22,175 @@ class Test(TestCase):
         ''',
                     m.UndefinedName)
 
+    @skipIf(version_info < (3,),
+            'in Python 2 exception names stay bound after the except: block')
+    def test_undefinedExceptionName(self):
+        """Exception names can't be used after the except: block."""
+        self.flakes('''
+        try:
+            raise ValueError('ve')
+        except ValueError as exc:
+            pass
+        exc
+        ''',
+                    m.UndefinedName)
+
+    def test_namesDeclaredInExceptBlocks(self):
+        """Locals declared in except: blocks can be used after the block.
+
+        This shows the example in test_undefinedExceptionName is
+        different."""
+        self.flakes('''
+        try:
+            raise ValueError('ve')
+        except ValueError as exc:
+            e = exc
+        e
+        ''')
+
+    @skip('error reporting disabled due to false positives below')
+    def test_undefinedExceptionNameObscuringLocalVariable(self):
+        """Exception names obscure locals, can't be used after.
+
+        Last line will raise UnboundLocalError on Python 3 after exiting
+        the except: block. Note next two examples for false positives to
+        watch out for."""
+        self.flakes('''
+        exc = 'Original value'
+        try:
+            raise ValueError('ve')
+        except ValueError as exc:
+            pass
+        exc
+        ''',
+                    m.UndefinedName)
+
+    @skipIf(version_info < (3,),
+            'in Python 2 exception names stay bound after the except: block')
+    def test_undefinedExceptionNameObscuringLocalVariable2(self):
+        """Exception names are unbound after the `except:` block.
+
+        Last line will raise UnboundLocalError on Python 3 but would print out
+        've' on Python 2."""
+        self.flakes('''
+        try:
+            raise ValueError('ve')
+        except ValueError as exc:
+            pass
+        print(exc)
+        exc = 'Original value'
+        ''',
+                    m.UndefinedName)
+
+    def test_undefinedExceptionNameObscuringLocalVariableFalsePositive1(self):
+        """Exception names obscure locals, can't be used after. Unless.
+
+        Last line will never raise UnboundLocalError because it's only
+        entered if no exception was raised."""
+        self.flakes('''
+        exc = 'Original value'
+        try:
+            raise ValueError('ve')
+        except ValueError as exc:
+            print('exception logged')
+            raise
+        exc
+        ''')
+
+    def test_undefinedExceptionNameObscuringLocalVariableFalsePositive2(self):
+        """Exception names obscure locals, can't be used after. Unless.
+
+        Last line will never raise UnboundLocalError because `error` is
+        only falsy if the `except:` block has not been entered."""
+        self.flakes('''
+        exc = 'Original value'
+        error = None
+        try:
+            raise ValueError('ve')
+        except ValueError as exc:
+            error = 'exception logged'
+        if error:
+            print(error)
+        else:
+            exc
+        ''')
+
+    @skip('error reporting disabled due to false positives below')
+    def test_undefinedExceptionNameObscuringGlobalVariable(self):
+        """Exception names obscure globals, can't be used after.
+
+        Last line will raise UnboundLocalError on both Python 2 and
+        Python 3 because the existence of that exception name creates
+        a local scope placeholder for it, obscuring any globals, etc."""
+        self.flakes('''
+        exc = 'Original value'
+        def func():
+            try:
+                pass  # nothing is raised
+            except ValueError as exc:
+                pass  # block never entered, exc stays unbound
+            exc
+        ''',
+                    m.UndefinedLocal)
+
+    @skip('error reporting disabled due to false positives below')
+    def test_undefinedExceptionNameObscuringGlobalVariable2(self):
+        """Exception names obscure globals, can't be used after.
+
+        Last line will raise NameError on Python 3 because the name is
+        locally unbound after the `except:` block, even if it's
+        nonlocal. We should issue an error in this case because code
+        only working correctly if an exception isn't raised, is invalid.
+        Unless it's explicitly silenced, see false positives below."""
+        self.flakes('''
+        exc = 'Original value'
+        def func():
+            global exc
+            try:
+                raise ValueError('ve')
+            except ValueError as exc:
+                pass  # block never entered, exc stays unbound
+            exc
+        ''',
+                    m.UndefinedLocal)
+
+    def test_undefinedExceptionNameObscuringGlobalVariableFalsePositive1(self):
+        """Exception names obscure globals, can't be used after. Unless.
+
+        Last line will never raise NameError because it's only entered
+        if no exception was raised."""
+        self.flakes('''
+        exc = 'Original value'
+        def func():
+            global exc
+            try:
+                raise ValueError('ve')
+            except ValueError as exc:
+                print('exception logged')
+                raise
+            exc
+        ''')
+
+    def test_undefinedExceptionNameObscuringGlobalVariableFalsePositive2(self):
+        """Exception names obscure globals, can't be used after. Unless.
+
+        Last line will never raise NameError because `error` is only
+        falsy if the `except:` block has not been entered."""
+        self.flakes('''
+        exc = 'Original value'
+        def func():
+            global exc
+            error = None
+            try:
+                raise ValueError('ve')
+            except ValueError as exc:
+                error = 'exception logged'
+            if error:
+                print(error)
+            else:
+                exc
+        ''')
+
     def test_functionsNeedGlobalScope(self):
         self.flakes('''
         class a:

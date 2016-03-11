@@ -358,7 +358,7 @@ def getNodeName(node):
     # Returns node.id, or node.name, or None
     if hasattr(node, 'id'):     # One of the many nodes with an id
         return node.id
-    if hasattr(node, 'name'):   # a ExceptHandler node
+    if hasattr(node, 'name'):   # an ExceptHandler node
         return node.name
 
 
@@ -1173,8 +1173,29 @@ class Checker(object):
     TRYEXCEPT = TRY
 
     def EXCEPTHANDLER(self, node):
-        # 3.x: in addition to handling children, we must handle the name of
-        # the exception, which is not a Name node, but a simple string.
-        if isinstance(node.name, str):
-            self.handleNodeStore(node)
+        if PY2 or node.name is None:
+            self.handleChildren(node)
+            return
+
+        # 3.x: the name of the exception, which is not a Name node, but
+        # a simple string, creates a local that is only bound within the scope
+        # of the except: block.
+
+        for scope in self.scopeStack[::-1]:
+            if node.name in scope:
+                is_name_previously_defined = True
+                break
+        else:
+            is_name_previously_defined = False
+
+        self.handleNodeStore(node)
         self.handleChildren(node)
+        if not is_name_previously_defined:
+            # See discussion on https://github.com/pyflakes/pyflakes/pull/59.
+
+            # We're removing the local name since it's being unbound
+            # after leaving the except: block and it's always unbound
+            # if the except: block is never entered. This will cause an
+            # "undefined name" error raised if the checked code tries to
+            # use the name afterwards.
+            del self.scope[node.name]
