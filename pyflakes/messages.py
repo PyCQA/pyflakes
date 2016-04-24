@@ -215,3 +215,15 @@ class AssertTuple(Message):
     Assertion test is a tuple, which are always True.
     """
     message = 'assertion is always true, perhaps remove parentheses?'
+
+
+class InvalidKeywordInCall(Message):
+    """
+    Call uses a keyword that is not defined in the function definition.
+    """
+    message = 'call to %r got invalid keyword %r. valid keywords are %r'
+
+    def __init__(self, filename, loc, function_name, wrong_keyword, valid_keywords):
+        Message.__init__(self, filename, loc)
+        self.message_args = (function_name, wrong_keyword, list(valid_keywords))
+

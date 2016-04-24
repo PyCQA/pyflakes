@@ -723,6 +723,26 @@ class Checker(object):
         for node in iter_child_nodes(tree, omit=omit):
             self.handleNode(node, tree)
 
+    def handleCall(self, call):
+        # checks only keywords for now.
+        # TODO - check positional arguments as well
+        used_keywords = {k.arg for k in call.keywords}
+        function_name = getNodeName(call.func)
+        assert function_name is not None # 'attr' in call.func._fields ?
+        try:
+            func_binding = self.scope.get(function_name)
+        except:
+            self.report('{} not in scope {}, error'.format(function_name, self.scope))
+            return
+        fdef = func_binding.source
+        if fdef.args.kwarg is not None:
+            # ignore calls to double star functions
+            return
+        valid_keywords = {arg.id for arg in fdef.args.args}
+        for k in used_keywords - valid_keywords:
+            self.report(messages.InvalidKeywordInCall, call, function_name=function_name,
+                        wrong_keyword=k, valid_keywords=valid_keywords)
+
     def isLiteralTupleUnpacking(self, node):
         if isinstance(node, ast.Assign):
             for child in node.targets + [node.value]:
@@ -827,8 +847,10 @@ class Checker(object):
 
     # "expr" type nodes
     BOOLOP = BINOP = UNARYOP = IFEXP = DICT = SET = \
-        COMPARE = CALL = REPR = ATTRIBUTE = SUBSCRIPT = \
+        COMPARE = REPR = ATTRIBUTE = SUBSCRIPT = \
         STARRED = NAMECONSTANT = handleChildren
+
+    CALL = handleCall
 
     NUM = STR = BYTES = ELLIPSIS = ignore
 
