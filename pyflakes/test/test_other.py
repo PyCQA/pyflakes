@@ -1749,4 +1749,4 @@ class TestAsyncStatements(TestCase):
         def foo(a):
             pass
         foo(b=1)
-        ''')
+        ''', m.InvalidKeywordInCall)

@@ -362,6 +362,14 @@ def getNodeName(node):
         return node.name
 
 
+def getCallName(call):
+    node = call.func
+    if hasattr(node, 'id'):
+        return node.id
+    if hasattr(node, 'attr'):
+        return node.attr
+
+
 class Checker(object):
     """
     I check the cleanliness and sanity of Python code.
@@ -726,20 +734,23 @@ class Checker(object):
     def handleCall(self, call):
         # checks only keywords for now.
         # TODO - check positional arguments as well
-        function_name = getNodeName(call.func)
+        function_name = getCallName(call)
         assert function_name is not None # 'attr' in call.func._fields ?
         try:
             func_binding = self.scope.get(function_name)
         except:
             self.report('{} not in scope {}, error'.format(function_name, self.scope))
             return
-        fdef = func_binding.source
-        if isinstance(fdef, ast.FunctionDef):
-            self.validateCall(fdef, call)
-        elif isinstance(fdef, ast.Import):
-            self.validateImportCall(fdef, call)
-        else:
-            assert False, "unexpected call binding: not Import, not FunctionDef"
+        if func_binding is not None:
+            fdef = func_binding.source
+            if isinstance(fdef, ast.FunctionDef):
+                self.validateCall(fdef, call)
+            elif isinstance(fdef, (ast.Import, ast.ImportFrom)):
+                self.validateImportCall(fdef, call)
+            elif isinstance(fdef, ast.Name):
+                pass # TODO
+        # Finally also validate children
+        self.handleChildren(call)
 
     def validateImportCall(self, importdef, call):
         #print("TODO")
