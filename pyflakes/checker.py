@@ -742,7 +742,8 @@ class Checker(object):
             assert False, "unexpected call binding: not Import, not FunctionDef"
 
     def validateImportCall(self, importdef, call):
-        print("TODO")
+        #print("TODO")
+        pass
 
     def validateCall(self, fdef, call):
         if fdef.args.kwarg is not None:
