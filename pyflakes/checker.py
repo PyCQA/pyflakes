@@ -726,7 +726,6 @@ class Checker(object):
     def handleCall(self, call):
         # checks only keywords for now.
         # TODO - check positional arguments as well
-        used_keywords = {k.arg for k in call.keywords}
         function_name = getNodeName(call.func)
         assert function_name is not None # 'attr' in call.func._fields ?
         try:
@@ -735,9 +734,22 @@ class Checker(object):
             self.report('{} not in scope {}, error'.format(function_name, self.scope))
             return
         fdef = func_binding.source
+        if isinstance(fdef, ast.FunctionDef):
+            self.validateCall(fdef, call)
+        elif isinstance(fdef, ast.Import):
+            self.validateImportCall(fdef, call)
+        else:
+            assert False, "unexpected call binding: not Import, not FunctionDef"
+
+    def validateImportCall(self, importdef, call):
+        print("TODO")
+
+    def validateCall(self, fdef, call):
         if fdef.args.kwarg is not None:
             # ignore calls to double star functions
             return
+        used_keywords = {k.arg for k in call.keywords}
+        function_name = getNodeName(call.func)
         valid_keywords = {arg.id for arg in fdef.args.args}
         for k in used_keywords - valid_keywords:
             self.report(messages.InvalidKeywordInCall, call, function_name=function_name,
