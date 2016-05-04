@@ -1,3 +1,24 @@
+1.2.0 (2015-05-01):
+  - Warn against reusing exception names after the except: block on Python 3
+  - Improve the error messages for imports
+
+1.1.0 (2016-03-01):
+  - Allow main() to accept arguments.
+  - Support @ matrix-multiplication operator
+  - Validate __future__ imports
+  - Fix doctest scope testing
+  - Warn for tuple assertions which are always true
+  - Warn for "import *" not at module level on Python 3
+  - Catch many more kinds of SyntaxErrors
+  - Check PEP 498 f-strings
+  - (and a few more sundry bugfixes)
+
+1.0.0 (2015-09-20):
+  - Python 3.5 support. async/await statements in particular.
+  - Fix test_api.py on Windows.
+  - Eliminate a false UnusedImport warning when the name has been
+    declared "global"
+
 0.9.2 (2015-06-17):
   - Fix a traceback when a global is defined in one scope, and used in another.
 
