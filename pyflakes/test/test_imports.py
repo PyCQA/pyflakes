@@ -767,6 +767,12 @@ class Test(TestCase):
         fu.x
         ''')
 
+        self.flakes('''
+        import fu.bar
+        import fu
+        fu.x
+        ''')
+
     def test_unused_package_with_submodule_import(self):
         """
         When a package and its submodule are imported, only report once.

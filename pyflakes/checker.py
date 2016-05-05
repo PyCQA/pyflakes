@@ -142,6 +142,9 @@ class Importation(Definition):
         super(Importation, self).__init__(name, source)
 
     def redefines(self, other):
+        if isinstance(other, SubmoduleImportation):
+            # See note in SubmoduleImportation about RedefinedWhileUnused
+            return self.fullName == other.fullName
         return isinstance(other, Definition) and self.name == other.name
 
     def _has_alias(self):
@@ -165,13 +168,24 @@ class Importation(Definition):
 
 
 class SubmoduleImportation(Importation):
+    """
+    A binding created by a submodule import statement.
+
+    A submodule import is a special case where the root module is implicitly
+    imported, without an 'as' clause, and the submodule is also imported.
+    Python does not restrict which attributes of the root module may be used.
+
+    This class is only used when the submodule import is without an 'as' clause.
+
+    pyflakes handles this case by registering the root module name in the scope,
+    allowing any attribute of the root module to be accessed.
+
+    RedefinedWhileUnused is suppressed in `redefines` unless the submodule
+    name is also the same, to avoid false positives.
+    """
 
     def __init__(self, name, source):
         # A dot should only appear in the name when it is a submodule import
-        # without an 'as' clause, which is a special type of import where the
-        # root module is implicitly imported, and the submodules are also
-        # accessible because Python does not restrict which attributes of the
-        # root module may be used.
         assert '.' in name and (not source or isinstance(source, ast.Import))
         package_name = name.split('.')[0]
         super(SubmoduleImportation, self).__init__(package_name, source)
