@@ -2,6 +2,7 @@
 *.egg-info
 *.pyc
 .tox
+/.cache/
 /dist/
 /build/
 docs/_build

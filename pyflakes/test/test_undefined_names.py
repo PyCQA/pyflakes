@@ -97,6 +97,15 @@ class Test(TestCase):
         exc
         ''')
 
+    def test_delExceptionInExcept(self):
+        """The exception name can be deleted in the except: block."""
+        self.flakes('''
+        try:
+            pass
+        except Exception as exc:
+            del exc
+        ''')
+
     def test_undefinedExceptionNameObscuringLocalVariableFalsePositive2(self):
         """Exception names obscure locals, can't be used after. Unless.
 

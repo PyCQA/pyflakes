@@ -1212,4 +1212,10 @@ class Checker(object):
             # if the except: block is never entered. This will cause an
             # "undefined name" error raised if the checked code tries to
             # use the name afterwards.
-            del self.scope[node.name]
+            #
+            # Unless it's been removed already. Then do nothing.
+
+            try:
+                del self.scope[node.name]
+            except KeyError:
+                pass
