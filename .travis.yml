@@ -17,4 +17,8 @@ install:
 script:
   - python setup.py test -q
   - if [ "$TRAVIS_PYTHON_VERSION" != "nightly" ]; then flake8 pyflakes setup.py; fi
+  - python -c "import pyflakes.api; pyflakes.api.checkRecursive(['$VIRTUAL_ENV/'], None);" > pyflakes.log
+  - tail -100 pyflakes.log
+after_script:
+  - cat pyflakes.log
 sudo: false
