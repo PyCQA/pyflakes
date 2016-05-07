@@ -1743,3 +1743,10 @@ class TestAsyncStatements(TestCase):
         def foo(a, b):
             return a @ b
         ''')
+
+    def test_callKeywords(self):
+        self.flakes('''
+        def foo(a):
+            pass
+        foo(b=1)
+        ''', m.InvalidKeywordInCall)
