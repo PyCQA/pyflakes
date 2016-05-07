@@ -2,6 +2,8 @@
 Tests for various Pyflakes behavior.
 """
 
+import sys
+
 from sys import version_info
 
 from pyflakes import messages as m
@@ -1100,6 +1102,50 @@ class Test(TestCase):
         x not in y
         ''')
 
+    def test_flattened(self):
+        """
+        Suppress warning when a defined name is used by a binop.
+        """
+        self.flakes('''
+        w = 5
+        x = 10
+        y = 20
+        z = w + x + y
+        ''')
+
+        self.flakes('''
+        a = 10
+        x = {}
+        y = {}
+        z = x + {a: a} + y
+        ''')
+
+    def test_flattened_with_lambda(self):
+        """
+        Suppress warning when a defined name is used in an expression
+        containing flattened and recursed nodes.
+        """
+        self.flakes('''
+        a = 10
+        b = 10
+        l = True and (lambda x: a) or (lambda x: b)
+        ''')
+        self.flakes('''
+        a = 10
+        l = []
+        l = l + (lambda x: a)
+        ''')
+
+    def test_flattened_with_comprehension(self):
+        """
+        Suppress warning when a defined name is used in an expression
+        containing flattened and recursed nodes.
+        """
+        self.flakes('''
+        l = []
+        l = l + [x for x in range(10)]
+        ''')
+
     def test_loopControl(self):
         """
         break and continue statements are supported.
@@ -1183,6 +1229,11 @@ class TestUnusedAssignment(TestCase):
         def a():
             b = 1
             return locals()
+        ''')
+        self.flakes('''
+        def a():
+            b = 1
+            return '{b}' % locals()
         ''')
 
     def test_unusedVariableNoLocals(self):
@@ -1389,6 +1440,13 @@ class TestUnusedAssignment(TestCase):
         self.flakes("a = 'moo' if True else 'oink'")
         self.flakes("a = foo if True else 'oink'", m.UndefinedName)
         self.flakes("a = 'moo' if True else bar", m.UndefinedName)
+
+    def test_withStatement(self):
+        self.flakes('''
+        with open('foo'):
+            baz = 1
+            assert baz
+        ''')
 
     def test_withStatementNoNames(self):
         """
@@ -1743,7 +1801,9 @@ class TestAsyncStatements(TestCase):
         async def read_data(db):
             output = []
             async for row in db.cursor():
+                foo = 1
                 output.append(row)
+                assert foo
             return output
         ''')
 
@@ -1810,6 +1870,8 @@ class TestAsyncStatements(TestCase):
         async def commit(session, data):
             async with session.transaction():
                 await session.update(data)
+                foo = 1
+                assert foo
         ''')
 
     @skipIf(version_info < (3, 5), 'new in Python 3.5')
@@ -1818,7 +1880,9 @@ class TestAsyncStatements(TestCase):
         async def commit(session, data):
             async with session.transaction() as trans:
                 await trans.begin()
+                foo = 1
                 ...
+                assert foo
                 await trans.end()
         ''')
 
@@ -1993,3 +2057,17 @@ class TestAsyncStatements(TestCase):
         self.flakes('''
         raise NotImplemented
         ''', m.RaiseNotImplemented)
+
+
+class TestMaximumRecursion(TestCase):
+
+    def setUp(self):
+        self._recursionlimit = sys.getrecursionlimit()
+
+    def test_flattened(self):
+        sys.setrecursionlimit(100)
+        s = 'x = ' + ' + '.join(str(n) for n in range(100))
+        self.flakes(s)
+
+    def tearDown(self):
+        sys.setrecursionlimit(self._recursionlimit)
