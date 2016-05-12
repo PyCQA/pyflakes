@@ -1,3 +1,6 @@
+1.2.3 (2016-05-12):
+  - Fix TypeError when processing relative imports
+
 1.2.2 (2016-05-06):
   - Avoid traceback when exception is del-ed in except
 
