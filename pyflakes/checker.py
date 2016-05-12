@@ -209,7 +209,12 @@ class ImportationFrom(Importation):
     def __init__(self, name, source, module, real_name=None):
         self.module = module
         self.real_name = real_name or name
-        full_name = module + '.' + self.real_name
+
+        if module.endswith('.'):
+            full_name = module + self.real_name
+        else:
+            full_name = module + '.' + self.real_name
+
         super(ImportationFrom, self).__init__(name, source, full_name)
 
     def __str__(self):
@@ -244,7 +249,11 @@ class StarImportation(Importation):
         return 'from ' + self.fullName + ' import *'
 
     def __str__(self):
-        return self.name
+        # When the module ends with a ., avoid the ambiguous '..*'
+        if self.fullName.endswith('.'):
+            return self.source_statement
+        else:
+            return self.name
 
 
 class FutureImportation(ImportationFrom):
@@ -1142,6 +1151,8 @@ class Checker(object):
         else:
             self.futuresAllowed = False
 
+        module = ('.' * node.level) + (node.module or '')
+
         for alias in node.names:
             name = alias.asname or alias.name
             if node.module == '__future__':
@@ -1153,15 +1164,15 @@ class Checker(object):
                 # Only Python 2, local import * is a SyntaxWarning
                 if not PY2 and not isinstance(self.scope, ModuleScope):
                     self.report(messages.ImportStarNotPermitted,
-                                node, node.module)
+                                node, module)
                     continue
 
                 self.scope.importStarred = True
-                self.report(messages.ImportStarUsed, node, node.module)
-                importation = StarImportation(node.module, node)
+                self.report(messages.ImportStarUsed, node, module)
+                importation = StarImportation(module, node)
             else:
                 importation = ImportationFrom(name, node,
-                                              node.module, alias.name)
+                                              module, alias.name)
             self.addBinding(node, importation)
 
     def TRY(self, node):
