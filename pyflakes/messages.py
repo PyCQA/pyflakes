@@ -116,6 +116,22 @@ class DuplicateArgument(Message):
         self.message_args = (name,)
 
 
+class MultiValueRepeatedKeyLiteral(Message):
+    message = 'dictionary key %r repeated with different values'
+
+    def __init__(self, filename, loc, key):
+        Message.__init__(self, filename, loc)
+        self.message_args = (key,)
+
+
+class MultiValueRepeatedKeyVariable(Message):
+    message = 'dictionary key variable %s repeated with different values'
+
+    def __init__(self, filename, loc, key):
+        Message.__init__(self, filename, loc)
+        self.message_args = (key,)
+
+
 class LateFutureImport(Message):
     message = 'from __future__ imports must occur at the beginning of the file'
 
