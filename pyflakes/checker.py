@@ -170,6 +170,9 @@ class Definition(Binding):
     A binding that defines a function or a class.
     """
 
+    def redefines(self, other):
+        return super(Definition, self).redefines(other) and self.name != "_"
+
 
 class UnhandledKeyType(object):
     """
