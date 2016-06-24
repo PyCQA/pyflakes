@@ -151,6 +151,16 @@ class Test(TestCase):
         def a(): pass
         ''', m.RedefinedWhileUnused)
 
+    def test_redefinedUnderscoreFunction(self):
+        """
+        Test that shadowing a function definition named with underscore doesn't
+        raise anything.
+        """
+        self.flakes('''
+        def _(): pass
+        def _(): pass
+        ''')
+
     def test_redefinedClassFunction(self):
         """
         Test that shadowing a function definition in a class suite with another
