@@ -1720,6 +1720,63 @@ class TestAsyncStatements(TestCase):
         ''')
 
     @skipIf(version_info < (3, 5), 'new in Python 3.5')
+    def test_loopControlInAsyncFor(self):
+        self.flakes('''
+        async def read_data(db):
+            output = []
+            async for row in db.cursor():
+                if row[0] == 'skip':
+                    continue
+                output.append(row)
+            return output
+        ''')
+
+        self.flakes('''
+        async def read_data(db):
+            output = []
+            async for row in db.cursor():
+                if row[0] == 'stop':
+                    break
+                output.append(row)
+            return output
+        ''')
+
+    @skipIf(version_info < (3, 5), 'new in Python 3.5')
+    def test_loopControlInAsyncForElse(self):
+        self.flakes('''
+        async def read_data(db):
+            output = []
+            async for row in db.cursor():
+                output.append(row)
+            else:
+                continue
+            return output
+        ''', m.ContinueOutsideLoop)
+
+        self.flakes('''
+        async def read_data(db):
+            output = []
+            async for row in db.cursor():
+                output.append(row)
+            else:
+                break
+            return output
+        ''', m.BreakOutsideLoop)
+
+    @skipIf(version_info < (3, 5), 'new in Python 3.5')
+    def test_continueInAsyncForFinally(self):
+        self.flakes('''
+        async def read_data(db):
+            output = []
+            async for row in db.cursor():
+                try:
+                    output.append(row)
+                finally:
+                    continue
+            return output
+        ''', m.ContinueInFinally)
+
+    @skipIf(version_info < (3, 5), 'new in Python 3.5')
     def test_asyncWith(self):
         self.flakes('''
         async def commit(session, data):

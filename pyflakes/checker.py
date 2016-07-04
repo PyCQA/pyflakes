@@ -12,6 +12,7 @@ import sys
 PY2 = sys.version_info < (3, 0)
 PY32 = sys.version_info < (3, 3)    # Python 2.5 to 3.2
 PY33 = sys.version_info < (3, 4)    # Python 2.5 to 3.3
+PY34 = sys.version_info < (3, 5)    # Python 2.5 to 3.4
 try:
     sys.pypy_version_info
     PYPY = True
@@ -54,6 +55,11 @@ else:
             return [n.body]
         if isinstance(n, ast.Try):
             return [n.body + n.orelse] + [[hdl] for hdl in n.handlers]
+
+if PY34:
+    LOOP_TYPES = (ast.While, ast.For)
+else:
+    LOOP_TYPES = (ast.While, ast.For, ast.AsyncFor)
 
 
 class _FieldsOrder(dict):
@@ -943,7 +949,7 @@ class Checker(object):
         n = node
         while hasattr(n, 'parent'):
             n, n_child = n.parent, n
-            if isinstance(n, (ast.While, ast.For)):
+            if isinstance(n, LOOP_TYPES):
                 # Doesn't apply unless it's in the loop itself
                 if n_child not in n.orelse:
                     return
