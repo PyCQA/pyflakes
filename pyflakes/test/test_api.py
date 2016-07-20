@@ -55,10 +55,30 @@ class Node(object):
 
 class SysStreamCapturing(object):
 
-    """Replaces sys.stdin, sys.stdout and sys.stderr with StringIO objects."""
+    """
+    Context manager capturing sys.stdin, sys.stdout and sys.stderr.
+
+    The file handles are replaced with a StringIO object.
+    On environments that support it, the StringIO object uses newlines
+    set to os.linesep.  Otherwise newlines are converted from \\n to
+    os.linesep during __exit__.
+    """
+
+    def _create_StringIO(self, buffer=None):
+        # Python 3 has a newline argument
+        try:
+            return StringIO(buffer, newline=os.linesep)
+        except TypeError:
+            self._newline = True
+            # Python 2 creates an input only stream when buffer is not None
+            if buffer is None:
+                return StringIO()
+            else:
+                return StringIO(buffer)
 
     def __init__(self, stdin):
-        self._stdin = StringIO(stdin or '')
+        self._newline = False
+        self._stdin = self._create_StringIO(stdin or '')
 
     def __enter__(self):
         self._orig_stdin = sys.stdin
@@ -66,14 +86,18 @@ class SysStreamCapturing(object):
         self._orig_stderr = sys.stderr
 
         sys.stdin = self._stdin
-        sys.stdout = self._stdout_stringio = StringIO()
-        sys.stderr = self._stderr_stringio = StringIO()
+        sys.stdout = self._stdout_stringio = self._create_StringIO()
+        sys.stderr = self._stderr_stringio = self._create_StringIO()
 
         return self
 
     def __exit__(self, *args):
         self.output = self._stdout_stringio.getvalue()
         self.error = self._stderr_stringio.getvalue()
+
+        if self._newline and os.linesep != '\n':
+            self.output = self.output.replace('\n', os.linesep)
+            self.error = self.error.replace('\n', os.linesep)
 
         sys.stdin = self._orig_stdin
         sys.stdout = self._orig_stdout
