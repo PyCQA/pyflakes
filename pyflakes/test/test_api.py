@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import tempfile
 
+from pyflakes.checker import PY2
 from pyflakes.messages import UnusedImport
 from pyflakes.reporter import Reporter
 from pyflakes.api import (
@@ -29,6 +30,12 @@ try:
     PYPY = True
 except AttributeError:
     PYPY = False
+
+try:
+    WindowsError
+    WIN = True
+except NameError:
+    WIN = False
 
 ERROR_HAS_COL_NUM = ERROR_HAS_LAST_LINE = sys.version_info >= (3, 2) or PYPY
 
@@ -661,6 +668,9 @@ class IntegrationTests(TestCase):
         if sys.version_info >= (3,):
             stdout = stdout.decode('utf-8')
             stderr = stderr.decode('utf-8')
+        # Workaround https://bitbucket.org/pypy/pypy/issues/2350
+        if PYPY and PY2 and WIN:
+            stderr = stderr.replace('\r\r\n', '\r\n')
         return (stdout, stderr, rv)
 
     def test_goodFile(self):
@@ -685,7 +695,7 @@ class IntegrationTests(TestCase):
         expected = UnusedImport(self.tempfilepath, Node(1), 'contraband')
         self.assertEqual(d, ("%s%s" % (expected, os.linesep), '', 1))
 
-    def test_errors(self):
+    def test_errors_io(self):
         """
         When pyflakes finds errors with the files it's given, (if they don't
         exist, say), then the return code is non-zero and the errors are
@@ -695,6 +705,20 @@ class IntegrationTests(TestCase):
         error_msg = '%s: No such file or directory%s' % (self.tempfilepath,
                                                          os.linesep)
         self.assertEqual(d, ('', error_msg, 1))
+
+    def test_errors_syntax(self):
+        """
+        When pyflakes finds errors with the files it's given, (if they don't
+        exist, say), then the return code is non-zero and the errors are
+        printed to stderr.
+        """
+        fd = open(self.tempfilepath, 'wb')
+        fd.write("import".encode('ascii'))
+        fd.close()
+        d = self.runPyflakes([self.tempfilepath])
+        error_msg = '{0}:1:{2}: invalid syntax{1}import{1}    {3}^{1}'.format(
+            self.tempfilepath, os.linesep, 5 if PYPY else 7, '' if PYPY else '  ')
+        self.assertEqual(d, ('', error_msg, True))
 
     def test_readFromStdin(self):
         """
