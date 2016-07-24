@@ -81,6 +81,17 @@ class _FieldsOrder(dict):
         return fields
 
 
+def counter(items):
+    """
+    Simplest required implementation of collections.Counter. Required as 2.6
+    does not have Counter in collections.
+    """
+    results = {}
+    for item in items:
+        results[item] = results.get(item, 0) + 1
+    return results
+
+
 def iter_child_nodes(node, omit=None, _fields_order=_FieldsOrder()):
     """
     Yield all direct child nodes of *node*, that is, all fields that
@@ -95,6 +106,33 @@ def iter_child_nodes(node, omit=None, _fields_order=_FieldsOrder()):
         elif isinstance(field, list):
             for item in field:
                 yield item
+
+
+def convert_to_value(item):
+    if isinstance(item, ast.Str):
+        return item.s
+    elif hasattr(ast, 'Bytes') and isinstance(item, ast.Bytes):
+        return item.s
+    elif isinstance(item, ast.Tuple):
+        return tuple(convert_to_value(i) for i in item.elts)
+    elif isinstance(item, ast.Num):
+        return item.n
+    elif isinstance(item, ast.Name):
+        result = VariableKey(item=item)
+        constants_lookup = {
+            'True': True,
+            'False': False,
+            'None': None,
+        }
+        return constants_lookup.get(
+            result.name,
+            result,
+        )
+    elif (not PY33) and isinstance(item, ast.NameConstant):
+        # None, True, False are nameconstants in python3, but names in 2
+        return item.value
+    else:
+        return UnhandledKeyType()
 
 
 class Binding(object):
@@ -131,6 +169,31 @@ class Definition(Binding):
     """
     A binding that defines a function or a class.
     """
+
+
+class UnhandledKeyType(object):
+    """
+    A dictionary key of a type that we cannot or do not check for duplicates.
+    """
+
+
+class VariableKey(object):
+    """
+    A dictionary key which is a variable.
+
+    @ivar item: The variable AST object.
+    """
+    def __init__(self, item):
+        self.name = item.id
+
+    def __eq__(self, compare):
+        return (
+            compare.__class__ == self.__class__
+            and compare.name == self.name
+        )
+
+    def __hash__(self):
+        return hash(self.name)
 
 
 class Importation(Definition):
@@ -855,7 +918,7 @@ class Checker(object):
     PASS = ignore
 
     # "expr" type nodes
-    BOOLOP = BINOP = UNARYOP = IFEXP = DICT = SET = \
+    BOOLOP = BINOP = UNARYOP = IFEXP = SET = \
         COMPARE = CALL = REPR = ATTRIBUTE = SUBSCRIPT = \
         STARRED = NAMECONSTANT = handleChildren
 
@@ -875,6 +938,42 @@ class Checker(object):
 
     # additional node types
     COMPREHENSION = KEYWORD = FORMATTEDVALUE = handleChildren
+
+    def DICT(self, node):
+        # Complain if there are duplicate keys with different values
+        # If they have the same value it's not going to cause potentially
+        # unexpected behaviour so we'll not complain.
+        keys = [
+            convert_to_value(key) for key in node.keys
+        ]
+
+        key_counts = counter(keys)
+        duplicate_keys = [
+            key for key, count in key_counts.items()
+            if count > 1
+        ]
+
+        for key in duplicate_keys:
+            key_indices = [i for i, i_key in enumerate(keys) if i_key == key]
+
+            values = counter(
+                convert_to_value(node.values[index])
+                for index in key_indices
+            )
+            if any(count == 1 for value, count in values.items()):
+                for key_index in key_indices:
+                    key_node = node.keys[key_index]
+                    if isinstance(key, VariableKey):
+                        self.report(messages.MultiValueRepeatedKeyVariable,
+                                    key_node,
+                                    key.name)
+                    else:
+                        self.report(
+                            messages.MultiValueRepeatedKeyLiteral,
+                            key_node,
+                            key,
+                        )
+        self.handleChildren(node)
 
     def ASSERT(self, node):
         if isinstance(node.test, ast.Tuple) and node.test.elts != []:
