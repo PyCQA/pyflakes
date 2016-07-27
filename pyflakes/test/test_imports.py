@@ -180,7 +180,7 @@ class Test(TestCase):
 
     def test_redefinedTry(self):
         """
-        Test that importing a module twice in an try block
+        Test that importing a module twice in a try block
         does raise a warning.
         """
         self.flakes('''
@@ -193,7 +193,7 @@ class Test(TestCase):
 
     def test_redefinedTryExcept(self):
         """
-        Test that importing a module twice in an try
+        Test that importing a module twice in a try
         and except block does not raise a warning.
         """
         self.flakes('''
@@ -1149,7 +1149,7 @@ class TestSpecialAll(TestCase):
 
 class Python26Tests(TestCase):
     """
-    Tests for checking of syntax which is valid in PYthon 2.6 and newer.
+    Tests for checking of syntax which is valid in Python 2.6 and newer.
     """
 
     @skipIf(version_info < (2, 6), "Python >= 2.6 only")

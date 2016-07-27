@@ -304,7 +304,7 @@ class ImportationFrom(Importation):
 
 
 class StarImportation(Importation):
-    """A binding created by an 'from x import *' statement."""
+    """A binding created by a 'from x import *' statement."""
 
     def __init__(self, name, source):
         super(StarImportation, self).__init__('*', source)
@@ -799,7 +799,7 @@ class Checker(object):
             return
 
         if on_conditional_branch():
-            # We can not predict if this conditional branch is going to
+            # We cannot predict if this conditional branch is going to
             # be executed.
             return
 
