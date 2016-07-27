@@ -5,7 +5,7 @@
   - Avoid traceback when exception is del-ed in except
 
 1.2.1 (2015-05-05):
-  - Fix false RedefinedWhileUnesed for submodule imports
+  - Fix false RedefinedWhileUnused for submodule imports
 
 1.2.0 (2016-05-03):
   - Warn against reusing exception names after the except: block on Python 3

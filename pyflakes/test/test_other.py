@@ -1181,7 +1181,7 @@ class TestUnusedAssignment(TestCase):
                 return
         ''', m.UnusedVariable)
 
-    @skip("todo: Difficult because it does't apply in the context of a loop")
+    @skip("todo: Difficult because it doesn't apply in the context of a loop")
     def test_unusedReassignedVariable(self):
         """
         Shadowing a used variable can still raise an UnusedVariable warning.
@@ -1489,7 +1489,7 @@ class TestUnusedAssignment(TestCase):
 
     def test_withStatementTupleNamesUndefined(self):
         """
-        An undefined name warning is emitted if a name first defined by a the
+        An undefined name warning is emitted if a name first defined by the
         tuple-unpacking form of the C{with} statement is used before the
         C{with} statement.
         """
