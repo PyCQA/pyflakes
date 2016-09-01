@@ -1,3 +1,9 @@
+1.3.0 (2016-09-01):
+  - Fix PyPy2 Windows IntegrationTests
+  - Check for duplicate dictionary keys
+  - Fix TestMain tests on Windows
+  - Fix "continue" and "break" checks ignoring py3.5's "async for" loop
+
 1.2.3 (2016-05-12):
   - Fix TypeError when processing relative imports
 
