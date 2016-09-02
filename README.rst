@@ -81,4 +81,4 @@ All changes should be include tests and pass flake8_.
 .. _`PEP 8`: http://legacy.python.org/dev/peps/pep-0008/
 .. _Pychecker: http://pychecker.sourceforge.net/
 .. _`rebase your changes`: https://git-scm.com/book/en/v2/Git-Branching-Rebasing
-.. _`GitHub pull request`: https://github.com/pyflakes/pyflakes/pulls
+.. _`GitHub pull request`: https://github.com/PyCQA/pyflakes/pulls

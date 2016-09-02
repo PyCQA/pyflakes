@@ -42,7 +42,7 @@ setup(
     long_description=get_long_description(),
     author="A lot of people",
     author_email="code-quality@python.org",
-    url="https://github.com/pyflakes/pyflakes",
+    url="https://github.com/PyCQA/pyflakes",
     packages=["pyflakes", "pyflakes.scripts", "pyflakes.test"],
     classifiers=[
         "Development Status :: 6 - Mature",
