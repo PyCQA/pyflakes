@@ -1321,7 +1321,7 @@ class Checker(object):
         self.handleNodeStore(node)
         self.handleChildren(node)
         if not is_name_previously_defined:
-            # See discussion on https://github.com/pyflakes/pyflakes/pull/59.
+            # See discussion on https://github.com/PyCQA/pyflakes/pull/59
 
             # We're removing the local name since it's being unbound
             # after leaving the except: block and it's always unbound
