@@ -1800,3 +1800,11 @@ class TestAsyncStatements(TestCase):
         def foo(a, b):
             return a @ b
         ''')
+
+    @skipIf(version_info < (3, 6), 'new in Python 3.6')
+    def test_formatstring(self):
+        self.flakes('''
+        hi = 'hi'
+        mom = 'mom'
+        f'{hi} {mom}'
+        ''')

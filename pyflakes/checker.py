@@ -937,7 +937,7 @@ class Checker(object):
         MATMULT = ignore
 
     # additional node types
-    COMPREHENSION = KEYWORD = FORMATTEDVALUE = handleChildren
+    COMPREHENSION = KEYWORD = FORMATTEDVALUE = JOINEDSTR = handleChildren
 
     def DICT(self, node):
         # Complain if there are duplicate keys with different values
