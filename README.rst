@@ -70,7 +70,7 @@ a coherent unit of work with a well-written log message.  If you are not
 comfortable with this rebase workflow, the project maintainers will be happy to
 rebase your commits for you.
 
-All changes should be include tests and pass flake8_.
+All changes should include tests and pass flake8_.
 
 .. image:: https://api.travis-ci.org/PyCQA/pyflakes.svg
    :target: https://travis-ci.org/PyCQA/pyflakes
