@@ -161,6 +161,15 @@ class Test(TestCase):
         def _(): pass
         ''')
 
+    def test_redefinedUnderscoreImportation(self):
+        """
+        Test that shadowing an underscore importation raises a warning.
+        """
+        self.flakes('''
+        from .i18n import _
+        def _(): pass
+        ''', m.RedefinedWhileUnused)
+
     def test_redefinedClassFunction(self):
         """
         Test that shadowing a function definition in a class suite with another
