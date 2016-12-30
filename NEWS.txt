@@ -1,3 +1,7 @@
+1.4.0 (2016-12-30):
+  - Change formatting of ImportStarMessage to be consistent with other errors
+  - Support PEP 498 "f-strings"
+
 1.3.0 (2016-09-01):
   - Fix PyPy2 Windows IntegrationTests
   - Check for duplicate dictionary keys
