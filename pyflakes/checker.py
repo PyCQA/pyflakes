@@ -1335,3 +1335,21 @@ class Checker(object):
                 del self.scope[node.name]
             except KeyError:
                 pass
+
+    def ANNASSIGN(self, node):
+        """
+        Annotated assignments don't have annotations evaluated on function
+        scope, hence the custom implementation.
+
+        See: PEP 526.
+        """
+        if node.value:
+            # Only bind the *targets* if the assignment has a value.
+            # Otherwise it's not really ast.Store and shouldn't silence
+            # UndefinedLocal warnings.
+            self.handleNode(node.target, node)
+        if not isinstance(self.scope, FunctionScope):
+            self.handleNode(node.annotation, node)
+        if node.value:
+            # If the assignment has value, handle the *value* now.
+            self.handleNode(node.value, node)
