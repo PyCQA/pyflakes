@@ -1,3 +1,6 @@
+1.5.0 (2017-01-09)
+  - Enable support for PEP 526 annotated assignments
+
 1.4.0 (2016-12-30):
   - Change formatting of ImportStarMessage to be consistent with other errors
   - Support PEP 498 "f-strings"
