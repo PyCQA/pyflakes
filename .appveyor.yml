@@ -30,10 +30,10 @@ install:
 
   # pypy3-2.4.0 and pypy-2.6.1 are manually bootstrapped and tested
   - ps: (New-Object Net.WebClient).DownloadFile('https://bootstrap.pypa.io/get-pip.py', "$env:appveyor_build_folder\get-pip.py")
-  - C:\pypy3-2.4.0-win32\pypy3 "$env:appveyor_build_folder\get-pip.py"
-  - C:\pypy3-2.4.0-win32\pypy3 -m pip install -U setuptools
-  - C:\pypy-2.6.1-win32\pypy "$env:appveyor_build_folder\get-pip.py"
-  - C:\pypy-2.6.1-win32\pypy -m pip install -U setuptools
+  - ps: C:\pypy3-2.4.0-win32\pypy3 "$env:appveyor_build_folder\get-pip.py"
+  - ps: C:\pypy3-2.4.0-win32\pypy3 -m pip install -U setuptools
+  - ps: C:\pypy-2.6.1-win32\pypy "$env:appveyor_build_folder\get-pip.py"
+  - ps: C:\pypy-2.6.1-win32\pypy -m pip install -U setuptools
 
 build: off
 
