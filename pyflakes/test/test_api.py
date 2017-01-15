@@ -513,12 +513,14 @@ foo = '\\xyz'
             sourcePath, [decoding_error])
 
     @skipIf(sys.platform == 'win32', 'unsupported on Windows')
-    @skipIf(os.getuid() == 0, 'root can do anything')
     def test_permissionDenied(self):
         """
         If the source file is not readable, this is reported on standard
         error.
         """
+        if os.getuid() == 0:
+            self.skipTest('root user can access all files regardless of '
+                          'permissions')
         sourcePath = self.makeTempFile('')
         os.chmod(sourcePath, 0)
         count, errors = self.getErrors(sourcePath)
