@@ -518,6 +518,9 @@ foo = '\\xyz'
         If the source file is not readable, this is reported on standard
         error.
         """
+        if os.getuid() == 0:
+            self.skipTest('root user can access all files regardless of '
+                          'permissions')
         sourcePath = self.makeTempFile('')
         os.chmod(sourcePath, 0)
         count, errors = self.getErrors(sourcePath)
