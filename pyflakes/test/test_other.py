@@ -1839,12 +1839,17 @@ class TestAsyncStatements(TestCase):
             name: str = 'Bob'
             age: int = 18
             foo: not_a_real_type = None
-        ''', m.UnusedVariable, m.UnusedVariable, m.UnusedVariable)
+        ''', m.UnusedVariable, m.UnusedVariable, m.UnusedVariable, m.UndefinedName)
         self.flakes('''
         def f():
             name: str
             print(name)
         ''', m.UndefinedName)
+        self.flakes('''
+        from typing import Any
+        def f():
+            a: Any
+        ''')
         self.flakes('''
         foo: not_a_real_type
         ''', m.UndefinedName)

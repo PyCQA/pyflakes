@@ -30,13 +30,11 @@ install:
 
   # pypy3-2.4.0 and pypy-2.6.1 are manually bootstrapped and tested
   - ps: (New-Object Net.WebClient).DownloadFile('https://bootstrap.pypa.io/get-pip.py', "$env:appveyor_build_folder\get-pip.py")
-  - git clone https://github.com/pypa/setuptools/
-  - cd setuptools
-  - C:\pypy3-2.4.0-win32\pypy3 bootstrap.py
-  - C:\pypy3-2.4.0-win32\pypy3 setup.py install
-  - C:\pypy-2.6.1-win32\pypy bootstrap.py
-  - C:\pypy-2.6.1-win32\pypy setup.py install
-  - cd ..
+  # errors are ignored due to https://github.com/pypa/pip/issues/2669#issuecomment-136405390
+  # NOTE: If and when a new version of PyPy3 is released for Windows that
+  #       supports anything newer than Python 3.2, remove the setuptools pin.
+  - ps: C:\pypy3-2.4.0-win32\pypy3 "$env:appveyor_build_folder\get-pip.py"; C:\pypy3-2.4.0-win32\pypy3 -m pip install -U --force-reinstall pip==8.1.2 "setuptools<30"; echo "ignore error"
+  - ps: C:\pypy-2.6.1-win32\pypy "$env:appveyor_build_folder\get-pip.py"
 
 build: off
 
