@@ -484,6 +484,31 @@ foo(bar=baz, bax)
 foo(bar=baz, bax)
 %s""" % (sourcePath, column, message, last_line)])
 
+    def test_nonastSyntaxError(self):
+        """
+        SyntaxError that is not encoded in the ast, and can only be detected
+        by compiling to bytecode, like return outside of function.
+        """
+        source = """\
+return
+"""
+        sourcePath = self.makeTempFile(source)
+        if sys.version_info[0] == 3:
+            self.assertHasErrors(
+                sourcePath,
+                ["""\
+%s:1:0: 'return' outside function
+return
+     ^
+""" % sourcePath])
+        else:
+            self.assertHasErrors(
+                sourcePath,
+                ["""\
+%s:1: 'return' outside function
+return
+""" % sourcePath])
+
     def test_invalidEscape(self):
         """
         The invalid escape syntax raises ValueError in Python 2
