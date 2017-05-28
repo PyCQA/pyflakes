@@ -61,7 +61,7 @@ Share your feedback and ideas: `subscribe to the mailing-list
 Contributing
 ------------
 
-Issues are tracked on `Launchpad <https://bugs.launchpad.net/pyflakes>`_.
+Issues are tracked on `GitHub <https://github.com/PyCQA/pyflakes/issues>`_.
 
 Patches may be submitted via a `GitHub pull request`_ or via the mailing list
 if you prefer. If you are comfortable doing so, please `rebase your changes`_
