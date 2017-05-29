@@ -1,3 +1,4 @@
+.*.sw?
 *.egg
 *.egg-info
 *.pyc
