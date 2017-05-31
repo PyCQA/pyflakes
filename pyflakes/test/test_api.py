@@ -187,6 +187,22 @@ class TestIterSourceCode(TestCase):
             sorted(iterSourceCode([self.tempdir])),
             sorted([apath, bpath, cpath]))
 
+    def test_shebang(self):
+        """
+        Find Python files that don't end with `.py`, but contain a Python
+        shebang.
+        """
+        apath = os.path.join(self.tempdir, 'a')
+        fd = open(apath, 'w')
+        fd.write('#!/usr/bin/env python\n')
+        fd.close()
+
+        self.makeEmptyFile('b')
+
+        self.assertEqual(
+            list(iterSourceCode([self.tempdir])),
+            list([apath]))
+
     def test_multipleDirectories(self):
         """
         L{iterSourceCode} can be given multiple directories.  It will recurse

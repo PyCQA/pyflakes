@@ -5,12 +5,16 @@ from __future__ import with_statement
 
 import sys
 import os
+import re
 import _ast
 
 from pyflakes import checker, __version__
 from pyflakes import reporter as modReporter
 
 __all__ = ['check', 'checkPath', 'checkRecursive', 'iterSourceCode', 'main']
+
+
+PYTHON_SHEBANG_REGEX = re.compile(br'^#!.*\bpython[23]?\b\s*$')
 
 
 def check(codeString, filename, reporter=None):
@@ -108,6 +112,25 @@ def checkPath(filename, reporter=None):
     return check(codestr, filename, reporter)
 
 
+def isPythonFile(filename):
+    """Return True if filename points to a Python file."""
+    if filename.endswith('.py'):
+        return True
+
+    max_bytes = 128
+
+    try:
+        with open(filename, 'rb') as f:
+            text = f.read(max_bytes)
+            if not text:
+                return False
+    except IOError:
+        return False
+
+    first_line = text.splitlines()[0]
+    return PYTHON_SHEBANG_REGEX.match(first_line)
+
+
 def iterSourceCode(paths):
     """
     Iterate over all Python source files in C{paths}.
@@ -120,8 +143,9 @@ def iterSourceCode(paths):
         if os.path.isdir(path):
             for dirpath, dirnames, filenames in os.walk(path):
                 for filename in filenames:
-                    if filename.endswith('.py'):
-                        yield os.path.join(dirpath, filename)
+                    full_path = os.path.join(dirpath, filename)
+                    if isPythonFile(full_path):
+                        yield full_path
         else:
             yield path
 
