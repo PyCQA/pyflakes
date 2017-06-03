@@ -192,16 +192,30 @@ class TestIterSourceCode(TestCase):
         Find Python files that don't end with `.py`, but contain a Python
         shebang.
         """
-        apath = os.path.join(self.tempdir, 'a')
-        fd = open(apath, 'w')
-        fd.write('#!/usr/bin/env python\n')
-        fd.close()
+        python = os.path.join(self.tempdir, 'a')
+        with open(python, 'w') as fd:
+            fd.write('#!/usr/bin/env python\n')
 
         self.makeEmptyFile('b')
 
+        with open(os.path.join(self.tempdir, 'c'), 'w') as fd:
+            fd.write('hello\nworld\n')
+
+        python2 = os.path.join(self.tempdir, 'd')
+        with open(python2, 'w') as fd:
+            fd.write('#!/usr/bin/env python2\n')
+
+        python3 = os.path.join(self.tempdir, 'e')
+        with open(python3, 'w') as fd:
+            fd.write('#!/usr/bin/env python3\n')
+
+        pythonw = os.path.join(self.tempdir, 'f')
+        with open(pythonw, 'w') as fd:
+            fd.write('#!/usr/bin/env pythonw\n')
+
         self.assertEqual(
-            list(iterSourceCode([self.tempdir])),
-            list([apath]))
+            sorted(iterSourceCode([self.tempdir])),
+            sorted([python, python2, python3, pythonw]))
 
     def test_multipleDirectories(self):
         """
