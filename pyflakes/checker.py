@@ -870,7 +870,19 @@ class Checker(object):
 
     def handleDoctests(self, node):
         try:
-            (docstring, node_lineno) = self.getDocstring(node.body[0])
+            if hasattr(node, 'docstring'):
+                docstring = node.docstring
+
+                # This is just a reasonable guess. In Python 3.7, docstrings no
+                # longer have line numbers associated with them. This will be
+                # incorrect if there are empty lines between the beginning
+                # of the function and the docstring.
+                node_lineno = node.lineno
+                if hasattr(node, 'args'):
+                    node_lineno = max([node_lineno] +
+                                      [arg.lineno for arg in node.args.args])
+            else:
+                (docstring, node_lineno) = self.getDocstring(node.body[0])
             examples = docstring and self._getDoctestExamples(docstring)
         except (ValueError, IndexError):
             # e.g. line 6 of the docstring for <string> has inconsistent
