@@ -756,6 +756,9 @@ class Checker(object):
             # the special name __path__ is valid only in packages
             return
 
+        if name == '__module__' and isinstance(self.scope, ClassScope):
+            return
+
         # protected with a NameError handler?
         if 'NameError' not in self.exceptHandlers[-1]:
             self.report(messages.UndefinedName, node, name)
