@@ -570,12 +570,11 @@ class Test(TestCase):
         ''')
 
     def test_redefinedByExcept(self):
-        as_exc = ', ' if version_info < (2, 6) else ' as '
         self.flakes('''
         import fu
         try: pass
-        except Exception%sfu: pass
-        ''' % as_exc, m.RedefinedWhileUnused)
+        except Exception as fu: pass
+        ''', m.RedefinedWhileUnused)
 
     def test_usedInRaise(self):
         self.flakes('''
@@ -1152,7 +1151,6 @@ class Python26Tests(TestCase):
     Tests for checking of syntax which is valid in Python 2.6 and newer.
     """
 
-    @skipIf(version_info < (2, 6), "Python >= 2.6 only")
     def test_usedAsClassDecorator(self):
         """
         Using an imported name as a class decorator results in no warnings,
