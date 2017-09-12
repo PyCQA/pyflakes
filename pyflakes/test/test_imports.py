@@ -1,4 +1,3 @@
-
 from sys import version_info
 
 from pyflakes import messages as m
@@ -571,11 +570,15 @@ class Test(TestCase):
 
     def test_redefinedByExcept(self):
         as_exc = ', ' if version_info < (2, 6) else ' as '
+        expected = [m.RedefinedWhileUnused]
+        if version_info >= (3,):
+            # The exc variable is unused inside the exception handler.
+            expected.append(m.UnusedVariable)
         self.flakes('''
         import fu
         try: pass
         except Exception%sfu: pass
-        ''' % as_exc, m.RedefinedWhileUnused)
+        ''' % as_exc, *expected)
 
     def test_usedInRaise(self):
         self.flakes('''

@@ -1,3 +1,6 @@
+UNRELEASED
+  - Check for unused exception binding in `except:` block
+
 1.6.0 (2017-08-03)
   - Process function scope variable annotations for used names
   - Find Python files without extensions by their shebang
