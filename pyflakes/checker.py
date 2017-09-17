@@ -42,6 +42,9 @@ else:
     def getNodeType(node_class):
         return node_class.__name__.upper()
 
+    # Silence `pyflakes` from reporting `undefined name 'unicode'` in Python 3.
+    unicode = str
+
 # Python >= 3.3 uses ast.Try instead of (ast.TryExcept + ast.TryFinally)
 if PY32:
     def getAlternatives(n):
