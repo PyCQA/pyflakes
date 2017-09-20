@@ -514,6 +514,7 @@ foo(bar=baz, bax)
 foo(bar=baz, bax)
 %s""" % (sourcePath, column, message, last_line)])
 
+    @skipIf(PYPY, 'Output in PyPy varies highly, dependending on version')
     def test_invalidEscape(self):
         """
         The invalid escape syntax raises ValueError in Python 2
@@ -523,13 +524,6 @@ foo(bar=baz, bax)
         sourcePath = self.makeTempFile(r"foo = '\xyz'")
         if ver < (3,):
             decoding_error = "%s: problem decoding source\n" % (sourcePath,)
-        elif PYPY:
-            # pypy3 only
-            decoding_error = """\
-%s:1:6: %s: ('unicodeescape', b'\\\\xyz', 0, 2, 'truncated \\\\xXX escape')
-foo = '\\xyz'
-     ^
-""" % (sourcePath, 'UnicodeDecodeError')
         else:
             last_line = '      ^\n' if ERROR_HAS_LAST_LINE else ''
             # Column has been "fixed" since 3.2.4 and 3.3.1
