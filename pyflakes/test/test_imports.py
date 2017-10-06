@@ -149,7 +149,7 @@ class Test(TestCase):
         self.flakes('from ..bar import fu as baz; assert baz')
 
     def test_redefinedWhileUnused(self):
-        self.flakes('import fu; fu = 3', m.RedefinedWhileUnused)
+        self.flakes('import fu; fu = 3; fu', m.RedefinedWhileUnused)
         self.flakes('import fu; fu, bar = 3', m.RedefinedWhileUnused)
         self.flakes('import fu; [fu, bar] = 3', m.RedefinedWhileUnused)
 
@@ -400,7 +400,7 @@ class Test(TestCase):
         ''')
 
     def test_newAssignment(self):
-        self.flakes('fu = None')
+        self.flakes('fu = None; fu')
 
     def test_usedInGetattr(self):
         self.flakes('import fu; fu.bar.baz')
@@ -574,7 +574,7 @@ class Test(TestCase):
         self.flakes('''
         import fu
         try: pass
-        except Exception%sfu: pass
+        except Exception%sfu: fu
         ''' % as_exc, m.RedefinedWhileUnused)
 
     def test_usedInRaise(self):
@@ -608,7 +608,7 @@ class Test(TestCase):
         self.flakes('import fu; fu.bar(stuff=fu)')
 
     def test_usedInAssignment(self):
-        self.flakes('import fu; bar=fu')
+        self.flakes('import fu; bar=fu; bar')
         self.flakes('import fu; n=0; n+=fu')
 
     def test_usedInListComp(self):
@@ -931,7 +931,7 @@ class Test(TestCase):
         ''', m.RedefinedWhileUnused)
 
     def test_ignoreNonImportRedefinitions(self):
-        self.flakes('a = 1; a = 2')
+        self.flakes('a = 1; a = 2; a')
 
     @skip("todo")
     def test_importingForImportError(self):
@@ -978,6 +978,7 @@ class Test(TestCase):
         self.flakes('''
         x = 5
         from __future__ import division
+        x
         ''', m.LateFutureImport)
         self.flakes('''
         from foo import bar

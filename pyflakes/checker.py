@@ -398,6 +398,14 @@ class Scope(dict):
         scope_cls = self.__class__.__name__
         return '<%s at 0x%x %s>' % (scope_cls, id(self), dict.__repr__(self))
 
+    def unusedAssignments(self):
+        """
+        Return a generator for the assignments which have not been used.
+        """
+        for name, binding in self.items():
+            if not binding.used and isinstance(binding, Assignment):
+                yield name, binding
+
 
 class ClassScope(Scope):
     pass
@@ -423,11 +431,15 @@ class FunctionScope(Scope):
     def unusedAssignments(self):
         """
         Return a generator for the assignments which have not been used.
+
+        All assignments are considered used when a scope uses locals().
+
+        Unused names in alwaysUsed are skipped.
         """
-        for name, binding in self.items():
-            if (not binding.used and name not in self.globals
-                    and not self.usesLocals
-                    and isinstance(binding, Assignment)):
+        if self.usesLocals:
+            return
+        for name, binding in super(FunctionScope, self).unusedAssignments():
+            if name not in self.globals:
                 yield name, binding
 
 
@@ -442,6 +454,16 @@ class ModuleScope(Scope):
 
 class DoctestScope(ModuleScope):
     """Scope for a doctest."""
+
+    def unusedAssignments(self):
+        """
+        Return a generator for the assignments which have not been used.
+
+        '_' is never unused.
+        """
+        for name, binding in super(DoctestScope, self).unusedAssignments():
+            if name != '_':
+                yield name, binding
 
 
 # Globally defined names which are not attributes of the builtins module, or
@@ -558,6 +580,13 @@ class Checker(object):
 
     def popScope(self):
         self.deadScopes.append(self.scopeStack.pop())
+
+    def _check_unused_assignments(self):
+        """
+        Check to see if any assignments have not been used.
+        """
+        for name, binding in self.scope.unusedAssignments():
+            self.report(messages.UnusedVariable, binding.source, name)
 
     def checkDeadScopes(self):
         """
@@ -919,6 +948,7 @@ class Checker(object):
                 self.offset = node_offset
         if not underscore_in_builtins:
             self.builtIns.remove('_')
+        self.deferAssignment(self._check_unused_assignments)
         self.popScope()
         self.scopeStack = saved_stack
 
@@ -1177,13 +1207,7 @@ class Checker(object):
                 # case for Lambdas
                 self.handleNode(node.body, node)
 
-            def checkUnusedAssignments():
-                """
-                Check to see if any assignments have not been used.
-                """
-                for name, binding in self.scope.unusedAssignments():
-                    self.report(messages.UnusedVariable, binding.source, name)
-            self.deferAssignment(checkUnusedAssignments)
+            self.deferAssignment(self._check_unused_assignments)
 
             if PY32:
                 def checkReturnWithArgumentInsideGenerator():

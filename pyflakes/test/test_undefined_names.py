@@ -351,7 +351,6 @@ class Test(TestCase):
         Ignores conditional bindings deletion.
         """
         self.flakes('''
-        context = None
         test = True
         if False:
             del(test)
@@ -434,6 +433,7 @@ class Test(TestCase):
             a
             a = 2
             return a
+        a
         ''', m.UndefinedLocal)
 
     def test_laterRedefinedGlobalFromNestedScope2(self):
@@ -450,6 +450,7 @@ class Test(TestCase):
                     a
                     a = 2
                     return a
+            a
         ''', m.UndefinedLocal)
 
     def test_intermediateClassScopeIgnored(self):
@@ -685,6 +686,7 @@ class Test(TestCase):
             socket_map
         except NameError:
             socket_map = {}
+        socket_map['foo'] = 1
         ''')
         self.flakes('''
         try:
@@ -698,12 +700,14 @@ class Test(TestCase):
             socket_map
         except:
             socket_map = {}
+        socket_map['foo'] = 1
         ''', m.UndefinedName)
         self.flakes('''
         try:
             socket_map
         except Exception:
             socket_map = {}
+        socket_map['foo'] = 1
         ''', m.UndefinedName)
 
     def test_definedInClass(self):
