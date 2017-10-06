@@ -82,3 +82,8 @@ All changes should include tests and pass flake8_.
 .. _Pychecker: http://pychecker.sourceforge.net/
 .. _`rebase your changes`: https://git-scm.com/book/en/v2/Git-Branching-Rebasing
 .. _`GitHub pull request`: https://github.com/PyCQA/pyflakes/pulls
+
+Changelog
+---------
+
+Please see `NEWS.txt <NEWS.txt>`_.
