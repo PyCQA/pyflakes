@@ -218,6 +218,10 @@ class Test(TestCase):
         """
         self.flakes('WindowsError')
 
+    @skipIf(version_info < (3, 7), 'breakpoint is a new builtin in Python 3.7')
+    def test_builtinBreakpoint(self):
+        self.flakes('breakpoint()')
+
     def test_magicGlobalsFile(self):
         """
         Use of the C{__file__} magic global should not emit an undefined name
