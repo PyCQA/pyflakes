@@ -1322,34 +1322,52 @@ class Checker(object):
             self.handleChildren(node)
             return
 
-        # 3.x: the name of the exception, which is not a Name node, but
-        # a simple string, creates a local that is only bound within the scope
-        # of the except: block.
+        # If the name already exists in the scope, modify state of existing
+        # binding.
+        if node.name in self.scope:
+            self.handleNodeStore(node)
+
+        # 3.x: the name of the exception, which is not a Name node, but a
+        # simple string, creates a local that is only bound within the scope of
+        # the except: block. As such, temporarily remove the existing binding
+        # to more accurately determine if the name is used in the except:
+        # block.
 
         for scope in self.scopeStack[::-1]:
-            if node.name in scope:
-                is_name_previously_defined = True
+            try:
+                binding = scope.pop(node.name)
+            except KeyError:
+                pass
+            else:
+                prev_definition = scope, binding
                 break
         else:
-            is_name_previously_defined = False
+            prev_definition = None
 
         self.handleNodeStore(node)
         self.handleChildren(node)
-        if not is_name_previously_defined:
-            # See discussion on https://github.com/PyCQA/pyflakes/pull/59
 
-            # We're removing the local name since it's being unbound
-            # after leaving the except: block and it's always unbound
-            # if the except: block is never entered. This will cause an
-            # "undefined name" error raised if the checked code tries to
-            # use the name afterwards.
-            #
-            # Unless it's been removed already. Then do nothing.
+        # See discussion on https://github.com/PyCQA/pyflakes/pull/59
 
-            try:
-                del self.scope[node.name]
-            except KeyError:
-                pass
+        # We're removing the local name since it's being unbound after leaving
+        # the except: block and it's always unbound if the except: block is
+        # never entered. This will cause an "undefined name" error raised if
+        # the checked code tries to use the name afterwards.
+        #
+        # Unless it's been removed already. Then do nothing.
+
+        try:
+            binding = self.scope.pop(node.name)
+        except KeyError:
+            pass
+        else:
+            if not binding.used:
+                self.report(messages.UnusedVariable, node, node.name)
+
+        # Restore.
+        if prev_definition:
+            scope, binding = prev_definition
+            scope[node.name] = binding
 
     def ANNASSIGN(self, node):
         if node.value:
