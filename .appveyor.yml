@@ -1,5 +1,7 @@
 # To activate, change the Appveyor settings to use `.appveyor.yml`.
 install:
+  - ps: "[Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12"
+
   - python -m pip install --upgrade virtualenv pip setuptools tox
 
   # Fetch the three main PyPy releases
