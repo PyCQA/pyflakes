@@ -922,6 +922,39 @@ class Checker(object):
         self.popScope()
         self.scopeStack = saved_stack
 
+    def handleAnnotation(self, annotation, node):
+        if isinstance(annotation, ast.Str):
+            # Defer handling forward annotation.
+            def handleForwardAnnotation():
+                try:
+                    tree = ast.parse(annotation.s)
+                except SyntaxError:
+                    self.report(
+                        messages.ForwardAnnotationSyntaxError,
+                        node,
+                        annotation.s,
+                    )
+                    return
+
+                body = tree.body
+                if len(body) != 1 or not isinstance(body[0], ast.Expr):
+                    self.report(
+                        messages.ForwardAnnotationSyntaxError,
+                        node,
+                        annotation.s,
+                    )
+                    return
+
+                parsed_annotation = tree.body[0].value
+                for descendant in ast.walk(parsed_annotation):
+                    ast.copy_location(descendant, annotation)
+
+                self.handleNode(parsed_annotation, node)
+
+            self.deferFunction(handleForwardAnnotation)
+        else:
+            self.handleNode(annotation, node)
+
     def ignore(self, node):
         pass
 
@@ -1160,9 +1193,11 @@ class Checker(object):
                 if arg in args[:idx]:
                     self.report(messages.DuplicateArgument, node, arg)
 
-        for child in annotations + defaults:
-            if child:
-                self.handleNode(child, node)
+        for annotation in annotations:
+            self.handleAnnotation(annotation, node)
+
+        for default in defaults:
+            self.handleNode(default, node)
 
         def runFunction():
 
@@ -1375,7 +1410,7 @@ class Checker(object):
             # Otherwise it's not really ast.Store and shouldn't silence
             # UndefinedLocal warnings.
             self.handleNode(node.target, node)
-        self.handleNode(node.annotation, node)
+        self.handleAnnotation(node.annotation, node)
         if node.value:
             # If the assignment has value, handle the *value* now.
             self.handleNode(node.value, node)

@@ -231,3 +231,11 @@ class AssertTuple(Message):
     Assertion test is a tuple, which are always True.
     """
     message = 'assertion is always true, perhaps remove parentheses?'
+
+
+class ForwardAnnotationSyntaxError(Message):
+    message = 'syntax error in forward annotation %r'
+
+    def __init__(self, filename, loc, annotation):
+        Message.__init__(self, filename, loc)
+        self.message_args = (annotation,)
