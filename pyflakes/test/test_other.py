@@ -1159,6 +1159,16 @@ class TestUnusedAssignment(TestCase):
             b = 1
         ''', m.UnusedVariable)
 
+    def test_unusedVariableUnderscore(self):
+        """
+        Warn when a variable in a function is assigned a value that's never
+        used.
+        """
+        self.flakes('''
+        def a():
+            _ = 1
+        ''', m.UnusedVariable)
+
     def test_unusedVariableAsLocals(self):
         """
         Using locals() it is perfectly valid to have unused variables
@@ -1247,11 +1257,24 @@ class TestUnusedAssignment(TestCase):
 
     def test_assignInForLoop(self):
         """
-        Don't warn when a variable in a for loop is assigned to but not used.
+        Warn when a variable in a for loop is assigned to but not used.
         """
         self.flakes('''
         def f():
             for i in range(10):
+                pass
+        ''', m.UnusedVariable)
+
+    def test_assignInForLoopWithIgnoredName(self):
+        """
+        Don't warn when a variable named '_' or '_unused' in a for loop
+        is assigned to but not used.
+        """
+        self.flakes('''
+        def f():
+            for _ in range(10):
+                pass
+            for _unused in range(10):
                 pass
         ''')
 
