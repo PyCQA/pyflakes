@@ -356,6 +356,12 @@ class Assignment(Binding):
     """
 
 
+class FOR_LOOP_VARIABLE(Binding):
+    """
+    Represents binding a name as a loop variable
+    """
+
+
 class FunctionDefinition(Definition):
     pass
 
@@ -412,6 +418,7 @@ class FunctionScope(Scope):
     usesLocals = False
     alwaysUsed = set(['__tracebackhide__',
                       '__traceback_info__', '__traceback_supplement__'])
+    namesToIgnore = ('_', '_unused')
 
     def __init__(self):
         super(FunctionScope, self).__init__()
@@ -425,9 +432,12 @@ class FunctionScope(Scope):
         Return a generator for the assignments which have not been used.
         """
         for name, binding in self.items():
-            if (not binding.used and name not in self.globals
-                    and not self.usesLocals
-                    and isinstance(binding, Assignment)):
+            if (not binding.used and name not in self.globals and
+                    not self.usesLocals and
+                    isinstance(binding, (Assignment, FOR_LOOP_VARIABLE))):
+
+                if isinstance(binding, FOR_LOOP_VARIABLE) and name in self.namesToIgnore:
+                    continue
                 yield name, binding
 
 
@@ -775,12 +785,14 @@ class Checker(object):
                     break
 
         parent_stmt = self.getParent(node)
-        if isinstance(parent_stmt, (ast.For, ast.comprehension)) or (
+        if isinstance(parent_stmt, (ast.comprehension, )) or (
                 parent_stmt != node.parent and
                 not self.isLiteralTupleUnpacking(parent_stmt)):
             binding = Binding(name, node)
         elif name == '__all__' and isinstance(self.scope, ModuleScope):
             binding = ExportBinding(name, node.parent, self.scope)
+        elif isinstance(parent_stmt, ast.For):
+            binding = FOR_LOOP_VARIABLE(name, node)
         else:
             binding = Assignment(name, node)
         self.addBinding(node, binding)
