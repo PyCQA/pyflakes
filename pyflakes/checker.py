@@ -679,8 +679,9 @@ class Checker(object):
                     self.report(messages.RedefinedInListComp,
                                 node, value.name, existing.source)
                 elif not existing.used and value.redefines(existing):
-                    self.report(messages.RedefinedWhileUnused,
-                                node, value.name, existing.source)
+                    if value.name != '_' or isinstance(existing, Importation):
+                        self.report(messages.RedefinedWhileUnused,
+                                    node, value.name, existing.source)
 
             elif isinstance(existing, Importation) and value.redefines(existing):
                 existing.redefined.append(node)
