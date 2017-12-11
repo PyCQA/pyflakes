@@ -89,19 +89,8 @@ def checkPath(filename, reporter=None):
     if reporter is None:
         reporter = modReporter._makeDefaultReporter()
     try:
-        # in Python 2.6, compile() will choke on \r\n line endings. In later
-        # versions of python it's smarter, and we want binary mode to give
-        # compile() the best opportunity to do the right thing WRT text
-        # encodings.
-        if sys.version_info < (2, 7):
-            mode = 'rU'
-        else:
-            mode = 'rb'
-
-        with open(filename, mode) as f:
+        with open(filename, 'rb') as f:
             codestr = f.read()
-        if sys.version_info < (2, 7):
-            codestr += '\n'     # Work around for Python <= 2.6
     except UnicodeError:
         reporter.unexpectedError(filename, 'problem decoding source')
         return 1

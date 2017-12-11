@@ -19,15 +19,11 @@ class Test(TestCase):
 
     @skipIf(version_info < (3,),
             "bytes and strings with same 'value' are not equal in python3")
-    @skipIf(version_info[0:2] == (3, 2),
-            "python3.2 does not allow u"" literal string definition")
     def test_duplicate_keys_bytes_vs_unicode_py3(self):
         self.flakes("{b'a': 1, u'a': 2}")
 
     @skipIf(version_info < (3,),
             "bytes and strings with same 'value' are not equal in python3")
-    @skipIf(version_info[0:2] == (3, 2),
-            "python3.2 does not allow u"" literal string definition")
     def test_duplicate_values_bytes_vs_unicode_py3(self):
         self.flakes(
             "{1: b'a', 1: u'a'}",

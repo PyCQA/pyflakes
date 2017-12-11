@@ -5,14 +5,15 @@ Implement the central Checker class.
 Also, it models the Bindings and Scopes.
 """
 import __future__
+import ast
 import doctest
 import os
 import sys
 
 PY2 = sys.version_info < (3, 0)
-PY32 = sys.version_info < (3, 3)    # Python 2.5 to 3.2
-PY33 = sys.version_info < (3, 4)    # Python 2.5 to 3.3
-PY34 = sys.version_info < (3, 5)    # Python 2.5 to 3.4
+PY32 = sys.version_info < (3, 3)    # Python 2.7 to 3.2
+PY33 = sys.version_info < (3, 4)    # Python 2.7 to 3.3
+PY34 = sys.version_info < (3, 5)    # Python 2.7 to 3.4
 try:
     sys.pypy_version_info
     PYPY = True
@@ -20,16 +21,6 @@ except AttributeError:
     PYPY = False
 
 builtin_vars = dir(__import__('__builtin__' if PY2 else 'builtins'))
-
-try:
-    import ast
-except ImportError:     # Python 2.5
-    import _ast as ast
-
-    if 'decorator_list' not in ast.ClassDef._fields:
-        # Patch the missing attribute 'decorator_list'
-        ast.ClassDef.decorator_list = ()
-        ast.FunctionDef.decorator_list = property(lambda s: s.decorators)
 
 from pyflakes import messages
 
