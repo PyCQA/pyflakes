@@ -353,6 +353,14 @@ class Test(TestCase):
             global m
         ''', m.UndefinedName)
 
+    def test_undefined_global(self):
+        """Use an undefined name with global statement"""
+        self.flakes('''
+        def f():
+            global m
+            print(m)
+        ''', m.UndefinedName)
+
     def test_del(self):
         """Del deletes bindings."""
         self.flakes('a = 1; del a; a', m.UndefinedName)

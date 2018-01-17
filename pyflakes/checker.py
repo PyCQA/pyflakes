@@ -435,6 +435,7 @@ class FunctionScope(Scope):
         super(FunctionScope, self).__init__()
         # Simplify: manage the special locals as globals
         self.globals = self.alwaysUsed.copy()
+        self.global_names = []
         self.returnValue = None     # First non-empty return
         self.isGenerator = False    # Detect a generator
 
@@ -573,6 +574,9 @@ class Checker(object):
     def _in_doctest(self):
         return (len(self.scopeStack) >= 2 and
                 isinstance(self.scopeStack[1], DoctestScope))
+
+    def _global_scope(self):
+        return self.scopeStack[1 if self._in_doctest() else 0]
 
     @property
     def futuresAllowed(self):
@@ -735,6 +739,11 @@ class Checker(object):
             elif isinstance(existing, Importation) and value.redefines(existing):
                 existing.redefined.append(node)
 
+        if (isinstance(self.scope, FunctionScope) and
+                isinstance(value, Importation) and
+                value.name in self.scope.global_names):
+            self.store_global_scope(value.name, value)
+
         if value.name in self.scope:
             # then assume the rebound name is used as a global or within a loop
             value.used = self.scope[value.name].used
@@ -756,6 +765,12 @@ class Checker(object):
 
         in_generators = None
         importStarred = None
+
+        if (isinstance(self.scope, FunctionScope) and
+                name in self.scope.global_names and
+                name not in self._global_scope()):
+            # report name declared with global statement but undefined
+            self.report(messages.UndefinedName, node, name)
 
         # try enclosing function scopes and global scope
         for scope in self.scopeStack[-1::-1]:
@@ -833,6 +848,10 @@ class Checker(object):
                                 scope[name].used[1], name, scope[name].source)
                     break
 
+        if (isinstance(self.scope, FunctionScope) and
+                name in self.scope.global_names):
+            self.store_global_scope(name, Assignment(name, node))
+
         parent_stmt = self.getParent(node)
         if isinstance(parent_stmt, (ast.For, ast.comprehension)) or (
                 parent_stmt != node.parent and
@@ -868,8 +887,15 @@ class Checker(object):
             # be executed.
             return
 
-        if isinstance(self.scope, FunctionScope) and name in self.scope.globals:
-            self.scope.globals.remove(name)
+        if isinstance(self.scope, FunctionScope):
+            if name in self.scope.globals:
+                self.scope.globals.remove(name)
+            if name in self.scope.global_names:
+                self.scope.global_names.remove(name)
+                try:
+                    del self._global_scope()[name]
+                except KeyError:
+                    self.report(messages.UndefinedName, node, name)
         else:
             try:
                 del self.scope[name]
@@ -1016,6 +1042,10 @@ class Checker(object):
     def ignore(self, node):
         pass
 
+    def store_global_scope(self, name, value):
+        """This store name in global scope"""
+        self._global_scope()[name] = value
+
     # "stmt" type nodes
     DELETE = PRINT = FOR = ASYNCFOR = WHILE = IF = WITH = WITHITEM = \
         ASYNCWITH = ASYNCWITHITEM = TRYFINALLY = EXEC = \
@@ -1122,7 +1152,8 @@ class Checker(object):
                     m.message_args[0] != node_name]
 
                 # Bind name to global scope if it doesn't exist already.
-                global_scope.setdefault(node_name, node_value)
+                if isinstance(self.scope, FunctionScope):
+                    self.scope.global_names.append(node_name)
 
                 # Bind name to non-global scopes, but as already "used".
                 node_value.used = (global_scope, node)
