@@ -710,10 +710,14 @@ class Checker(object):
 
         # try enclosing function scopes and global scope
         for scope in self.scopeStack[-1::-1]:
-            # only generators used in a class scope can access the names
-            # of the class. this is skipped during the first iteration
-            if in_generators is False and isinstance(scope, ClassScope):
-                continue
+            if isinstance(scope, ClassScope):
+                if not PY2 and name == '__class__':
+                    return
+                elif in_generators is False:
+                    # only generators used in a class scope can access the
+                    # names of the class. this is skipped during the first
+                    # iteration
+                    continue
 
             try:
                 scope[name].used = (self.scope, node)

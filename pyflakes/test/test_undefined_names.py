@@ -799,6 +799,24 @@ class Test(TestCase):
         any(lambda: id(y) for x in range(10))
         ''', m.UndefinedName)
 
+    def test_dunderClass(self):
+        """
+        `__class__` is defined in class scope under Python 3, but is not
+        in Python 2.
+        """
+        code = '''
+        class Test(object):
+            def __init__(self):
+                print(__class__.__name__)
+                self.x = 1
+
+        t = Test()
+        '''
+        if version_info < (3,):
+            self.flakes(code, m.UndefinedName)
+        else:
+            self.flakes(code)
+
 
 class NameTests(TestCase):
     """
