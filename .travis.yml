@@ -13,11 +13,9 @@ python:
   - pypy3
   - pypy3.3-5.2-alpha1
 install:
-  - pip install flake8==2.1.0 pep8==1.5.6
-  - python setup.py install
+  - pip install --upgrade .
   - pip list
-  - if [ "$TRAVIS_PYTHON_VERSION" != "nightly" ]; then flake8 --version; fi
 script:
   - python setup.py test -q
-  - if [ "$TRAVIS_PYTHON_VERSION" != "nightly" ]; then flake8 pyflakes setup.py; fi
+  - if [ "$TRAVIS_PYTHON_VERSION" != "nightly" ]; then pip install flake8==2.1.0 pep8==1.5.6 && flake8 --version && flake8 pyflakes setup.py; fi
 sudo: false
