@@ -14,7 +14,7 @@ python:
   - pypy3.3-5.2-alpha1
 install:
   - pip install flake8==2.1.0 pep8==1.5.6
-  - python setup.py install
+  - pip install .
   - pip list
   - if [ "$TRAVIS_PYTHON_VERSION" != "nightly" ]; then flake8 --version; fi
 script:
