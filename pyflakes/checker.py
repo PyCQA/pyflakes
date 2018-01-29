@@ -965,7 +965,7 @@ class Checker(object):
 
     # "stmt" type nodes
     DELETE = PRINT = FOR = ASYNCFOR = WHILE = IF = WITH = WITHITEM = \
-        ASYNCWITH = ASYNCWITHITEM = RAISE = TRYFINALLY = EXEC = \
+        ASYNCWITH = ASYNCWITHITEM = TRYFINALLY = EXEC = \
         EXPR = ASSIGN = handleChildren
 
     PASS = ignore
@@ -988,6 +988,22 @@ class Checker(object):
         BITOR = BITXOR = BITAND = FLOORDIV = INVERT = NOT = UADD = USUB = \
         EQ = NOTEQ = LT = LTE = GT = GTE = IS = ISNOT = IN = NOTIN = \
         MATMULT = ignore
+
+    def RAISE(self, node):
+        self.handleChildren(node)
+
+        # Check for `
+        raise_arg = node.exc
+        if not isinstance(raise_arg, ast.Call):
+            return
+
+        func = raise_arg.func
+        if not isinstance(func, ast.Name):
+            return
+
+        name = getNodeName(func)
+        if name == 'NotImplemented':
+            self.report(messages.RaiseNotImplemented, node)
 
     # additional node types
     COMPREHENSION = KEYWORD = FORMATTEDVALUE = JOINEDSTR = handleChildren
