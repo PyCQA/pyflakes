@@ -514,7 +514,7 @@ foo(bar=baz, bax)
 foo(bar=baz, bax)
 %s""" % (sourcePath, column, message, last_line)])
 
-    @skipIf(PYPY, 'Output in PyPy varies highly, dependending on version')
+    @skipIf(PYPY, 'Output in PyPy varies highly, depending on version')
     def test_invalidEscape(self):
         """
         The invalid escape syntax raises ValueError in Python 2
