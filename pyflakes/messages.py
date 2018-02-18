@@ -242,4 +242,4 @@ class ForwardAnnotationSyntaxError(Message):
 
 
 class RaiseNotImplemented(Message):
-    message = "'raise NotImplemented(...)' should be 'raise NotImplementedError(...)'"
+    message = "'raise NotImplemented' should be 'raise NotImplementedError'"
