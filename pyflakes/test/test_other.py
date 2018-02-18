@@ -1983,3 +1983,20 @@ class TestAsyncStatements(TestCase):
         self.flakes('''
         a: 'a: "A"'
         ''', m.ForwardAnnotationSyntaxError)
+
+    def test_raise_notimplemented(self):
+        self.flakes('''
+        raise NotImplementedError("This is fine")
+        ''')
+
+        self.flakes('''
+        raise NotImplementedError
+        ''')
+
+        self.flakes('''
+        raise NotImplemented("This isn't gonna work")
+        ''', m.RaiseNotImplemented)
+
+        self.flakes('''
+        raise NotImplemented
+        ''', m.RaiseNotImplemented)

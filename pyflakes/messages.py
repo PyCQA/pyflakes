@@ -239,3 +239,7 @@ class ForwardAnnotationSyntaxError(Message):
     def __init__(self, filename, loc, annotation):
         Message.__init__(self, filename, loc)
         self.message_args = (annotation,)
+
+
+class RaiseNotImplemented(Message):
+    message = "'raise NotImplemented' should be 'raise NotImplementedError'"
