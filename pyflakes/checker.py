@@ -38,9 +38,16 @@ if PY2:
     def getNodeType(node_class):
         # workaround str.upper() which is locale-dependent
         return str(unicode(node_class.__name__).upper())
+
+    def get_raise_argument(node):
+        return node.type
+
 else:
     def getNodeType(node_class):
         return node_class.__name__.upper()
+
+    def get_raise_argument(node):
+        return node.exc
 
     # Silence `pyflakes` from reporting `undefined name 'unicode'` in Python 3.
     unicode = str
@@ -136,6 +143,10 @@ def convert_to_value(item):
         return item.value
     else:
         return UnhandledKeyType()
+
+
+def is_notimplemented_name_node(node):
+    return isinstance(node, ast.Name) and getNodeName(node) == 'NotImplemented'
 
 
 class Binding(object):
@@ -992,17 +1003,14 @@ class Checker(object):
     def RAISE(self, node):
         self.handleChildren(node)
 
-        # Check for `
-        raise_arg = node.exc
-        if not isinstance(raise_arg, ast.Call):
-            return
+        arg = get_raise_argument(node)
 
-        func = raise_arg.func
-        if not isinstance(func, ast.Name):
-            return
-
-        name = getNodeName(func)
-        if name == 'NotImplemented':
+        if isinstance(arg, ast.Call):
+            if is_notimplemented_name_node(arg.func):
+                # Handle "raise NotImplemented(...)"
+                self.report(messages.RaiseNotImplemented, node)
+        elif is_notimplemented_name_node(arg):
+            # Handle "raise NotImplemented"
             self.report(messages.RaiseNotImplemented, node)
 
     # additional node types

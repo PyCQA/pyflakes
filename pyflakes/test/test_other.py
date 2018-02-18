@@ -1990,5 +1990,13 @@ class TestAsyncStatements(TestCase):
         ''')
 
         self.flakes('''
+        raise NotImplementedError
+        ''')
+
+        self.flakes('''
         raise NotImplemented("This isn't gonna work")
+        ''', m.RaiseNotImplemented)
+
+        self.flakes('''
+        raise NotImplemented
         ''', m.RaiseNotImplemented)
