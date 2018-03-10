@@ -161,6 +161,17 @@ class UnusedVariable(Message):
         self.message_args = (names,)
 
 
+class UnusedExpression(Message):
+    """
+    Indicates that an expression was not assigned.
+    """
+    message = 'expression not used'
+
+    def __init__(self, filename, loc):
+        Message.__init__(self, filename, loc)
+        self.message_args = ()
+
+
 class ReturnWithArgsInsideGenerator(Message):
     """
     Indicates a return statement with arguments inside a generator.

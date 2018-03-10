@@ -521,38 +521,38 @@ class Test(TestCase):
         ''')
 
     def test_usedInOperators(self):
-        self.flakes('import fu; 3 + fu.bar')
-        self.flakes('import fu; 3 % fu.bar')
-        self.flakes('import fu; 3 - fu.bar')
-        self.flakes('import fu; 3 * fu.bar')
-        self.flakes('import fu; 3 ** fu.bar')
-        self.flakes('import fu; 3 / fu.bar')
-        self.flakes('import fu; 3 // fu.bar')
-        self.flakes('import fu; -fu.bar')
-        self.flakes('import fu; ~fu.bar')
-        self.flakes('import fu; 1 == fu.bar')
-        self.flakes('import fu; 1 | fu.bar')
-        self.flakes('import fu; 1 & fu.bar')
-        self.flakes('import fu; 1 ^ fu.bar')
-        self.flakes('import fu; 1 >> fu.bar')
-        self.flakes('import fu; 1 << fu.bar')
+        self.flakes('import fu; x = 3 + fu.bar')
+        self.flakes('import fu; x = 3 % fu.bar')
+        self.flakes('import fu; x = 3 - fu.bar')
+        self.flakes('import fu; x = 3 * fu.bar')
+        self.flakes('import fu; x = 3 ** fu.bar')
+        self.flakes('import fu; x = 3 / fu.bar')
+        self.flakes('import fu; x = 3 // fu.bar')
+        self.flakes('import fu; x = -fu.bar')
+        self.flakes('import fu; x = ~fu.bar')
+        self.flakes('import fu; x = 1 == fu.bar')
+        self.flakes('import fu; x = 1 | fu.bar')
+        self.flakes('import fu; x = 1 & fu.bar')
+        self.flakes('import fu; x = 1 ^ fu.bar')
+        self.flakes('import fu; x = 1 >> fu.bar')
+        self.flakes('import fu; x = 1 << fu.bar')
 
     def test_usedInAssert(self):
         self.flakes('import fu; assert fu.bar')
 
     def test_usedInSubscript(self):
-        self.flakes('import fu; fu.bar[1]')
+        self.flakes('import fu; x = fu.bar[1]')
 
     def test_usedInLogic(self):
-        self.flakes('import fu; fu and False')
-        self.flakes('import fu; fu or False')
-        self.flakes('import fu; not fu.bar')
+        self.flakes('import fu; x = fu and False')
+        self.flakes('import fu; x = fu or False')
+        self.flakes('import fu; x = not fu.bar')
 
     def test_usedInList(self):
-        self.flakes('import fu; [fu]')
+        self.flakes('import fu; x = [fu]')
 
     def test_usedInTuple(self):
-        self.flakes('import fu; (fu,)')
+        self.flakes('import fu; x = (fu,)')
 
     def test_usedInTry(self):
         self.flakes('''
@@ -594,8 +594,8 @@ class Test(TestCase):
         ''')
 
     def test_usedInDict(self):
-        self.flakes('import fu; {fu:None}')
-        self.flakes('import fu; {1:fu}')
+        self.flakes('import fu; x = {fu:None}')
+        self.flakes('import fu; x = {1:fu}')
 
     def test_usedInParameterDefault(self):
         self.flakes('''
@@ -615,13 +615,13 @@ class Test(TestCase):
         self.flakes('import fu; n=0; n+=fu')
 
     def test_usedInListComp(self):
-        self.flakes('import fu; [fu for _ in range(1)]')
-        self.flakes('import fu; [1 for _ in range(1) if fu]')
+        self.flakes('import fu; x = [fu for _ in range(1)]')
+        self.flakes('import fu; x = [1 for _ in range(1) if fu]')
 
     @skipIf(version_info >= (3,),
             'in Python 3 list comprehensions execute in a separate scope')
     def test_redefinedByListComp(self):
-        self.flakes('import fu; [1 for fu in range(1)]',
+        self.flakes('import fu; x = [1 for fu in range(1)]',
                     m.RedefinedInListComp)
 
     def test_usedInTryFinally(self):
@@ -682,7 +682,7 @@ class Test(TestCase):
 
     @skipIf(version_info >= (3,), 'deprecated syntax')
     def test_usedInBackquote(self):
-        self.flakes('import fu; `fu`')
+        self.flakes('import fu; x = `fu`')
 
     def test_usedInExec(self):
         if version_info < (3,):
@@ -692,15 +692,20 @@ class Test(TestCase):
         self.flakes('import fu; %s' % exec_stmt)
 
     def test_usedInLambda(self):
-        self.flakes('import fu; lambda: fu')
+        self.flakes('import fu; x = lambda: fu')
 
     def test_shadowedByLambda(self):
-        self.flakes('import fu; lambda fu: fu',
+        self.flakes('import fu; x = lambda fu: fu',
                     m.UnusedImport, m.RedefinedWhileUnused)
-        self.flakes('import fu; lambda fu: fu\nfu()')
+
+        if self.withDoctest:
+            expect = []
+        else:
+            expect = [m.UnusedExpression]
+        self.flakes('import fu; lambda fu: fu\nfu()', *expect)
 
     def test_usedInSliceObj(self):
-        self.flakes('import fu; "meow"[::fu]')
+        self.flakes('import fu; x = "meow"[::fu]')
 
     def test_unusedInNestedScope(self):
         self.flakes('''
@@ -857,12 +862,14 @@ class Test(TestCase):
         """
         self.flakes('''
         import fu.bar, fu.baz
-        fu.bar, fu.baz
+        fu.bar
+        fu.baz
         ''')
         self.flakes('''
         import fu.bar
         import fu.baz
-        fu.bar, fu.baz
+        fu.bar
+        fu.baz
         ''')
 
     def test_used_package_with_submodule_import(self):
@@ -1112,15 +1119,15 @@ class TestSpecialAll(TestCase):
         """
         Using a global in a generator expression results in no warnings.
         """
-        self.flakes('import fu; (fu for _ in range(1))')
-        self.flakes('import fu; (1 for _ in range(1) if fu)')
+        self.flakes('import fu; x = (fu for _ in range(1))')
+        self.flakes('import fu; x = (1 for _ in range(1) if fu)')
 
     def test_redefinedByGenExp(self):
         """
         Re-using a global name as the loop variable for a generator
         expression results in a redefinition warning.
         """
-        self.flakes('import fu; (1 for fu in range(1))',
+        self.flakes('import fu; x = (1 for fu in range(1))',
                     m.RedefinedWhileUnused, m.UnusedImport)
 
     def test_usedAsDecorator(self):

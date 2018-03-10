@@ -34,6 +34,20 @@ except ImportError:     # Python 2.5
 from pyflakes import messages
 
 
+ALLOWED_EXPR_NODE_TYPE = (
+    ast.Str, ast.Yield, ast.Call,
+    ast.Name, ast.Attribute,
+    ast.Ellipsis,
+)
+
+if not PY32:
+    ALLOWED_EXPR_NODE_TYPE = ALLOWED_EXPR_NODE_TYPE + (
+        ast.YieldFrom, )
+
+if not PY34:
+    ALLOWED_EXPR_NODE_TYPE = ALLOWED_EXPR_NODE_TYPE + (
+        ast.Await, )
+
 if PY2:
     def getNodeType(node_class):
         # workaround str.upper() which is locale-dependent
@@ -1051,6 +1065,15 @@ class Checker(object):
                             key,
                         )
         self.handleChildren(node)
+
+    def EXPR(self, node):
+        value = node.value
+
+        if (not self._in_doctest() and
+                not isinstance(value, ALLOWED_EXPR_NODE_TYPE)):
+            self.report(messages.UnusedExpression, node)
+
+        self.handleNode(value, node)
 
     def ASSERT(self, node):
         if isinstance(node.test, ast.Tuple) and node.test.elts != []:
