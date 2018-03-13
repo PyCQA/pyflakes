@@ -250,3 +250,7 @@ class ForwardAnnotationSyntaxError(Message):
 
 class RaiseNotImplemented(Message):
     message = "'raise NotImplemented' should be 'raise NotImplementedError'"
+
+
+class InvalidPrintSyntax(Message):
+    message = 'use of >> is invalid with print function'

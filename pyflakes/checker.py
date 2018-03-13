@@ -768,6 +768,13 @@ class Checker(object):
                     # iteration
                     continue
 
+            if (name == 'print' and
+                    isinstance(scope.get(name, None), Builtin)):
+                parent = self.getParent(node)
+                if (isinstance(parent, ast.BinOp) and
+                        isinstance(parent.op, ast.RShift)):
+                    self.report(messages.InvalidPrintSyntax, node)
+
             try:
                 scope[name].used = (self.scope, node)
             except KeyError:

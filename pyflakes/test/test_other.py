@@ -2034,3 +2034,53 @@ class TestAsyncStatements(TestCase):
         self.flakes('''
         raise NotImplemented
         ''', m.RaiseNotImplemented)
+
+
+class TestIncompatiblePrintOperator(TestCase):
+    """
+    Tests for warning about invalid use of print function.
+    """
+
+    def test_valid_print(self):
+        self.flakes('''
+        print("Hello")
+        ''')
+
+    def test_invalid_print_when_imported_from_future(self):
+        exc = self.flakes('''
+        from __future__ import print_function
+        import sys
+        print >>sys.stderr, "Hello"
+        ''', m.InvalidPrintSyntax).messages[0]
+
+        self.assertEqual(exc.lineno, 4)
+        self.assertEqual(exc.col, 0)
+
+    def test_print_function_assignment(self):
+        """
+        A valid assignment, tested for catching false positives.
+        """
+        self.flakes('''
+        from __future__ import print_function
+        log = print
+        log("Hello")
+        ''')
+
+    def test_print_in_lambda(self):
+        self.flakes('''
+        from __future__ import print_function
+        a = lambda: print
+        ''')
+
+    def test_print_returned_in_function(self):
+        self.flakes('''
+        from __future__ import print_function
+        def a():
+            return print
+        ''')
+
+    def test_print_as_condition_test(self):
+        self.flakes('''
+        from __future__ import print_function
+        if print: pass
+        ''')
