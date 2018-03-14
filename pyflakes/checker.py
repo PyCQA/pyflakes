@@ -22,14 +22,19 @@ except AttributeError:
 builtin_vars = dir(__import__('__builtin__' if PY2 else 'builtins'))
 
 try:
-    import ast
-except ImportError:     # Python 2.5
-    import _ast as ast
+    from typed_ast import ast3 as ast
+    _compile = ast.parse
+except ImportError:
+    try:
+        import ast
+    except ImportError:     # Python 2.5
+        import _ast as ast
 
-    if 'decorator_list' not in ast.ClassDef._fields:
-        # Patch the missing attribute 'decorator_list'
-        ast.ClassDef.decorator_list = ()
-        ast.FunctionDef.decorator_list = property(lambda s: s.decorators)
+        if 'decorator_list' not in ast.ClassDef._fields:
+            # Patch the missing attribute 'decorator_list'
+            ast.ClassDef.decorator_list = ()
+            ast.FunctionDef.decorator_list = property(lambda s: s.decorators)
+    _compile = compile
 
 from pyflakes import messages
 
@@ -73,7 +78,7 @@ else:
 
 
 def ast_compile(codeString, filename):
-    tree = compile(codeString, filename, 'exec', ast.PyCF_ONLY_AST)
+    tree = _compile(codeString, filename, 'exec', ast.PyCF_ONLY_AST)
     return tree
 
 
