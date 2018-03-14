@@ -873,6 +873,28 @@ class Checker(object):
 
         return (node.s, doctest_lineno)
 
+    def handleTypeComments(self, node):
+        def extractTypeComments(typeComment):
+            if '->' in typeComment:
+                for token in node.type_comment.split(' -> '):
+                    if token[0] == '(' and token[-1] == ')':
+                        token = token[1:-1]
+                    if ',' in token:
+                        for part in token.split(','):
+                            yield part.strip()
+                    else:
+                        yield token
+            else:
+                yield typeComment
+
+        typeComment = getattr(node, 'type_comment', None)
+        if typeComment is not None:
+            for comment in extractTypeComments(typeComment):
+                typeNode = ast.Name(comment, ast.Load())
+                typeNode.lineno = node.lineno
+                typeNode.col_offset = node.col_offset
+                self.handleNode(typeNode, node)
+
     def handleNode(self, node, parent):
         if node is None:
             return
@@ -887,6 +909,7 @@ class Checker(object):
         self.nodeDepth += 1
         node.depth = self.nodeDepth
         node.parent = parent
+        self.handleTypeComments(node)
         try:
             handler = self.getNodeHandler(node.__class__)
             handler(node)

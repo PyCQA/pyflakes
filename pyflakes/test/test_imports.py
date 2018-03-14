@@ -147,6 +147,40 @@ class Test(TestCase):
         self.flakes('from .. import fu; assert fu')
         self.flakes('from ..bar import fu as baz; assert baz')
 
+    def test_usedImportFunctionTypeComment(self):
+        self.flakes('''
+        from foo import Foo
+        def takes_foo(foo):
+            # type: (Foo) -> None
+            pass
+        ''')
+        self.flakes('''
+        from foo import Foo
+        def returns_foo(foo):
+            # type: () -> Foo
+            pass
+        ''')
+        self.flakes('''
+        from foo import Foo, Bar, Baz
+        def takes_and_returns_foo(foo, bar):
+            # type: (Foo, Bar) -> Baz
+            pass
+        ''')
+
+    def test_usedImportVariableTypeComment(self):
+        self.flakes('''from foo import Foo; foo = None # type: Foo''')
+        # TODO: multiple variables (a, b) = [], []  # type: a, b
+        # TODO: multiple variables (a, b) = [], []  # type: (a, b)
+
+    def test_usedImportForTypeComment(self):
+        # TODO: for x in xs:  # type: x
+        # TODO: for x, y in xs:  # type: x, y
+        pass
+
+    def test_usedImportWithTypeComment(self):
+        # TODO: with x as y:  # type: y
+        pass
+
     def test_redefinedWhileUnused(self):
         self.flakes('import fu; fu = 3', m.RedefinedWhileUnused)
         self.flakes('import fu; fu, bar = 3', m.RedefinedWhileUnused)
