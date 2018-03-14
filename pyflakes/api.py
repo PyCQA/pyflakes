@@ -38,7 +38,7 @@ def check(codeString, filename, reporter=None):
         reporter = modReporter._makeDefaultReporter()
     # First, compile into an AST and handle syntax errors.
     try:
-        tree = compile(codeString, filename, "exec", _ast.PyCF_ONLY_AST)
+        tree = checker.ast_compile(codeString, filename)
     except SyntaxError:
         value = sys.exc_info()[1]
         msg = value.args[0]

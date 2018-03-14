@@ -72,6 +72,11 @@ else:
     LOOP_TYPES = (ast.While, ast.For, ast.AsyncFor)
 
 
+def ast_compile(codeString, filename):
+    tree = compile(codeString, filename, 'exec', ast.PyCF_ONLY_AST)
+    return tree
+
+
 class _FieldsOrder(dict):
     """Fix order of AST node fields."""
 
@@ -920,7 +925,7 @@ class Checker(object):
             self.builtIns.add('_')
         for example in examples:
             try:
-                tree = compile(example.source, "<doctest>", "exec", ast.PyCF_ONLY_AST)
+                tree = ast_compile(example.source, "<doctest>")
             except SyntaxError:
                 e = sys.exc_info()[1]
                 if PYPY:

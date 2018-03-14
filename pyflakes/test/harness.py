@@ -21,7 +21,7 @@ class TestCase(unittest.TestCase):
     withDoctest = False
 
     def flakes(self, input, *expectedOutputs, **kw):
-        tree = compile(textwrap.dedent(input), "<test>", "exec", PyCF_ONLY_AST)
+        tree = checker.ast_compile(textwrap.dedent(input), "<test>")
         w = checker.Checker(tree, withDoctest=self.withDoctest, **kw)
         outputs = [type(o) for o in w.messages]
         expectedOutputs = list(expectedOutputs)
