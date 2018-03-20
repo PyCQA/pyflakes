@@ -117,7 +117,7 @@ def isPythonFile(filename):
     if filename.endswith('.py'):
         return True
 
-    # Avoid obvious backup files (Emacs & vim)
+    # Avoid obvious Emacs backup files
     if filename.endswith("~"):
         return False
 
