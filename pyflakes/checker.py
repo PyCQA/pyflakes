@@ -5,14 +5,13 @@ Implement the central Checker class.
 Also, it models the Bindings and Scopes.
 """
 import __future__
+import ast
 import doctest
 import os
 import sys
 
 PY2 = sys.version_info < (3, 0)
-PY32 = sys.version_info < (3, 3)    # Python 2.5 to 3.2
-PY33 = sys.version_info < (3, 4)    # Python 2.5 to 3.3
-PY34 = sys.version_info < (3, 5)    # Python 2.5 to 3.4
+PY34 = sys.version_info < (3, 5)    # Python 2.7 to 3.4
 try:
     sys.pypy_version_info
     PYPY = True
@@ -20,16 +19,6 @@ except AttributeError:
     PYPY = False
 
 builtin_vars = dir(__import__('__builtin__' if PY2 else 'builtins'))
-
-try:
-    import ast
-except ImportError:     # Python 2.5
-    import _ast as ast
-
-    if 'decorator_list' not in ast.ClassDef._fields:
-        # Patch the missing attribute 'decorator_list'
-        ast.ClassDef.decorator_list = ()
-        ast.FunctionDef.decorator_list = property(lambda s: s.decorators)
 
 from pyflakes import messages
 
@@ -53,7 +42,7 @@ else:
     unicode = str
 
 # Python >= 3.3 uses ast.Try instead of (ast.TryExcept + ast.TryFinally)
-if PY32:
+if PY2:
     def getAlternatives(n):
         if isinstance(n, (ast.If, ast.TryFinally)):
             return [n.body]
@@ -138,7 +127,7 @@ def convert_to_value(item):
             result.name,
             result,
         )
-    elif (not PY33) and isinstance(item, ast.NameConstant):
+    elif (not PY2) and isinstance(item, ast.NameConstant):
         # None, True, False are nameconstants in python3, but names in 2
         return item.value
     else:
@@ -421,8 +410,8 @@ class FunctionScope(Scope):
     @ivar globals: Names declared 'global' in this function.
     """
     usesLocals = False
-    alwaysUsed = set(['__tracebackhide__',
-                      '__traceback_info__', '__traceback_supplement__'])
+    alwaysUsed = {'__tracebackhide__', '__traceback_info__',
+                  '__traceback_supplement__'}
 
     def __init__(self):
         super(FunctionScope, self).__init__()
@@ -1206,9 +1195,9 @@ class Checker(object):
             wildcard = getattr(node.args, arg_name)
             if not wildcard:
                 continue
-            args.append(wildcard if PY33 else wildcard.arg)
+            args.append(wildcard if PY2 else wildcard.arg)
             if is_py3_func:
-                if PY33:  # Python 2.5 to 3.3
+                if PY2:  # Python 2.7
                     argannotation = arg_name + 'annotation'
                     annotations.append(getattr(node.args, argannotation))
                 else:     # Python >= 3.4
@@ -1249,7 +1238,7 @@ class Checker(object):
                     self.report(messages.UnusedVariable, binding.source, name)
             self.deferAssignment(checkUnusedAssignments)
 
-            if PY32:
+            if PY2:
                 def checkReturnWithArgumentInsideGenerator():
                     """
                     Check to see if there is any return statement with

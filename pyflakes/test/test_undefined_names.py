@@ -728,14 +728,13 @@ class Test(TestCase):
             B = dict((i, str(i)) for i in T)
         ''')
 
-        if version_info >= (2, 7):
-            self.flakes('''
-            class A:
-                T = range(10)
+        self.flakes('''
+        class A:
+            T = range(10)
 
-                X = {x for x in T}
-                Y = {x:x for x in T}
-            ''')
+            X = {x for x in T}
+            Y = {x:x for x in T}
+        ''')
 
     def test_definedInClassNested(self):
         """Defined name for nested generator expressions in a class."""
@@ -761,7 +760,6 @@ class Test(TestCase):
         (42 for i in range(i))
         ''', m.UndefinedName)
 
-    @skipIf(version_info < (2, 7), 'Dictionary comprehensions do not exist')
     def test_definedFromLambdaInDictionaryComprehension(self):
         """
         Defined name referenced from a lambda function within a dict/set
@@ -780,7 +778,6 @@ class Test(TestCase):
         any(lambda: id(x) for x in range(10))
         ''')
 
-    @skipIf(version_info < (2, 7), 'Dictionary comprehensions do not exist')
     def test_undefinedFromLambdaInDictionaryComprehension(self):
         """
         Undefined name referenced from a lambda function within a dict/set
