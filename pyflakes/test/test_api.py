@@ -180,6 +180,7 @@ class TestIterSourceCode(TestCase):
         """
         os.mkdir(os.path.join(self.tempdir, 'foo'))
         apath = self.makeEmptyFile('foo', 'a.py')
+        self.makeEmptyFile('foo', 'a.py~')
         os.mkdir(os.path.join(self.tempdir, 'bar'))
         bpath = self.makeEmptyFile('bar', 'b.py')
         cpath = self.makeEmptyFile('c.py')

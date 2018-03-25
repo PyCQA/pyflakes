@@ -117,6 +117,10 @@ def isPythonFile(filename):
     if filename.endswith('.py'):
         return True
 
+    # Avoid obvious Emacs backup files
+    if filename.endswith("~"):
+        return False
+
     max_bytes = 128
 
     try:
