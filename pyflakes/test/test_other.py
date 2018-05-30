@@ -1650,6 +1650,15 @@ class TestUnusedAssignment(TestCase):
             except (tokenize.TokenError, IndentationError): pass
         ''')
 
+    def test_exceptUnusedAsLocals(self):
+        """
+        Don't issue false warning when an exception is used by locals().
+        """
+        self.flakes('''
+        try: raise ValueError()
+        except ValueError as e: locals()
+        ''')
+
     def test_augmentedAssignmentImportedFunctionCall(self):
         """
         Consider a function that is called on the right part of an
