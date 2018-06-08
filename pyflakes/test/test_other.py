@@ -1175,6 +1175,15 @@ class TestUnusedAssignment(TestCase):
             b = 1
         ''', m.UnusedVariable)
 
+    def test_unusedUnderscoreVariable(self):
+        """
+        Don't warn when an unused variable starts with an underscore.
+        """
+        self.flakes('''
+        def a():
+            _b = 1
+        ''')
+
     def test_unusedVariableAsLocals(self):
         """
         Using locals() it is perfectly valid to have unused variables
