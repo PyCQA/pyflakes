@@ -1,5 +1,10 @@
-UNRELEASED
+2.0.0 (2018-05-20)
+  - Drop support for EOL Python <2.7 and 3.2-3.3
   - Check for unused exception binding in `except:` block
+  - Handle string literal type annotations
+  - Ignore redefinitions of `_`, unless originally defined by import
+  - Support `__class__` without `self` in Python 3
+  - Issue an error for `raise NotImplemented(...)`
 
 1.6.0 (2017-08-03)
   - Process function scope variable annotations for used names

@@ -9,7 +9,7 @@ parsing the source file, not importing it, so it is safe to use on
 modules with side effects.  It's also much faster.
 
 It is `available on PyPI <https://pypi.python.org/pypi/pyflakes>`_
-and it supports all active versions of Python from 2.5 to 3.6.
+and it supports all active versions of Python: 2.7 and 3.4 to 3.7.
 
 
 
@@ -32,7 +32,7 @@ Useful tips:
 
 * If you require more options and more flexibility, you could give a
   look to Flake8_ too.
-  
+
 
 Design Principles
 -----------------
