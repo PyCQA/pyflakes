@@ -425,7 +425,10 @@ class FunctionScope(Scope):
         Return a generator for the assignments which have not been used.
         """
         for name, binding in self.items():
-            if (not binding.used and name not in self.globals
+            if (not binding.used
+                    and (not name.startswith('_')
+                         or name.startswith('__'))
+                    and name not in self.globals
                     and not self.usesLocals
                     and isinstance(binding, Assignment)):
                 yield name, binding
