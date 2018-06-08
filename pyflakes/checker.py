@@ -426,7 +426,8 @@ class FunctionScope(Scope):
         """
         for name, binding in self.items():
             if (not binding.used
-                    and (name[0:1] != '_' or name[0:2] == '__')
+                    and (not name.startswith('_')
+                         or name.startswith('__'))
                     and name not in self.globals
                     and not self.usesLocals
                     and isinstance(binding, Assignment)):
