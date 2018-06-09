@@ -94,6 +94,13 @@ class TestImportationObject(TestCase):
         assert binding.source_statement == 'from __future__ import print_function'
         assert str(binding) == '__future__.print_function'
 
+    def test_unusedImport_underscore(self):
+        """
+        The magic underscore var should be reported as unused when used as an
+        import alias.
+        """
+        self.flakes('import fu as _', m.UnusedImport)
+
 
 class Test(TestCase):
 
