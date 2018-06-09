@@ -31,7 +31,7 @@ install:
 
   # Only pypy2-5.3.1 is integrated into tox, as pypy3-2.4.0 fails and
   # a Windows distribution of pypy3-5.2 isnt available yet.
-  - ps: $env:path = "$env:path;C:\pypy2-v5.3.1-win32"
+  - ps: $env:path = "$env:path;C:\pypy2-v5.3.1-win32;C:\pypy-2.6.1-win32\bin"
 
   # pypy3-2.4.0 and pypy-2.6.1 are manually bootstrapped and tested
   - ps: (New-Object Net.WebClient).DownloadFile('https://bootstrap.pypa.io/get-pip.py', "$env:appveyor_build_folder\get-pip.py")
