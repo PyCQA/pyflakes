@@ -17,6 +17,9 @@ class TestCase(unittest.TestCase):
 
     def flakes(self, input, *expectedOutputs, **kw):
         tree = compile(textwrap.dedent(input), "<test>", "exec", PyCF_ONLY_AST)
+        if kw.get('is_segment'):
+            tree = tree.body[0]
+            kw.pop('is_segment')
         w = checker.Checker(tree, withDoctest=self.withDoctest, **kw)
         outputs = [type(o) for o in w.messages]
         expectedOutputs = list(expectedOutputs)

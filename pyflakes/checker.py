@@ -95,9 +95,15 @@ def iter_child_nodes(node, omit=None, _fields_order=_FieldsOrder()):
     """
     Yield all direct child nodes of *node*, that is, all fields that
     are nodes and all items of fields that are lists of nodes.
+
+    :param node:          AST node to be iterated upon
+    :param omit:          String or tuple of strings denoting the
+                          attributes of the node to be omitted from
+                          further parsing
+    :param _fields_order: Order of AST node fields
     """
     for name in _fields_order[node.__class__]:
-        if name == omit:
+        if omit and name in omit:
             continue
         field = getattr(node, name, None)
         if isinstance(field, ast.AST):
@@ -472,6 +478,17 @@ class Checker(object):
         callables which are deferred assignment checks.
     """
 
+    _ast_node_scope = {
+        ast.Module: ModuleScope,
+        ast.ClassDef: ClassScope,
+        ast.FunctionDef: FunctionScope,
+        ast.Lambda: FunctionScope,
+        ast.ListComp: GeneratorScope,
+        ast.SetComp: GeneratorScope,
+        ast.GeneratorExp: GeneratorScope,
+        ast.DictComp: GeneratorScope,
+    }
+
     nodeDepth = 0
     offset = None
     traceTree = False
@@ -493,7 +510,10 @@ class Checker(object):
         if builtins:
             self.builtIns = self.builtIns.union(builtins)
         self.withDoctest = withDoctest
-        self.scopeStack = [ModuleScope()]
+        try:
+            self.scopeStack = [Checker._ast_node_scope[type(tree)]()]
+        except KeyError:
+            raise RuntimeError('No scope implemented for the node %r' % tree)
         self.exceptHandlers = [()]
         self.root = tree
         self.handleChildren(tree)
@@ -643,6 +663,18 @@ class Checker(object):
                 return True
         return False
 
+    def _getAncestor(self, node, ancestor_type):
+        parent = node
+        while True:
+            if parent is self.root:
+                return None
+            parent = self.getParent(parent)
+            if isinstance(parent, ancestor_type):
+                return parent
+
+    def getScopeNode(self, node):
+        return self._getAncestor(node, tuple(Checker._ast_node_scope.keys()))
+
     def differentForks(self, lnode, rnode):
         """True, if lnode and rnode are located on different forks of IF/TRY"""
         ancestor = self.getCommonAncestor(lnode, rnode, self.root)
@@ -790,6 +822,8 @@ class Checker(object):
             binding = Binding(name, node)
         elif name == '__all__' and isinstance(self.scope, ModuleScope):
             binding = ExportBinding(name, node.parent, self.scope)
+        elif isinstance(getattr(node, 'ctx', None), ast.Param):
+            binding = Argument(name, self.getScopeNode(node))
         else:
             binding = Assignment(name, node)
         self.addBinding(node, binding)
@@ -1103,13 +1137,12 @@ class Checker(object):
                     and isinstance(node.parent, ast.Call)):
                 # we are doing locals() call in current scope
                 self.scope.usesLocals = True
-        elif isinstance(node.ctx, (ast.Store, ast.AugStore)):
+        elif isinstance(node.ctx, (ast.Store, ast.AugStore, ast.Param)):
             self.handleNodeStore(node)
         elif isinstance(node.ctx, ast.Del):
             self.handleNodeDelete(node)
         else:
-            # must be a Param context -- this only happens for names in function
-            # arguments, but these aren't dispatched through here
+            # Unknown context
             raise RuntimeError("Got impossible expression context: %r" % (node.ctx,))
 
     def CONTINUE(self, node):
@@ -1225,15 +1258,8 @@ class Checker(object):
         def runFunction():
 
             self.pushScope()
-            for name in args:
-                self.addBinding(node, Argument(name, node))
-            if isinstance(node.body, list):
-                # case for FunctionDefs
-                for stmt in node.body:
-                    self.handleNode(stmt, node)
-            else:
-                # case for Lambdas
-                self.handleNode(node.body, node)
+
+            self.handleChildren(node, omit='decorator_list')
 
             def checkUnusedAssignments():
                 """
@@ -1256,6 +1282,18 @@ class Checker(object):
             self.popScope()
 
         self.deferFunction(runFunction)
+
+    def ARGUMENTS(self, node):
+        self.handleChildren(node, omit=('defaults', 'kw_defaults'))
+        if PY2:
+            scope_node = self.getScopeNode(node)
+            if node.vararg:
+                self.addBinding(node, Argument(node.vararg, scope_node))
+            if node.kwarg:
+                self.addBinding(node, Argument(node.kwarg, scope_node))
+
+    def ARG(self, node):
+        self.addBinding(node, Argument(node.arg, self.getScopeNode(node)))
 
     def CLASSDEF(self, node):
         """

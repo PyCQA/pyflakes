@@ -1159,6 +1159,37 @@ class Test(TestCase):
         def g(): foo = 'anything'; foo.is_used()
         ''')
 
+    def test_function_arguments(self):
+        """
+        Test to traverse ARG and ARGUMENT handler
+        """
+        self.flakes('''
+        def foo(a, b):
+            pass
+        ''')
+
+        self.flakes('''
+        def foo(a, b, c=0):
+            pass
+        ''')
+
+        self.flakes('''
+        def foo(a, b, c=0, *args):
+            pass
+        ''')
+
+        self.flakes('''
+        def foo(a, b, c=0, *args, **kwargs):
+            pass
+        ''')
+
+    @skipIf(version_info < (3, 3), "Python >= 3.3 only")
+    def test_function_arguments_python3(self):
+        self.flakes('''
+        def foo(a, b, c=0, *args, d=0, **kwargs):
+            pass
+        ''')
+
 
 class TestUnusedAssignment(TestCase):
     """
