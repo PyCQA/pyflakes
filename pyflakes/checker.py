@@ -180,6 +180,18 @@ class Definition(Binding):
     """
 
 
+class Builtin(Definition):
+    """A definition created for all Python builtins."""
+
+    def __init__(self, name):
+        super(Builtin, self).__init__(name, None)
+
+    def __repr__(self):
+        return '<%s object %r at 0x%x>' % (self.__class__.__name__,
+                                           self.name,
+                                           id(self))
+
+
 class UnhandledKeyType(object):
     """
     A dictionary key of a type that we cannot or do not check for duplicates.
@@ -516,6 +528,8 @@ class Checker(object):
             raise RuntimeError('No scope implemented for the node %r' % tree)
         self.exceptHandlers = [()]
         self.root = tree
+        for builtin in self.builtIns:
+            self.addBinding(None, Builtin(builtin))
         self.handleChildren(tree)
         self.runDeferred(self._deferredFunctions)
         # Set _deferredFunctions to None so that deferFunction will fail
@@ -699,7 +713,8 @@ class Checker(object):
                 break
         existing = scope.get(value.name)
 
-        if existing and not self.differentForks(node, existing.source):
+        if (existing and not isinstance(existing, Builtin) and
+                not self.differentForks(node, existing.source)):
 
             parent_stmt = self.getParent(value.source)
             if isinstance(existing, Importation) and isinstance(parent_stmt, ast.For):
@@ -764,10 +779,6 @@ class Checker(object):
 
             if in_generators is not False:
                 in_generators = isinstance(scope, GeneratorScope)
-
-        # look in the built-ins
-        if name in self.builtIns:
-            return
 
         if importStarred:
             from_list = []
@@ -943,9 +954,7 @@ class Checker(object):
         self.scopeStack = [self.scopeStack[0]]
         node_offset = self.offset or (0, 0)
         self.pushScope(DoctestScope)
-        underscore_in_builtins = '_' in self.builtIns
-        if not underscore_in_builtins:
-            self.builtIns.add('_')
+        self.addBinding(None, Builtin('_'))
         for example in examples:
             try:
                 tree = compile(example.source, "<doctest>", "exec", ast.PyCF_ONLY_AST)
@@ -961,8 +970,6 @@ class Checker(object):
                                node_offset[1] + example.indent + 4)
                 self.handleChildren(tree)
                 self.offset = node_offset
-        if not underscore_in_builtins:
-            self.builtIns.remove('_')
         self.popScope()
         self.scopeStack = saved_stack
 
