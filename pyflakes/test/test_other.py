@@ -2011,7 +2011,7 @@ class TestMaximumRecursion(TestCase):
         # Using self._recursionlimit * 10 tends to cause CPython to core dump.
         # Older PyPy tend to break with lower recusion limits.
         if PYPY and version_info < (3, 5):
-            new_recursion_limit = self._recursionlimit * 3
+            new_recursion_limit = self._recursionlimit * 2
         else:
             new_recursion_limit = self._recursionlimit * 6
 
