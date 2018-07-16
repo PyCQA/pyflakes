@@ -1461,15 +1461,9 @@ class Checker(object):
         # to more accurately determine if the name is used in the except:
         # block.
 
-        for scope in self.scopeStack[::-1]:
-            try:
-                binding = scope.pop(node.name)
-            except KeyError:
-                pass
-            else:
-                prev_definition = scope, binding
-                break
-        else:
+        try:
+            prev_definition = self.scope.pop(node.name)
+        except KeyError:
             prev_definition = None
 
         self.handleNodeStore(node)
@@ -1494,8 +1488,7 @@ class Checker(object):
 
         # Restore.
         if prev_definition:
-            scope, binding = prev_definition
-            scope[node.name] = binding
+            self.scope[node.name] = prev_definition
 
     def ANNASSIGN(self, node):
         if node.value:
