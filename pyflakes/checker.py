@@ -409,7 +409,6 @@ class FunctionScope(Scope):
 
     @ivar globals: Names declared 'global' in this function.
     """
-    usesLocals = False
     alwaysUsed = {'__tracebackhide__', '__traceback_info__',
                   '__traceback_supplement__'}
 
@@ -428,7 +427,6 @@ class FunctionScope(Scope):
             if (not binding.used
                     and name != '_'  # see issue #202
                     and name not in self.globals
-                    and not self.usesLocals
                     and isinstance(binding, Assignment)):
                 yield name, binding
 
@@ -709,6 +707,15 @@ class Checker(object):
 
         in_generators = None
         importStarred = None
+
+        if node.id == 'locals' and isinstance(node.parent, ast.Call):
+            # we are doing locals() call, which marks names currently
+            # in scope as used.
+            scope = self.scope
+            if isinstance(scope, GeneratorScope):
+                scope = self.scopeStack[-2]
+            for binding in scope.values():
+                binding.used = (self.scope, node)
 
         # try enclosing function scopes and global scope
         for scope in self.scopeStack[-1::-1]:
@@ -1096,10 +1103,6 @@ class Checker(object):
         # Locate the name in locals / function / globals scopes.
         if isinstance(node.ctx, (ast.Load, ast.AugLoad)):
             self.handleNodeLoad(node)
-            if (node.id == 'locals' and isinstance(self.scope, FunctionScope)
-                    and isinstance(node.parent, ast.Call)):
-                # we are doing locals() call in current scope
-                self.scope.usesLocals = True
         elif isinstance(node.ctx, (ast.Store, ast.AugStore)):
             self.handleNodeStore(node)
         elif isinstance(node.ctx, ast.Del):

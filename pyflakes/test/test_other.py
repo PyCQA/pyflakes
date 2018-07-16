@@ -1185,7 +1185,7 @@ class TestUnusedAssignment(TestCase):
             _ = unused_param
         ''')
 
-    def test_unusedVariableAsLocals(self):
+    def test_unusedVariableWithLocals(self):
         """
         Using locals() it is perfectly valid to have unused variables
         """
@@ -1194,6 +1194,29 @@ class TestUnusedAssignment(TestCase):
             b = 1
             return locals()
         ''')
+
+    def test_unusedVariableWithLocalsInComprehension(self):
+        """
+        Using locals() in comprehension it is perfectly valid
+        to have unused variables
+        """
+        self.flakes('''
+        def a():
+            b = 1
+            return (i for i in locals())
+        ''')
+
+    def test_unusedVariableAfterLocals(self):
+        """
+        Warn when an unused variable appears after locals()
+        """
+        self.flakes('''
+        def a():
+            b = 1
+            c = locals()
+            d = 1
+            return c
+        ''', m.UnusedVariable)
 
     def test_unusedVariableNoLocals(self):
         """
