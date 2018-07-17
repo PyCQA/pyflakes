@@ -394,9 +394,13 @@ class ExportBinding(Binding):
 class Scope(dict):
     importStarred = False       # set to True when import * is found
 
+    def __init__(self, node):
+        self.node = node
+
     def __repr__(self):
         scope_cls = self.__class__.__name__
-        return '<%s at 0x%x %s>' % (scope_cls, id(self), dict.__repr__(self))
+        return '<%s at 0x%x for %r containing: %s>' % (
+            scope_cls, id(self), self.node, dict.__repr__(self))
 
 
 class ClassScope(Scope):
@@ -413,8 +417,8 @@ class FunctionScope(Scope):
     alwaysUsed = {'__tracebackhide__', '__traceback_info__',
                   '__traceback_supplement__'}
 
-    def __init__(self):
-        super(FunctionScope, self).__init__()
+    def __init__(self, node):
+        super(FunctionScope, self).__init__(node)
         # Simplify: manage the special locals as globals
         self.globals = self.alwaysUsed.copy()
         self.returnValue = None     # First non-empty return
@@ -493,7 +497,8 @@ class Checker(object):
         if builtins:
             self.builtIns = self.builtIns.union(builtins)
         self.withDoctest = withDoctest
-        self.scopeStack = [ModuleScope()]
+        tree.depth = self.nodeDepth
+        self.scopeStack = [ModuleScope(tree)]
         self.exceptHandlers = [()]
         self.root = tree
         self.handleChildren(tree)
@@ -611,8 +616,8 @@ class Checker(object):
                             messg = messages.RedefinedWhileUnused
                         self.report(messg, node, value.name, value.source)
 
-    def pushScope(self, scopeClass=FunctionScope):
-        self.scopeStack.append(scopeClass())
+    def pushScope(self, scopeClass=FunctionScope, node=None):
+        self.scopeStack.append(scopeClass(node))
 
     def report(self, messageClass, *args, **kwargs):
         self.messages.append(messageClass(self.filename, *args, **kwargs))
@@ -631,6 +636,9 @@ class Checker(object):
         if lnode is rnode:
             return lnode
 
+        if stop.depth in (lnode.depth, rnode.depth):
+            return None
+
         if (lnode.depth > rnode.depth):
             return self.getCommonAncestor(lnode.parent, rnode, stop)
         if (lnode.depth < rnode.depth):
@@ -645,7 +653,8 @@ class Checker(object):
 
     def differentForks(self, lnode, rnode):
         """True, if lnode and rnode are located on different forks of IF/TRY"""
-        ancestor = self.getCommonAncestor(lnode, rnode, self.root)
+        ancestor = self.getCommonAncestor(lnode, rnode,
+                                          self.scope.node or self.root)
         parts = getAlternatives(ancestor)
         if parts:
             for items in parts:
@@ -667,7 +676,7 @@ class Checker(object):
                 break
         existing = scope.get(value.name)
 
-        if existing and not self.differentForks(node, existing.source):
+        if existing:
 
             parent_stmt = self.getParent(value.source)
             if isinstance(existing, Importation) and isinstance(parent_stmt, ast.For):
@@ -675,7 +684,11 @@ class Checker(object):
                             node, value.name, existing.source)
 
             elif scope is self.scope:
-                if (isinstance(parent_stmt, ast.comprehension) and
+                if self.differentForks(node, existing.source):
+                    # ignore redefinitions in different forks of `if` & `try`
+                    pass
+
+                elif (isinstance(parent_stmt, ast.comprehension) and
                         not isinstance(self.getParent(existing.source),
                                        (ast.For, ast.comprehension))):
                     self.report(messages.RedefinedInListComp,
@@ -908,7 +921,7 @@ class Checker(object):
         saved_stack = self.scopeStack
         self.scopeStack = [self.scopeStack[0]]
         node_offset = self.offset or (0, 0)
-        self.pushScope(DoctestScope)
+        self.pushScope(DoctestScope, node)
         underscore_in_builtins = '_' in self.builtIns
         if not underscore_in_builtins:
             self.builtIns.add('_')
@@ -1084,7 +1097,7 @@ class Checker(object):
     NONLOCAL = GLOBAL
 
     def GENERATOREXP(self, node):
-        self.pushScope(GeneratorScope)
+        self.pushScope(GeneratorScope, node)
         self.handleChildren(node)
         self.popScope()
 
@@ -1224,7 +1237,7 @@ class Checker(object):
 
         def runFunction():
 
-            self.pushScope()
+            self.pushScope(FunctionScope, node)
             for name in args:
                 self.addBinding(node, Argument(name, node))
             if isinstance(node.body, list):
@@ -1270,7 +1283,7 @@ class Checker(object):
         if not PY2:
             for keywordNode in node.keywords:
                 self.handleNode(keywordNode, node)
-        self.pushScope(ClassScope)
+        self.pushScope(ClassScope, node)
         # doctest does not process doctest within a doctest
         # classes within classes are processed.
         if (self.withDoctest and
