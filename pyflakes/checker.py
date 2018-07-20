@@ -13,9 +13,10 @@ import sys
 PY2 = sys.version_info < (3, 0)
 PY34 = sys.version_info < (3, 5)    # Python 2.7 to 3.4
 try:
-    sys.pypy_version_info
+    PYPY_VERSION = sys.pypy_version_info
     PYPY = True
 except AttributeError:
+    PYPY_VERSION = None
     PYPY = False
 
 builtin_vars = dir(__import__('__builtin__' if PY2 else 'builtins'))
@@ -951,7 +952,7 @@ class Checker(object):
                 tree = compile(example.source, "<doctest>", "exec", ast.PyCF_ONLY_AST)
             except SyntaxError:
                 e = sys.exc_info()[1]
-                if PYPY:
+                if PYPY and PYPY_VERSION < (6, ):
                     e.offset += 1
                 position = (node_lineno + example.lineno + e.lineno,
                             example.indent + 4 + (e.offset or 0))
