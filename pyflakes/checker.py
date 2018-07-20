@@ -516,6 +516,7 @@ class Checker(object):
             raise RuntimeError('No scope implemented for the node %r' % tree)
         self.exceptHandlers = [()]
         self.root = tree
+        self._recursion_limit = sys.getrecursionlimit()
         self.handleChildren(tree)
         self.runDeferred(self._deferredFunctions)
         # Set _deferredFunctions to None so that deferFunction will fail
@@ -859,6 +860,15 @@ class Checker(object):
                 self.report(messages.UndefinedName, node, name)
 
     def handleChildren(self, tree, omit=None):
+        # The recursion limit needs to be at least double nodeDepth
+        # as the recursion cycles between handleChildren and handleNode.
+        # Set it to triple nodeDepth to account for other items on the stack,
+        # and to reduce the frequency of changes to the limit.
+        acceptable_recursion_limit = self.nodeDepth * 3
+        if self._recursion_limit <= acceptable_recursion_limit:
+            sys.setrecursionlimit(acceptable_recursion_limit)
+            self._recursion_limit = acceptable_recursion_limit
+
         for node in iter_child_nodes(tree, omit=omit):
             self.handleNode(node, tree)
 

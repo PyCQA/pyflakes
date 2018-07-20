@@ -1,11 +1,18 @@
 """
 Tests for various Pyflakes behavior.
 """
+import sys
 
 from sys import version_info
 
 from pyflakes import messages as m
 from pyflakes.test.harness import TestCase, skip, skipIf
+
+try:
+    sys.pypy_version_info
+    PYPY = True
+except AttributeError:
+    PYPY = False
 
 
 class Test(TestCase):
@@ -2034,3 +2041,24 @@ class TestAsyncStatements(TestCase):
         self.flakes('''
         raise NotImplemented
         ''', m.RaiseNotImplemented)
+
+
+class TestMaximumRecursion(TestCase):
+
+    def setUp(self):
+        self._recursionlimit = sys.getrecursionlimit()
+
+    def test_recursion_limit(self):
+        # Using self._recursionlimit * 10 tends to cause CPython to core dump.
+        # Older PyPy tend to break with lower recusion limits.
+        if PYPY and version_info < (3, 5):
+            new_recursion_limit = self._recursionlimit * 2
+        else:
+            new_recursion_limit = self._recursionlimit * 6
+
+        r = range(new_recursion_limit)
+        s = 'x = ' + ' + '.join(str(n) for n in r)
+        self.flakes(s)
+
+    def tearDown(self):
+        sys.setrecursionlimit(self._recursionlimit)
