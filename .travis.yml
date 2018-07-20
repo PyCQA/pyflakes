@@ -7,7 +7,9 @@ python:
   - 3.6
   - nightly
   - pypy
-  - pypy-5.3
+  - pypy3.5-5.8.0
+  - pypy3.5-5.9.0
+  - pypy3.5-5.10.1
   - pypy3
 install:
   - pip install --upgrade .
