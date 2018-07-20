@@ -859,8 +859,41 @@ class Checker(object):
                 self.report(messages.UndefinedName, node, name)
 
     def handleChildren(self, tree, omit=None):
+        """Handle all children recursively, but may be flattened."""
         for node in iter_child_nodes(tree, omit=omit):
             self.handleNode(node, tree)
+
+    def handleChildrenNested(self, node):
+        """Handle all children recursively."""
+        self.handleChildren(node)
+
+    def _iter_flattened(self, tree, omit, _fields_order=_FieldsOrder()):
+        """
+        Yield child nodes of *node* and their children, with handler.
+
+        The value yielded is a tuple of the node, its parent and its handler.
+        The handler may be False to indicate that no handler and no recursion
+        is required as the node is part of a flattened list.
+        """
+        _may_flatten = (self.handleChildren,
+                        self.handleChildrenFlattened)
+
+        nodes = [(tree, None)]
+        for node, parent in nodes:
+            # Skip the root of the tree, which has parent None
+            handler = self.getNodeHandler(node.__class__) if parent else False
+            if handler and handler not in _may_flatten:
+                yield node, parent, handler
+            else:
+                nodes[:] += ((child, node)
+                             for child in iter_child_nodes(node,
+                                                           omit,
+                                                           _fields_order))
+
+    def handleChildrenFlattened(self, tree, omit=None):
+        """Handle all children recursively as a flat list where possible."""
+        for node, parent, handler in self._iter_flattened(tree, omit=omit):
+            self.handleNode(node, parent, handler)
 
     def isLiteralTupleUnpacking(self, node):
         if isinstance(node, ast.Assign):
@@ -891,7 +924,12 @@ class Checker(object):
 
         return (node.s, doctest_lineno)
 
-    def handleNode(self, node, parent):
+    def handleNode(self, node, parent, handler=None):
+        """
+        Handle a single node, invoking its handler, which may recurse.
+
+        If handler is None, the default handler is used.
+        """
         if node is None:
             return
         if self.offset and getattr(node, 'lineno', None) is not None:
@@ -902,11 +940,18 @@ class Checker(object):
         if self.futuresAllowed and not (isinstance(node, ast.ImportFrom) or
                                         self.isDocstring(node)):
             self.futuresAllowed = False
-        self.nodeDepth += 1
-        node.depth = self.nodeDepth
+
+        node.depth = self.nodeDepth + 1
         node.parent = parent
-        try:
+
+        if handler is False:
+            return
+
+        if not handler:
             handler = self.getNodeHandler(node.__class__)
+
+        self.nodeDepth += 1
+        try:
             handler(node)
         finally:
             self.nodeDepth -= 1
@@ -1003,21 +1048,22 @@ class Checker(object):
         pass
 
     # "stmt" type nodes
-    DELETE = PRINT = FOR = ASYNCFOR = WHILE = IF = WITH = WITHITEM = \
-        ASYNCWITH = ASYNCWITHITEM = TRYFINALLY = EXEC = \
-        EXPR = ASSIGN = handleChildren
+    DELETE = PRINT = EXEC = EXPR = handleChildrenFlattened
+    ASSIGN = TRYFINALLY = handleChildren
+    FOR = ASYNCFOR = WHILE = IF = WITH = ASYNCWITH = handleChildren
+    WITHITEM = ASYNCWITHITEM = handleChildrenFlattened
 
     PASS = ignore
 
     # "expr" type nodes
     BOOLOP = BINOP = UNARYOP = IFEXP = SET = \
         COMPARE = CALL = REPR = ATTRIBUTE = SUBSCRIPT = \
-        STARRED = NAMECONSTANT = handleChildren
+        STARRED = NAMECONSTANT = handleChildrenFlattened
 
     NUM = STR = BYTES = ELLIPSIS = ignore
 
     # "slice" type nodes
-    SLICE = EXTSLICE = INDEX = handleChildren
+    SLICE = EXTSLICE = INDEX = handleChildrenFlattened
 
     # expression contexts are node instances too, though being constants
     LOAD = STORE = DEL = AUGLOAD = AUGSTORE = PARAM = ignore
@@ -1042,7 +1088,8 @@ class Checker(object):
             self.report(messages.RaiseNotImplemented, node)
 
     # additional node types
-    COMPREHENSION = KEYWORD = FORMATTEDVALUE = JOINEDSTR = handleChildren
+    COMPREHENSION = handleChildren
+    KEYWORD = FORMATTEDVALUE = JOINEDSTR = handleChildrenFlattened
 
     def DICT(self, node):
         # Complain if there are duplicate keys with different values
@@ -1122,7 +1169,7 @@ class Checker(object):
         self.handleChildren(node)
         self.popScope()
 
-    LISTCOMP = handleChildren if PY2 else GENERATOREXP
+    LISTCOMP = handleChildrenNested if PY2 else GENERATOREXP
 
     DICTCOMP = SETCOMP = GENERATOREXP
 
