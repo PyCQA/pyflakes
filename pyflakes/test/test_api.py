@@ -501,7 +501,7 @@ foo(bar=baz, bax)
 """
         sourcePath = self.makeTempFile(source)
         last_line = '            ^\n' if ERROR_HAS_LAST_LINE else ''
-        column = '13:' if ERROR_HAS_COL_NUM or PYPY else ''
+        column = '13:' if ERROR_HAS_COL_NUM else ''
 
         if sys.version_info >= (3, 5):
             message = 'positional argument follows keyword argument'
