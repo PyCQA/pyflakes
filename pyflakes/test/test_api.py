@@ -757,7 +757,7 @@ class IntegrationTests(TestCase):
         d = self.runPyflakes([self.tempfilepath])
         error_msg = '{0}:1:{2}: invalid syntax{1}import{1}    {3}^{1}'.format(
             self.tempfilepath, os.linesep, 5 if PYPY else 7, '' if PYPY else '  ')
-        self.assertEqual(d, ('', error_msg, True))
+        self.assertEqual(d, ('', error_msg, 1))
 
     def test_readFromStdin(self):
         """
@@ -778,6 +778,8 @@ class TestMain(IntegrationTests):
             with SysStreamCapturing(stdin) as capture:
                 main(args=paths)
         except SystemExit as e:
-            return (capture.output, capture.error, e.code)
+            self.assertIsInstance(e.code, bool)
+            rv = int(e.code)
+            return (capture.output, capture.error, rv)
         else:
             raise RuntimeError('SystemExit not raised')
