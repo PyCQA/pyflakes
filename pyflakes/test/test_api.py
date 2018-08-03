@@ -515,7 +515,6 @@ foo(bar=baz, bax)
 foo(bar=baz, bax)
 %s""" % (sourcePath, column, message, last_line)])
 
-    @skipIf(PYPY, 'Output in PyPy varies highly, depending on version')
     def test_invalidEscape(self):
         """
         The invalid escape syntax raises ValueError in Python 2
@@ -526,14 +525,26 @@ foo(bar=baz, bax)
         if ver < (3,):
             decoding_error = "%s: problem decoding source\n" % (sourcePath,)
         else:
-            last_line = '      ^\n' if ERROR_HAS_LAST_LINE else ''
-            # Column has been "fixed" since 3.2.4 and 3.3.1
-            col = 1 if ver >= (3, 3, 1) or ((3, 2, 4) <= ver < (3, 3)) else 2
+            position_end = 1
+            if PYPY:
+                column = 6
+            else:
+                column = 7
+                # Column has been "fixed" since 3.2.4 and 3.3.1
+                if ver < (3, 2, 4) or ver[:3] == (3, 3, 0):
+                    position_end = 2
+
+            if ERROR_HAS_LAST_LINE:
+                last_line = '%s^\n' % (' ' * (column - 1))
+            else:
+                last_line = ''
+
             decoding_error = """\
-%s:1:7: (unicode error) 'unicodeescape' codec can't decode bytes \
+%s:1:%d: (unicode error) 'unicodeescape' codec can't decode bytes \
 in position 0-%d: truncated \\xXX escape
 foo = '\\xyz'
-%s""" % (sourcePath, col, last_line)
+%s""" % (sourcePath, column, position_end, last_line)
+
         self.assertHasErrors(
             sourcePath, [decoding_error])
 
