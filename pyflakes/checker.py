@@ -871,10 +871,12 @@ class Checker(object):
         if isinstance(self.scope, FunctionScope) and name in self.scope.globals:
             self.scope.globals.remove(name)
         else:
-            try:
-                del self.scope[name]
-            except KeyError:
+            binding = self.scope.get(name, None)
+            if not binding or isinstance(binding, Builtin):
                 self.report(messages.UndefinedName, node, name)
+                return
+
+        del self.scope[name]
 
     def handleChildren(self, tree, omit=None):
         for node in iter_child_nodes(tree, omit=omit):

@@ -371,6 +371,19 @@ class Test(TestCase):
         """Del an undefined name."""
         self.flakes('del a', m.UndefinedName)
 
+    def test_del_builtin(self):
+        """Del a builtin not possible."""
+        self.flakes('del range', m.UndefinedName)
+
+    def test_del_shadowed_builtin(self):
+        """
+        Del a function with same name as builtin.
+        """
+        self.flakes('''
+        def range(): pass
+        del range
+        ''')
+
     def test_delConditional(self):
         """
         Ignores conditional bindings deletion.
