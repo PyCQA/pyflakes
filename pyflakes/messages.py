@@ -262,3 +262,20 @@ class InvalidStringInterpolation(Message):
     def __init__(self, filename, loc, message):
         Message.__init__(self, filename, loc)
         self.message_args = (message,)
+
+
+class InvalidStringFormatSpecification(Message):
+    message = 'invalid string format specification'
+
+
+class StringFormatTupleOutOfRange(Message):
+    message = 'tuple index out of range in string format specification'
+
+
+class StringFormatKeyError(Message):
+    message = 'key error in string format specification'
+
+
+class StringFormatMixFieldSpecification(Message):
+    message = 'cannot switch from automatic field numbering ' \
+              'to manual field specification'

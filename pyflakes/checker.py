@@ -8,6 +8,7 @@ import __future__
 import ast
 import doctest
 import os
+import string
 import sys
 
 PY2 = sys.version_info < (3, 0)
@@ -158,6 +159,12 @@ class DummyInterpolationArg(object):
 
     def __repr__(self):
         return "DummyInterpolationArg()"
+
+    def __getitem__(self, i):
+        return DummyInterpolationArg()
+
+    def __getattr__(self, i):
+        return DummyInterpolationArg()
 
 
 def is_notimplemented_name_node(node):
@@ -1048,7 +1055,7 @@ class Checker(object):
         COMPARE = CALL = REPR = ATTRIBUTE = SUBSCRIPT = \
         STARRED = NAMECONSTANT = handleChildren
 
-    NUM = STR = BYTES = ELLIPSIS = ignore
+    NUM = BYTES = ELLIPSIS = ignore
 
     # "slice" type nodes
     SLICE = EXTSLICE = INDEX = handleChildren
@@ -1091,11 +1098,84 @@ class Checker(object):
             self.report(messages.InvalidStringInterpolation, str, e.args[0])
         return
 
+    def handleStringFormat(self, node):
+        """
+        Complain if string formatting has too many or too few arguments
+        """
+        if not PY2:
+            # starred / kwargs handled differently in PY3
+            return
+
+        call = node.parent.parent
+
+        # build dummy arguments for use in the format call
+        if call.starargs is not None:
+            args = None
+        else:
+            args = tuple(None for arg in call.args)
+            curfield = 0
+
+        if call.kwargs is not None:
+            kwargs = None
+        else:
+            kwargs = dict((kw.arg, DummyInterpolationArg())
+                          for kw in call.keywords)
+
+        formatter = string.Formatter()
+
+        def fields():
+            _parse_gen = formatter.parse(node.s)
+            while True:
+                try:
+                    yield _parse_gen.next()
+                except ValueError:
+                    # parser couldn't handle the string; maybe unbalanced {}?
+                    self.report(messages.InvalidStringFormatSpecification, node)
+                    return
+
+        for _, field_name, _, _ in fields():
+            if field_name is None:
+                continue
+            elif (field_name == '' or field_name[0] == '.'):
+                # unnamed {}; check index of current field
+                if args is not None:
+                    if curfield >= len(args):
+                        self.report(
+                            messages.StringFormatTupleOutOfRange, node)
+                        return
+                    curfield += 1
+            elif field_name[0].isdigit():
+                # numbered {1}; possibly with attribute reading
+                if args is not None:
+                    if curfield > 0:
+                        # cannot switch from automatic field
+                        # numbering to manual field specification
+                        self.report(
+                            messages.StringFormatMixFieldSpecification, node)
+                        return
+                    try:
+                        formatter.get_field(field_name, args, {})
+                    except IndexError:
+                        self.report(
+                            messages.StringFormatTupleOutOfRange, node)
+            else:
+                # named field {obj}
+                if kwargs is not None:
+                    try:
+                        formatter.get_field(field_name, (), kwargs)
+                    except KeyError:
+                        self.report(messages.StringFormatKeyError, node)
+
     def STR(self, node):
         if isinstance(node.parent, ast.BinOp) and \
            node.parent.left is node and \
            isinstance(node.parent.op, ast.Mod):
             self.handleStringInterpolation(node.parent.left, node.parent.right)
+
+        if isinstance(node.parent, ast.Attribute) and \
+           node.parent.attr == "format" and \
+           isinstance(node.parent.parent, ast.Call):
+            self.handleStringFormat(node)
 
     def RAISE(self, node):
         self.handleChildren(node)

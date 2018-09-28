@@ -2133,8 +2133,41 @@ class TestStringInterpolation(TestCase):
 
     @skip("wrong string interpolation that are not handled")
     def test_unhandled_string_interp(self):
+        # only warns when second argument is literal tuple or dictionary
         self.flakes('''
         args = ("foo", "bar")
         "%" % args
-        ''')                    # only warns when second argument is literal
-                                # tuple or dictionary
+        ''')
+
+
+class TestStringFormat(TestCase):
+    def test_valid_string_format(self):
+        self.flakes('"{}".format("foo")')
+        self.flakes('"{1}".format("foo", "bar")')
+        self.flakes('"{foo}".format(foo="bar")')
+        self.flakes('''
+        import Something
+        quuz = corge = Something()
+        "}} {.upper} {!s} {foo!r} {bar[0].baz:<10} {{".format(
+            "qux", "quux", foo=quuz, bar=corge)
+        ''')
+        self.flakes('''
+        foo = [1, 2]
+        "{} {} {}".format(0, *foo)
+        ''')
+        self.flakes('''
+        foo = {"bar": "baz"}
+        "{qux} {bar}".format(qux="quux", **foo)
+        ''')                    # really: unhandled because of the kwargs
+
+    @skipIf(version_info >= (3,),
+            'check not implemented in Python 3')
+    def test_invalid_string_format(self):
+        self.flakes('"{".format()', m.InvalidStringFormatSpecification)
+        self.flakes('"{}".format()', m.StringFormatTupleOutOfRange)
+        self.flakes('"{} {1}".format("foo", "bar")',
+                    m.StringFormatMixFieldSpecification)
+        self.flakes('"{1}".format("foo")',
+                    m.StringFormatTupleOutOfRange)
+        self.flakes('"{foo}".format("bar")', m.StringFormatKeyError)
+        self.flakes('"{foo}".format(bar="baz")', m.StringFormatKeyError)
