@@ -140,6 +140,26 @@ def convert_to_value(item):
         return UnhandledKeyType()
 
 
+class DummyInterpolationArg(object):
+    """
+    Dummy arguments used for string interpolation
+    """
+    def __str__(self):
+        return ""
+
+    def __float__(self):
+        return 0.0
+
+    def __index__(self):
+        return 0
+
+    def __int__(self):
+        return 0
+
+    def __repr__(self):
+        return "DummyInterpolationArg()"
+
+
 def is_notimplemented_name_node(node):
     return isinstance(node, ast.Name) and getNodeName(node) == 'NotImplemented'
 
@@ -1041,6 +1061,41 @@ class Checker(object):
         BITOR = BITXOR = BITAND = FLOORDIV = INVERT = NOT = UADD = USUB = \
         EQ = NOTEQ = LT = LTE = GT = GTE = IS = ISNOT = IN = NOTIN = \
         MATMULT = ignore
+
+    def handleStringInterpolation(self, str, arg):
+        """
+        Complain if string %-interpolation has too many or too few arguments
+        """
+
+        if isinstance(arg, ast.Tuple):
+            # tuple with positional parameters
+            size = len(arg.elts)
+            interpolation_args = tuple(DummyInterpolationArg()
+                                       for i in range(size))
+        elif isinstance(arg, ast.Dict):
+            # dictionary, with named mapped keys
+            interpolation_args = dict(
+                (convert_to_value(k), DummyInterpolationArg())
+                for k in arg.keys)
+        elif isinstance(arg, (ast.Str, ast.Num, ast.List)):
+            # "atoms" of cardinal 1 for the purpose of the string-% operator
+            interpolation_args = DummyInterpolationArg()
+        else:
+            # some other more complex expression, which may or may not return
+            # a tuple of the right cardinal
+            return
+
+        try:
+            str.s % interpolation_args
+        except (TypeError, ValueError, KeyError) as e:
+            self.report(messages.InvalidStringInterpolation, str, e.args[0])
+        return
+
+    def STR(self, node):
+        if isinstance(node.parent, ast.BinOp) and \
+           node.parent.left is node and \
+           isinstance(node.parent.op, ast.Mod):
+            self.handleStringInterpolation(node.parent.left, node.parent.right)
 
     def RAISE(self, node):
         self.handleChildren(node)

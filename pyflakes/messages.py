@@ -254,3 +254,11 @@ class RaiseNotImplemented(Message):
 
 class InvalidPrintSyntax(Message):
     message = 'use of >> is invalid with print function'
+
+
+class InvalidStringInterpolation(Message):
+    message = 'invalid string interpolation: %s'
+
+    def __init__(self, filename, loc, message):
+        Message.__init__(self, filename, loc)
+        self.message_args = (message,)

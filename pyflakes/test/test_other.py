@@ -2084,3 +2084,57 @@ class TestIncompatiblePrintOperator(TestCase):
         from __future__ import print_function
         if print: pass
         ''')
+
+
+class TestStringInterpolation(TestCase):
+    def test_valid_string_interp(self):
+        self.flakes('"%s"')
+        self.flakes('"%%"')
+        self.flakes('"%d%%" % 100')
+        self.flakes('''
+        "%d %i %o %u %x %X %e   %E   %f   %F   %g   %G  %c  %r     %s" % \
+        (1, 1, 1, 1, 1, 1, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1, "foo", "bar")
+        ''')
+        self.flakes('"%s" % "foo"')
+        self.flakes('r"%s" % b"foo"')
+        self.flakes('u"%s" % r"foo"')
+        self.flakes('"%s" % ("foo",)')
+        self.flakes('"%s %s" % ("foo", "bar")')
+        self.flakes('"%s" % ["foo", "bar"]')
+        self.flakes('''
+        args = ("foo", "bar")
+        "%s %s" % args
+        ''')
+        self.flakes('"%(foo)s" % {"foo": "bar"}')
+        self.flakes('''
+        def f():
+          return {"foo": "bar"}
+        "%(foo)s" % f()
+        ''')
+
+    def test_invalid_string_interp(self):
+        invalid_interpolations = [
+            ('"%s %s" % "foo"', 'not enough arguments for format string'),
+            ('"%s %" % "foo"', 'incomplete format'),
+            ('"%(foos" % {"foo": "bar"}', 'incomplete format key'),
+            ('"%(foo)" % {"foo": "bar"}', 'incomplete format'),
+            ('"%s %s" % ("foo",)', 'not enough arguments for format string'),
+            ('"%s %s" % ["foo", "bar"]',
+             'not enough arguments for format string'),
+            ('"%s" % ("foo", "bar")',
+             'not all arguments converted during string formatting'),
+            ('"%(foo)s" % {"bar": "baz"}', 'foo'),
+            ('"%(foo)s" % ("bar",)', 'format requires a mapping'),
+            ('"%z" % "foo"', 'unsupported format character'),
+        ]
+        for program, error in invalid_interpolations:
+            exc = self.flakes(program, m.InvalidStringInterpolation)
+            self.assertIn(error, str(exc.messages[0]))
+
+    @skip("wrong string interpolation that are not handled")
+    def test_unhandled_string_interp(self):
+        self.flakes('''
+        args = ("foo", "bar")
+        "%" % args
+        ''')                    # only warns when second argument is literal
+                                # tuple or dictionary
