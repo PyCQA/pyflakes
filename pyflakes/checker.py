@@ -1086,7 +1086,7 @@ class Checker(object):
         COMPARE = CALL = REPR = ATTRIBUTE = SUBSCRIPT = \
         STARRED = NAMECONSTANT = handleChildren
 
-    NUM = STR = BYTES = ELLIPSIS = ignore
+    NUM = STR = BYTES = ELLIPSIS = CONSTANT = ignore
 
     # "slice" type nodes
     SLICE = EXTSLICE = INDEX = handleChildren

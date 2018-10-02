@@ -257,7 +257,9 @@ class TestReporter(TestCase):
         """
         err = StringIO()
         reporter = Reporter(None, err)
-        reporter.syntaxError('foo.py', 'a problem', 3, 7, 'bad line of source')
+        reporter.syntaxError('foo.py', 'a problem', 3,
+                             8 if sys.version_info >= (3, 8) else 7,
+                             'bad line of source')
         self.assertEqual(
             ("foo.py:3:8: a problem\n"
              "bad line of source\n"
@@ -292,10 +294,11 @@ class TestReporter(TestCase):
         reporter = Reporter(None, err)
         reporter.syntaxError('foo.py', 'a problem', 3, len(lines[0]) + 7,
                              '\n'.join(lines))
+        column = 25 if sys.version_info >= (3, 8) else 7
         self.assertEqual(
-            ("foo.py:3:7: a problem\n" +
+            ("foo.py:3:%d: a problem\n" % column +
              lines[-1] + "\n" +
-             "      ^\n"),
+             " " * (column - 1) + "^\n"),
             err.getvalue())
 
     def test_unexpectedError(self):
@@ -424,13 +427,14 @@ def baz():
             else:
                 message = 'invalid syntax'
 
+            column = 8 if sys.version_info >= (3, 8) else 11
             self.assertHasErrors(
                 sourcePath,
                 ["""\
-%s:8:11: %s
+%s:8:%d: %s
     '''quux'''
-          ^
-""" % (sourcePath, message)])
+%s^
+""" % (sourcePath, column, message, ' ' * (column - 1))])
 
     def test_eofSyntaxError(self):
         """
@@ -483,14 +487,18 @@ def foo(bar=baz, bax):
     pass
 """
         with self.makeTempFile(source) as sourcePath:
-            last_line = '       ^\n' if ERROR_HAS_LAST_LINE else ''
-            column = '8:' if ERROR_HAS_COL_NUM else ''
+            if ERROR_HAS_LAST_LINE:
+                column = 9 if sys.version_info >= (3, 8) else 8
+                last_line = ' ' * (column - 1) + '^\n'
+                columnstr = '%d:' % column
+            else:
+                last_line = columnstr = ''
             self.assertHasErrors(
                 sourcePath,
                 ["""\
 %s:1:%s non-default argument follows default argument
 def foo(bar=baz, bax):
-%s""" % (sourcePath, column, last_line)])
+%s""" % (sourcePath, columnstr, last_line)])
 
     def test_nonKeywordAfterKeywordSyntaxError(self):
         """
@@ -502,8 +510,12 @@ def foo(bar=baz, bax):
 foo(bar=baz, bax)
 """
         with self.makeTempFile(source) as sourcePath:
-            last_line = '            ^\n' if ERROR_HAS_LAST_LINE else ''
-            column = '13:' if ERROR_HAS_COL_NUM else ''
+            if ERROR_HAS_LAST_LINE:
+                column = 14 if sys.version_info >= (3, 8) else 13
+                last_line = ' ' * (column - 1) + '^\n'
+                columnstr = '%d:' % column
+            else:
+                last_line = columnstr = ''
 
             if sys.version_info >= (3, 5):
                 message = 'positional argument follows keyword argument'
@@ -515,7 +527,7 @@ foo(bar=baz, bax)
                 ["""\
 %s:1:%s %s
 foo(bar=baz, bax)
-%s""" % (sourcePath, column, message, last_line)])
+%s""" % (sourcePath, columnstr, message, last_line)])
 
     def test_invalidEscape(self):
         """
