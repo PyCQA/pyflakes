@@ -2095,6 +2095,7 @@ class TestStringInterpolation(TestCase):
         "%d %i %o %u %x %X %e   %E   %f   %F   %g   %G  %c  %r     %s" % \
         (1, 1, 1, 1, 1, 1, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1, "foo", "bar")
         ''')
+        self.flakes('"%*f" % (1, 1.0)')
         self.flakes('"%s" % "foo"')
         self.flakes('r"%s" % b"foo"')
         self.flakes('u"%s" % r"foo"')
@@ -2138,7 +2139,8 @@ class TestStringInterpolation(TestCase):
         args = ("foo", "bar")
         "%" % args
         ''')
-
+        # consumes all memory until Python eventually segfaults
+        self.flakes('"%1000000000000f" % 1')
 
 class TestStringFormat(TestCase):
     def test_valid_string_format(self):

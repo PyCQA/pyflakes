@@ -141,7 +141,7 @@ def convert_to_value(item):
         return UnhandledKeyType()
 
 
-class DummyInterpolationArg(object):
+class DummyInterpolationArg(int):
     """
     Dummy arguments used for string interpolation
     """
