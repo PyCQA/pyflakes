@@ -33,7 +33,8 @@ class _DoctestMixin(object):
                   line.startswith('except ') or
                   line.startswith('finally:') or
                   line.startswith('else:') or
-                  line.startswith('elif ')):
+                  line.startswith('elif ') or
+                  (lines and lines[-1].startswith(('>>> @', '... @')))):
                 line = "... %s" % line
             else:
                 line = ">>> %s" % line

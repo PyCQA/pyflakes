@@ -495,6 +495,28 @@ def getNodeName(node):
         return node.name
 
 
+def is_typing_overload(value, scope):
+    def is_typing_overload_decorator(node):
+        return (
+            (
+                isinstance(node, ast.Name) and
+                node.id in scope and
+                scope[node.id].fullName == 'typing.overload'
+            ) or (
+                isinstance(node, ast.Attribute) and
+                isinstance(node.value, ast.Name) and
+                node.value.id == 'typing' and
+                node.attr == 'overload'
+            )
+        )
+
+    return (
+        isinstance(value.source, ast.FunctionDef) and
+        len(value.source.decorator_list) == 1 and
+        is_typing_overload_decorator(value.source.decorator_list[0])
+    )
+
+
 class Checker(object):
     """
     I check the cleanliness and sanity of Python code.
@@ -747,8 +769,9 @@ class Checker(object):
                                 node, value.name, existing.source)
                 elif not existing.used and value.redefines(existing):
                     if value.name != '_' or isinstance(existing, Importation):
-                        self.report(messages.RedefinedWhileUnused,
-                                    node, value.name, existing.source)
+                        if not is_typing_overload(existing, self.scope):
+                            self.report(messages.RedefinedWhileUnused,
+                                        node, value.name, existing.source)
 
             elif isinstance(existing, Importation) and value.redefines(existing):
                 existing.redefined.append(node)

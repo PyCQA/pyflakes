@@ -291,6 +291,35 @@ class Test(TestCase):
                 pass
         """)
 
+    def test_typingOverload(self):
+        """Allow intentional redefinitions via @typing.overload"""
+        self.flakes("""
+        import typing
+        from typing import overload
+
+        @overload
+        def f(s):  # type: (None) -> None
+            pass
+
+        @overload
+        def f(s):  # type: (int) -> int
+            pass
+
+        def f(s):
+            return s
+
+        @typing.overload
+        def g(s):  # type: (None) -> None
+            pass
+
+        @typing.overload
+        def g(s):  # type: (int) -> int
+            pass
+
+        def g(s):
+            return s
+        """)
+
     def test_unaryPlus(self):
         """Don't die on unary +."""
         self.flakes('+1')
