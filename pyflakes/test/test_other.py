@@ -2055,6 +2055,24 @@ class TestAsyncStatements(TestCase):
         a: 'a: "A"'
         ''', m.ForwardAnnotationSyntaxError)
 
+    @skipIf(version_info < (3, 7), 'new in Python 3.7')
+    def test_postponed_annotations(self):
+        self.flakes('''
+        from __future__ import annotations
+        def f(a: A) -> A: pass
+        class A:
+            b: B
+        class B: pass
+        ''')
+
+        self.flakes('''
+        from __future__ import annotations
+        def f(a: A) -> A: pass
+        class A:
+            b: Undefined
+        class B: pass
+        ''', m.UndefinedName)
+
     def test_raise_notimplemented(self):
         self.flakes('''
         raise NotImplementedError("This is fine")
