@@ -1789,6 +1789,14 @@ class TestAsyncStatements(TestCase):
         ''')
 
     @skipIf(version_info < (3, 5), 'new in Python 3.5')
+    def test_asyncForUnderscoreLoopVar(self):
+        self.flakes('''
+        async def coro(it):
+            async for _ in it:
+                pass
+        ''')
+
+    @skipIf(version_info < (3, 5), 'new in Python 3.5')
     def test_loopControlInAsyncFor(self):
         self.flakes('''
         async def read_data(db):

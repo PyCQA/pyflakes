@@ -56,8 +56,10 @@ else:
             return [n.body + n.orelse] + [[hdl] for hdl in n.handlers]
 
 if PY34:
+    FOR_TYPES = (ast.For,)
     LOOP_TYPES = (ast.While, ast.For)
 else:
+    FOR_TYPES = (ast.For, ast.AsyncFor)
     LOOP_TYPES = (ast.While, ast.For, ast.AsyncFor)
 
 
@@ -637,7 +639,7 @@ class Checker(object):
                         messg = messages.UnusedImport
                         self.report(messg, value.source, str(value))
                     for node in value.redefined:
-                        if isinstance(self.getParent(node), ast.For):
+                        if isinstance(self.getParent(node), FOR_TYPES):
                             messg = messages.ImportShadowedByLoopVar
                         elif used:
                             continue
@@ -717,14 +719,14 @@ class Checker(object):
                 not self.differentForks(node, existing.source)):
 
             parent_stmt = self.getParent(value.source)
-            if isinstance(existing, Importation) and isinstance(parent_stmt, ast.For):
+            if isinstance(existing, Importation) and isinstance(parent_stmt, FOR_TYPES):
                 self.report(messages.ImportShadowedByLoopVar,
                             node, value.name, existing.source)
 
             elif scope is self.scope:
                 if (isinstance(parent_stmt, ast.comprehension) and
                         not isinstance(self.getParent(existing.source),
-                                       (ast.For, ast.comprehension))):
+                                       (FOR_TYPES, ast.comprehension))):
                     self.report(messages.RedefinedInListComp,
                                 node, value.name, existing.source)
                 elif not existing.used and value.redefines(existing):
@@ -834,7 +836,7 @@ class Checker(object):
                     break
 
         parent_stmt = self.getParent(node)
-        if isinstance(parent_stmt, (ast.For, ast.comprehension)) or (
+        if isinstance(parent_stmt, (FOR_TYPES, ast.comprehension)) or (
                 parent_stmt != node.parent and
                 not self.isLiteralTupleUnpacking(parent_stmt)):
             binding = Binding(name, node)
