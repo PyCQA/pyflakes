@@ -390,10 +390,10 @@ class ExportBinding(Binding):
     can be determined statically, they will be treated as names for export and
     additional checking applied to them.
 
-    The only C{__all__} assignment that can be recognized is one which takes
-    the value of a literal list containing literal strings.  For example::
+    The only recognized C{__all__} assignment via list concatenation is in the
+    following format:
 
-        __all__ = ["foo", "bar"]
+        __all__ = ['a'] + ['b'] + ['c']
 
     Names which are imported and not otherwise used but appear in the value of
     C{__all__} will not have an unused import warning reported for them.
@@ -405,9 +405,25 @@ class ExportBinding(Binding):
         else:
             self.names = []
         if isinstance(source.value, (ast.List, ast.Tuple)):
-            for node in source.value.elts:
-                if isinstance(node, ast.Str):
-                    self.names.append(node.s)
+            self.names += ast.literal_eval(source.value)
+        # If concatenating lists
+        elif isinstance(source.value, ast.BinOp):
+            currentValue = source.value
+            while isinstance(currentValue.right, ast.List):
+                left = currentValue.left
+                right = currentValue.right
+                self.names += ast.literal_eval(right)
+                # If more lists are being added
+                if isinstance(left, ast.BinOp):
+                    currentValue = left
+                # If just two lists are being added
+                elif isinstance(left, ast.List):
+                    self.names += ast.literal_eval(left)
+                    # All lists accounted for - done
+                    break
+                # If not list concatenation
+                else:
+                    break
         super(ExportBinding, self).__init__(name, source)
 
 

@@ -1068,19 +1068,14 @@ class TestSpecialAll(TestCase):
             __all__ += ['c', 'd']
         ''', m.UndefinedExport, m.UndefinedExport)
 
-    def test_unrecognizable(self):
+    def test_concatenationAssignment(self):
         """
-        If C{__all__} is defined in a way that can't be recognized statically,
-        it is ignored.
+        The C{__all__} variable is defined through list concatenation.
         """
         self.flakes('''
-        import foo
-        __all__ = ["f" + "oo"]
-        ''', m.UnusedImport)
-        self.flakes('''
-        import foo
-        __all__ = [] + ["foo"]
-        ''', m.UnusedImport)
+        import sys
+        __all__ = ['a'] + ['b'] + ['c']
+        ''', m.UndefinedExport, m.UndefinedExport, m.UndefinedExport, m.UnusedImport)
 
     def test_unboundExported(self):
         """
