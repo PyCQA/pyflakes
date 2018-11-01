@@ -818,6 +818,16 @@ class Checker(object):
 
             try:
                 scope[name].used = (self.scope, node)
+
+                # if the name of SubImportation is same as
+                # alias of other Importation and the alias
+                # is used, SubImportation also should be marked as used.
+                n = scope[name]
+                if isinstance(n, Importation) and n._has_alias():
+                    try:
+                        scope[n.fullName].used = (self.scope, node)
+                    except KeyError:
+                        pass
             except KeyError:
                 pass
             else:

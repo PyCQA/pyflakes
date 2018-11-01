@@ -887,6 +887,22 @@ class Test(TestCase):
         fu.x
         ''')
 
+    def test_used_package_with_submodule_import_of_alias(self):
+        """
+        Usage of package by alias marks submodule imports as used.
+        """
+        self.flakes('''
+        import foo as f
+        import foo.bar
+        f.bar.do_something()
+        ''')
+
+        self.flakes('''
+        import foo as f
+        import foo.bar.blah
+        f.bar.blah.do_something()
+        ''')
+
     def test_unused_package_with_submodule_import(self):
         """
         When a package and its submodule are imported, only report once.
