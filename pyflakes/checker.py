@@ -665,9 +665,16 @@ class Checker(object):
 
                 # mark all import '*' as used by the undefined in __all__
                 if scope.importStarred:
+                    from_list = []
                     for binding in scope.values():
                         if isinstance(binding, StarImportation):
                             binding.used = all_binding
+                            from_list.append(binding.fullName)
+                    # report * usage, with a list of possible sources
+                    from_list = ', '.join(sorted(from_list))
+                    for name in undefined:
+                        self.report(messages.ImportStarUsage,
+                                    scope['__all__'].source, name, from_list)
 
             # Look for imported names that aren't used.
             for value in scope.values():

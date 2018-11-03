@@ -1110,12 +1110,13 @@ class TestSpecialAll(TestCase):
 
     def test_importStarExported(self):
         """
-        Do not report undefined if import * is used
+        Report undefined if import * is used
         """
         self.flakes('''
-        from foolib import *
-        __all__ = ["foo"]
-        ''', m.ImportStarUsed)
+        from math import *
+        __all__ = ['sin', 'cos']
+        csc(1)
+        ''', m.ImportStarUsed, m.ImportStarUsage, m.ImportStarUsage, m.ImportStarUsage)
 
     def test_importStarNotExported(self):
         """Report unused import when not needed to satisfy __all__."""
