@@ -1073,7 +1073,7 @@ class TestSpecialAll(TestCase):
 
     def test_augmentedAssignment(self):
         """
-        The C{__all__} variable is defined incrementally.
+        The C{__all__} variable is effected by augmented assignment.
         """
         self.flakes('''
         import a
@@ -1084,6 +1084,21 @@ class TestSpecialAll(TestCase):
             __all__ += ['c', 'd']
         ''', m.UndefinedExport, m.UndefinedExport)
 
+        # Though Python doesn't support subtraction with list,
+        # pyflakes doesn't complain about it, instead, it just
+        # ignores it.
+        self.flakes('''
+        import sys
+        __all__ = ['a', 'b']
+        __all__ -= ['a']
+        ''')
+
+        self.flakes('''
+        import sys
+        __all__ = ['a']
+        __all__ *= 3
+        ''', m.UndefinedExport, m.UnusedImport)
+
     def test_concatenationAssignment(self):
         """
         The C{__all__} variable is defined through list concatenation.
@@ -1092,6 +1107,27 @@ class TestSpecialAll(TestCase):
         import sys
         __all__ = ['a'] + ['b'] + ['c']
         ''', m.UndefinedExport, m.UndefinedExport, m.UndefinedExport, m.UnusedImport)
+
+        self.flakes('''
+        import sys
+        __all__ = ['a'] + ['b'] * 3 + ['c']
+        ''', m.UndefinedExport, m.UndefinedExport, m.UndefinedExport, m.UnusedImport)
+
+        self.flakes('''
+        import sys
+        __all__ = ['a'] - ['b'] + ['c']
+        ''')
+
+        self.flakes('''
+        import sys
+        __all__ = ['a'] * 'b' + ['c']
+        ''')
+
+        self.flakes('''
+        import sys
+        b = 'b'
+        __all__ = ['a'] + [b] + ['c']
+        ''')
 
     def test_unboundExported(self):
         """

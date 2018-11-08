@@ -390,41 +390,80 @@ class ExportBinding(Binding):
     can be determined statically, they will be treated as names for export and
     additional checking applied to them.
 
-    The only recognized C{__all__} assignment via list concatenation is in the
-    following format:
-
-        __all__ = ['a'] + ['b'] + ['c']
-
     Names which are imported and not otherwise used but appear in the value of
     C{__all__} will not have an unused import warning reported for them.
+
+    However, if binding includes what pyflakes cannot understand, unused import
+    warning will not emitted and consider __all__ as empty list.
     """
 
     def __init__(self, name, source, scope):
+        self.ignore = False
+
         if '__all__' in scope and isinstance(source, ast.AugAssign):
             self.names = list(scope['__all__'].names)
         else:
             self.names = []
         if isinstance(source.value, (ast.List, ast.Tuple)):
-            self.names += ast.literal_eval(source.value)
+            if (isinstance(source, ast.AugAssign) and
+                    isinstance(source.op, ast.Add) and
+                    '__all__' in scope or
+                    '__all__' not in scope and
+                    not isinstance(source, ast.AugAssign)):
+                if all(isinstance(e, ast.Str) for e in source.value.elts):
+                    self.names += ast.literal_eval(source.value)
+                else:
+                    self.ignore = True
+            else:
+                self.ignore = True
+        elif isinstance(source.value, ast.Num):
+            if (isinstance(source, ast.AugAssign) and
+                    isinstance(source.op, ast.Mult) and
+                    '__all__' in scope):
+                self.names *= source.value.n
+            else:
+                self.ignore = True
         # If concatenating lists
         elif isinstance(source.value, ast.BinOp):
-            currentValue = source.value
-            while isinstance(currentValue.right, ast.List):
-                left = currentValue.left
-                right = currentValue.right
-                self.names += ast.literal_eval(right)
-                # If more lists are being added
-                if isinstance(left, ast.BinOp):
-                    currentValue = left
-                # If just two lists are being added
-                elif isinstance(left, ast.List):
-                    self.names += ast.literal_eval(left)
-                    # All lists accounted for - done
-                    break
-                # If not list concatenation
-                else:
-                    break
+            self.names += self._list_binary_operation(source.value)
+        else:
+            self.ignore = True
         super(ExportBinding, self).__init__(name, source)
+
+    def _list_binary_operation(self, node):
+        """
+        This takes a ast.BinOp and evaluates it.
+        What it evaluate is:
+
+        * concatenation(+) with sequences(lists or tuples)
+        * multiplication(*) with a sequence and a int
+
+        What it doesn't:
+
+        * if it includes operators except + or *
+        * if it includes unsupported form such as variable name
+        * elements of sequence not str
+        """
+        if isinstance(node, ast.BinOp):
+            left = self._list_binary_operation(node.left)
+            right = self._list_binary_operation(node.right)
+            if isinstance(node.op, ast.Add):
+                if (left and right and
+                        isinstance(left, list) and isinstance(right, list)):
+                    return left + right
+            if isinstance(node.op, ast.Mult):
+                if (isinstance(left, list) and isinstance(right, int) or
+                        isinstance(left, int) and isinstance(right, list)):
+                    return left * right
+        if (isinstance(node, (ast.List, ast.Tuple)) and
+                all(isinstance(e, ast.Str) for e in node.elts)):
+            return ast.literal_eval(node)
+        if isinstance(node, ast.Num):
+            return node.n
+
+        self.ignore = True
+
+        return []
 
 
 class Scope(dict):
@@ -656,8 +695,9 @@ class Checker(object):
                 all_names = undefined = []
 
             if undefined:
-                if not scope.importStarred and \
-                   os.path.basename(self.filename) != '__init__.py':
+                if (not scope.importStarred and
+                        os.path.basename(self.filename) != '__init__.py' and
+                        not all_binding.ignore):
                     # Look for possible mistakes in the export list
                     for name in undefined:
                         self.report(messages.UndefinedExport,
@@ -673,6 +713,10 @@ class Checker(object):
             for value in scope.values():
                 if isinstance(value, Importation):
                     used = value.used or value.name in all_names
+                    # If there is what pyflakes cannot understand in __all__,
+                    # mark all importation as used.
+                    if all_binding is not None:
+                        used = used or all_binding.ignore
                     if not used:
                         messg = messages.UnusedImport
                         self.report(messg, value.source, str(value))
