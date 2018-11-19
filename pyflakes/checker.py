@@ -785,7 +785,7 @@ class Checker(object):
 
         if value.name in self.scope:
             # then assume the rebound name is used as a global or within a loop
-            value.used = self.scope[value.name].used
+            value.used = value.used or self.scope[value.name].used
 
         self.scope[value.name] = value
 
@@ -1429,6 +1429,10 @@ class Checker(object):
             else:
                 name = alias.asname or alias.name
                 importation = Importation(name, node, alias.name)
+
+            if alias.asname == '_':
+                importation.used = True
+
             self.addBinding(node, importation)
 
     def IMPORTFROM(self, node):
@@ -1461,6 +1465,10 @@ class Checker(object):
             else:
                 importation = ImportationFrom(name, node,
                                               module, alias.name)
+
+            if alias.asname == '_':
+                importation.used = True
+
             self.addBinding(node, importation)
 
     def TRY(self, node):

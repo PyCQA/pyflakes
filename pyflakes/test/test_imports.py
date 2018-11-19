@@ -94,13 +94,6 @@ class TestImportationObject(TestCase):
         assert binding.source_statement == 'from __future__ import print_function'
         assert str(binding) == '__future__.print_function'
 
-    def test_unusedImport_underscore(self):
-        """
-        The magic underscore var should be reported as unused when used as an
-        import alias.
-        """
-        self.flakes('import fu as _', m.UnusedImport)
-
 
 class Test(TestCase):
 
@@ -142,6 +135,12 @@ class Test(TestCase):
         self.flakes('from moo import fu as moo; moo')
         self.flakes('import fu as fu; fu')
         self.flakes('import fu.bar as fu; fu')
+
+    def test_aliasedImportUnderscore(self):
+        """If the alias is underscore(_), mark as used."""
+        self.flakes('from fu import bar as _')
+        self.flakes('import fu as _')
+        self.flakes('import fu.bar as _')
 
     def test_usedImport(self):
         self.flakes('import fu; print(fu)')
