@@ -39,7 +39,7 @@
 1.1.0 (2016-03-01):
   - Allow main() to accept arguments.
   - Support @ matrix-multiplication operator
-  - Validate __future__ imports
+  - Validate `__future__` imports
   - Fix doctest scope testing
   - Warn for tuple assertions which are always true
   - Warn for "import *" not at module level on Python 3
@@ -140,7 +140,7 @@
   - Allow function redefinition for modern property construction via
     property.setter/deleter.
   - Fix spurious redefinition warnings in conditionals.
-  - Do not report undefined name in __all__ if import * is used.
+  - Do not report undefined name in `__all__` if import * is used.
   - Add WindowsError as a known built-in name on all platforms.
   - Support specifying additional built-ins in the `Checker` constructor.
   - Don't issue Unused Variable warning when using locals() in current scope.
@@ -178,10 +178,10 @@
   - Display more informative SyntaxError messages.
   - Don't hang flymake with unmatched triple quotes (only report a single
     line of source for a multiline syntax error).
-  - Recognize __builtins__ as a defined name.
+  - Recognize `__builtins__` as a defined name.
   - Improve pyflakes support for python versions 2.3-2.5
   - Support for if-else expressions and with statements.
   - Warn instead of error on non-existent file paths.
-  - Check for __future__ imports after other statements.
+  - Check for `__future__` imports after other statements.
   - Add reporting for some types of import shadowing.
   - Improve reporting of unbound locals
