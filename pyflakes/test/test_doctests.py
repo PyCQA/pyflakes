@@ -328,7 +328,10 @@ class Test(TestCase):
             m.DoctestSyntaxError).messages
         exc = exceptions[0]
         self.assertEqual(exc.lineno, 4)
-        self.assertEqual(exc.col, 26)
+        if sys.version_info >= (3, 8):
+            self.assertEqual(exc.col, 18)
+        else:
+            self.assertEqual(exc.col, 26)
 
         # PyPy error column offset is 0,
         # for the second and third line of the doctest
@@ -341,7 +344,7 @@ class Test(TestCase):
             self.assertEqual(exc.col, 16)
         exc = exceptions[2]
         self.assertEqual(exc.lineno, 6)
-        if PYPY:
+        if PYPY or sys.version_info >= (3, 8):
             self.assertEqual(exc.col, 13)
         else:
             self.assertEqual(exc.col, 18)
@@ -355,7 +358,7 @@ class Test(TestCase):
             """
         ''', m.DoctestSyntaxError).messages[0]
         self.assertEqual(exc.lineno, 5)
-        if PYPY:
+        if PYPY or sys.version_info >= (3, 8):
             self.assertEqual(exc.col, 13)
         else:
             self.assertEqual(exc.col, 16)
