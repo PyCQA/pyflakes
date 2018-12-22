@@ -476,6 +476,7 @@ class GeneratorScope(Scope):
 class ModuleScope(Scope):
     """Scope for a module."""
     _futures_allowed = True
+    _annotations_future_enabled = False
 
 
 class DoctestScope(ModuleScope):
@@ -627,6 +628,19 @@ class Checker(object):
         assert value is False
         if isinstance(self.scope, ModuleScope):
             self.scope._futures_allowed = False
+
+    @property
+    def annotationsFutureEnabled(self):
+        scope = self.scopeStack[0]
+        if not isinstance(scope, ModuleScope):
+            return False
+        return scope._annotations_future_enabled
+
+    @annotationsFutureEnabled.setter
+    def annotationsFutureEnabled(self, value):
+        assert value is True
+        assert isinstance(self.scope, ModuleScope)
+        self.scope._annotations_future_enabled = True
 
     @property
     def scope(self):
@@ -1068,6 +1082,8 @@ class Checker(object):
                 self.handleNode(parsed_annotation, node)
 
             self.deferFunction(handleForwardAnnotation)
+        elif self.annotationsFutureEnabled:
+            self.deferFunction(lambda: self.handleNode(annotation, node))
         else:
             self.handleNode(annotation, node)
 
@@ -1448,6 +1464,8 @@ class Checker(object):
                 if alias.name not in __future__.all_feature_names:
                     self.report(messages.FutureFeatureNotDefined,
                                 node, alias.name)
+                if alias.name == 'annotations':
+                    self.annotationsFutureEnabled = True
             elif alias.name == '*':
                 # Only Python 2, local import * is a SyntaxWarning
                 if not PY2 and not isinstance(self.scope, ModuleScope):
