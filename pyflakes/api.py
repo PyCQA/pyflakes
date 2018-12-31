@@ -5,6 +5,7 @@ from __future__ import with_statement
 
 import sys
 import os
+import platform
 import re
 import _ast
 
@@ -186,6 +187,14 @@ def _exitOnSignal(sigName, message):
         pass
 
 
+def _get_version():
+    """
+    Retrieve and format package version along with python version & OS used
+    """
+    return ('%s Python %s on %s' %
+            (__version__, platform.python_version(), platform.system()))
+
+
 def main(prog=None, args=None):
     """Entry point for the script "pyflakes"."""
     import optparse
@@ -194,7 +203,7 @@ def main(prog=None, args=None):
     _exitOnSignal('SIGINT', '... stopped')
     _exitOnSignal('SIGPIPE', 1)
 
-    parser = optparse.OptionParser(prog=prog, version=__version__)
+    parser = optparse.OptionParser(prog=prog, version=_get_version())
     (__, args) = parser.parse_args(args=args)
     reporter = modReporter._makeDefaultReporter()
     if args:
