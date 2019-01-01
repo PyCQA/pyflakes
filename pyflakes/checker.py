@@ -11,7 +11,8 @@ import os
 import sys
 
 PY2 = sys.version_info < (3, 0)
-PY34 = sys.version_info < (3, 5)    # Python 2.7 to 3.4
+PY35_PLUS = sys.version_info >= (3, 5)    # Python 3.5 and above
+PY36_PLUS = sys.version_info >= (3, 6)    # Python 3.6 and above
 try:
     sys.pypy_version_info
     PYPY = True
@@ -55,12 +56,12 @@ else:
         if isinstance(n, ast.Try):
             return [n.body + n.orelse] + [[hdl] for hdl in n.handlers]
 
-if PY34:
-    FOR_TYPES = (ast.For,)
-    LOOP_TYPES = (ast.While, ast.For)
-else:
+if PY35_PLUS:
     FOR_TYPES = (ast.For, ast.AsyncFor)
     LOOP_TYPES = (ast.While, ast.For, ast.AsyncFor)
+else:
+    FOR_TYPES = (ast.For,)
+    LOOP_TYPES = (ast.While, ast.For)
 
 
 class _FieldsOrder(dict):
@@ -486,6 +487,9 @@ class DoctestScope(ModuleScope):
 # Globally defined names which are not attributes of the builtins module, or
 # are only present on some platforms.
 _MAGIC_GLOBALS = ['__file__', '__builtins__', 'WindowsError']
+# module scope annotation will store in `__annotations__`, see also PEP 526.
+if PY36_PLUS:
+    _MAGIC_GLOBALS.append('__annotations__')
 
 
 def getNodeName(node):
