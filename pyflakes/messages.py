@@ -248,6 +248,14 @@ class ForwardAnnotationSyntaxError(Message):
         self.message_args = (annotation,)
 
 
+class CommentAnnotationSyntaxError(Message):
+    message = 'syntax error in type comment %r'
+
+    def __init__(self, filename, loc, annotation):
+        Message.__init__(self, filename, loc)
+        self.message_args = (annotation,)
+
+
 class RaiseNotImplemented(Message):
     message = "'raise NotImplemented' should be 'raise NotImplementedError'"
 

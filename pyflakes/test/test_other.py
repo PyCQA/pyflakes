@@ -2073,6 +2073,72 @@ class TestAsyncStatements(TestCase):
         class B: pass
         ''', m.UndefinedName)
 
+    def test_typeCommentsMarkImportsAsUsed(self):
+        self.flakes("""
+        from mod import A, B, C, D, E, F, G
+
+
+        def f(
+            a,  # type: A
+        ):
+            # type: (...) -> B
+            for b in a:  # type: C
+                with b as c:  # type: D
+                    d = c.x  # type: E
+                    return d
+
+
+        def g(x):  # type: (F) -> G
+            return x.y
+        """)
+
+    def test_typeCommentsFullSignature(self):
+        self.flakes("""
+        from mod import A, B, C, D
+        def f(a, b):
+            # type: (A, B[C]) -> D
+            return a + b
+        """)
+
+    def test_typeCommentsAdditionalComemnt(self):
+        self.flakes("""
+        from mod import F
+
+        x = 1 # type: F  # noqa
+        """)
+
+    def test_typeCommentsNoWhitespaceAnnotation(self):
+        self.flakes("""
+        from mod import F
+
+        x = 1  #type:F
+        """)
+
+    def test_typeCommentsInvalidDoesNotMarkAsUsed(self):
+        self.flakes("""
+        from mod import F
+
+        # type: F
+        """, m.UnusedImport)
+
+    def test_typeCommentsSyntaxError(self):
+        self.flakes("""
+        def f(x):  # type: (F[) -> None
+            pass
+        """, m.CommentAnnotationSyntaxError)
+
+    def test_typeCommentsAssignedToPreviousNode(self):
+        # This test demonstrates an issue in the implementation which
+        # associates the type comment with a node above it, however the type
+        # comment isn't valid according to mypy.  If an improved approach
+        # which can detect these "invalid" type comments is implemented, this
+        # test should be removed / improved to assert that new check.
+        self.flakes("""
+        from mod import F
+        x = 1
+        # type: F
+        """)
+
     def test_raise_notimplemented(self):
         self.flakes('''
         raise NotImplementedError("This is fine")

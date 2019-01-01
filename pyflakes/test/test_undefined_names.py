@@ -1,5 +1,4 @@
-
-from _ast import PyCF_ONLY_AST
+import ast
 from sys import version_info
 
 from pyflakes import messages as m, checker
@@ -848,7 +847,8 @@ class NameTests(TestCase):
         A Name node with an unrecognized context results in a RuntimeError being
         raised.
         """
-        tree = compile("x = 10", "<test>", "exec", PyCF_ONLY_AST)
+        tree = ast.parse("x = 10")
+        tokens = checker.make_tokens("x = 10")
         # Make it into something unrecognizable.
         tree.body[0].targets[0].ctx = object()
-        self.assertRaises(RuntimeError, checker.Checker, tree)
+        self.assertRaises(RuntimeError, checker.Checker, tree, tokens=tokens)

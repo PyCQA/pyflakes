@@ -13,9 +13,5 @@ matrix:
       dist: xenial
     - python: nightly
       dist: xenial
-install:
-  - pip install --upgrade .
-  - pip list
-script:
-  - python setup.py test -q
-  - if [ "$TRAVIS_PYTHON_VERSION" != "nightly" ]; then pip install flake8==3.6.0 && flake8 --version && flake8 pyflakes setup.py; fi
+install: pip install tox
+script: tox -e py
