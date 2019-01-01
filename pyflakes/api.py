@@ -3,17 +3,16 @@ API for the command-line I{pyflakes} tool.
 """
 from __future__ import with_statement
 
-import sys
+import ast
 import os
 import platform
 import re
-import _ast
+import sys
 
 from pyflakes import checker, __version__
 from pyflakes import reporter as modReporter
 
 __all__ = ['check', 'checkPath', 'checkRecursive', 'iterSourceCode', 'main']
-
 
 PYTHON_SHEBANG_REGEX = re.compile(br'^#!.*\bpython[23w]?\b\s*$')
 
@@ -39,7 +38,7 @@ def check(codeString, filename, reporter=None):
         reporter = modReporter._makeDefaultReporter()
     # First, compile into an AST and handle syntax errors.
     try:
-        tree = compile(codeString, filename, "exec", _ast.PyCF_ONLY_AST)
+        tree = ast.parse(codeString, filename=filename)
     except SyntaxError:
         value = sys.exc_info()[1]
         msg = value.args[0]
@@ -71,7 +70,8 @@ def check(codeString, filename, reporter=None):
         reporter.unexpectedError(filename, 'problem decoding source')
         return 1
     # Okay, it's syntactically valid.  Now check it.
-    w = checker.Checker(tree, filename)
+    tokens = checker.make_tokens(codeString)
+    w = checker.Checker(tree, tokens=tokens, filename=filename)
     w.messages.sort(key=lambda m: m.lineno)
     for warning in w.messages:
         reporter.flake(warning)

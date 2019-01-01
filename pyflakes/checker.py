@@ -6,9 +6,14 @@ Also, it models the Bindings and Scopes.
 """
 import __future__
 import ast
+import bisect
+import collections
 import doctest
+import functools
 import os
+import re
 import sys
+import tokenize
 
 from pyflakes import messages
 
@@ -23,6 +28,10 @@ except AttributeError:
 
 builtin_vars = dir(__import__('__builtin__' if PY2 else 'builtins'))
 
+if PY2:
+    tokenize_tokenize = tokenize.generate_tokens
+else:
+    tokenize_tokenize = tokenize.tokenize
 
 if PY2:
     def getNodeType(node_class):
@@ -62,6 +71,13 @@ if PY35_PLUS:
 else:
     FOR_TYPES = (ast.For,)
     LOOP_TYPES = (ast.While, ast.For)
+
+# https://github.com/python/typed_ast/blob/55420396/ast27/Parser/tokenizer.c#L102-L104
+TYPE_COMMENT_RE = re.compile(r'^#\s*type:\s*')
+# https://github.com/python/typed_ast/blob/55420396/ast27/Parser/tokenizer.c#L1400
+TYPE_IGNORE_RE = re.compile(TYPE_COMMENT_RE.pattern + r'ignore\s*(#|$)')
+# https://github.com/python/typed_ast/blob/55420396/ast27/Grammar/Grammar#L147
+TYPE_FUNC_RE = re.compile(r'^(\(.*?\))\s*->\s*(.*)$')
 
 
 class _FieldsOrder(dict):
@@ -522,6 +538,63 @@ def is_typing_overload(value, scope):
     )
 
 
+def make_tokens(code):
+    # PY3: tokenize.tokenize requires readline of bytes
+    if not isinstance(code, bytes):
+        code = code.encode('UTF-8')
+    lines = iter(code.splitlines(True))
+    # next(lines, b'') is to prevent an error in pypy3
+    return tuple(tokenize_tokenize(lambda: next(lines, b'')))
+
+
+class _TypeableVisitor(ast.NodeVisitor):
+    """Collect the line number and nodes which are deemed typeable by
+    PEP 484
+
+    https://www.python.org/dev/peps/pep-0484/#type-comments
+    """
+    def __init__(self):
+        self.typeable_lines = []  # type: List[int]
+        self.typeable_nodes = {}  # type: Dict[int, ast.AST]
+
+    def _typeable(self, node):
+        # if there is more than one typeable thing on a line last one wins
+        self.typeable_lines.append(node.lineno)
+        self.typeable_nodes[node.lineno] = node
+
+        self.generic_visit(node)
+
+    visit_Assign = visit_For = visit_FunctionDef = visit_With = _typeable
+    visit_AsyncFor = visit_AsyncFunctionDef = visit_AsyncWith = _typeable
+
+
+def _collect_type_comments(tree, tokens):
+    visitor = _TypeableVisitor()
+    visitor.visit(tree)
+
+    type_comments = collections.defaultdict(list)
+    for tp, text, start, _, _ in tokens:
+        if (
+                tp != tokenize.COMMENT or  # skip non comments
+                not TYPE_COMMENT_RE.match(text) or  # skip non-type comments
+                TYPE_IGNORE_RE.match(text)  # skip ignores
+        ):
+            continue
+
+        # search for the typeable node at or before the line number of the
+        # type comment.
+        # if the bisection insertion point is before any nodes this is an
+        # invalid type comment which is ignored.
+        lineno, _ = start
+        idx = bisect.bisect_right(visitor.typeable_lines, lineno)
+        if idx == 0:
+            continue
+        node = visitor.typeable_nodes[visitor.typeable_lines[idx - 1]]
+        type_comments[node].append((start, text))
+
+    return type_comments
+
+
 class Checker(object):
     """
     I check the cleanliness and sanity of Python code.
@@ -556,8 +629,11 @@ class Checker(object):
         builtIns.update(_customBuiltIns.split(','))
     del _customBuiltIns
 
+    # TODO: tokens= is required to perform checks on type comments, eventually
+    #       make this a required positional argument.  For now it is defaulted
+    #       to `()` for api compatibility.
     def __init__(self, tree, filename='(none)', builtins=None,
-                 withDoctest='PYFLAKES_DOCTEST' in os.environ):
+                 withDoctest='PYFLAKES_DOCTEST' in os.environ, tokens=()):
         self._nodeHandlers = {}
         self._deferredFunctions = []
         self._deferredAssignments = []
@@ -573,6 +649,7 @@ class Checker(object):
             raise RuntimeError('No scope implemented for the node %r' % tree)
         self.exceptHandlers = [()]
         self.root = tree
+        self._type_comments = _collect_type_comments(tree, tokens)
         for builtin in self.builtIns:
             self.addBinding(None, Builtin(builtin))
         self.handleChildren(tree)
@@ -952,7 +1029,26 @@ class Checker(object):
             except KeyError:
                 self.report(messages.UndefinedName, node, name)
 
+    def _handle_type_comments(self, node):
+        for (lineno, col_offset), comment in self._type_comments.get(node, ()):
+            comment = comment.split(':', 1)[1].strip()
+            func_match = TYPE_FUNC_RE.match(comment)
+            if func_match:
+                parts = (func_match.group(1), func_match.group(2).strip())
+            else:
+                parts = (comment,)
+
+            for part in parts:
+                if PY2:
+                    part = part.replace('...', 'Ellipsis')
+                self.deferFunction(functools.partial(
+                    self.handleStringAnnotation,
+                    part, node, lineno, col_offset,
+                    messages.CommentAnnotationSyntaxError,
+                ))
+
     def handleChildren(self, tree, omit=None):
+        self._handle_type_comments(tree)
         for node in iter_child_nodes(tree, omit=omit):
             self.handleNode(node, tree)
 
@@ -1040,7 +1136,7 @@ class Checker(object):
         self.addBinding(None, Builtin('_'))
         for example in examples:
             try:
-                tree = compile(example.source, "<doctest>", "exec", ast.PyCF_ONLY_AST)
+                tree = ast.parse(example.source, "<doctest>")
             except SyntaxError:
                 e = sys.exc_info()[1]
                 if PYPY:
@@ -1056,36 +1152,40 @@ class Checker(object):
         self.popScope()
         self.scopeStack = saved_stack
 
+    def handleStringAnnotation(self, s, node, ref_lineno, ref_col_offset, err):
+        try:
+            tree = ast.parse(s)
+        except SyntaxError:
+            self.report(err, node, s)
+            return
+
+        body = tree.body
+        if len(body) != 1 or not isinstance(body[0], ast.Expr):
+            self.report(err, node, s)
+            return
+
+        parsed_annotation = tree.body[0].value
+        for descendant in ast.walk(parsed_annotation):
+            if (
+                    'lineno' in descendant._attributes and
+                    'col_offset' in descendant._attributes
+            ):
+                descendant.lineno = ref_lineno
+                descendant.col_offset = ref_col_offset
+
+        self.handleNode(parsed_annotation, node)
+
     def handleAnnotation(self, annotation, node):
         if isinstance(annotation, ast.Str):
             # Defer handling forward annotation.
-            def handleForwardAnnotation():
-                try:
-                    tree = ast.parse(annotation.s)
-                except SyntaxError:
-                    self.report(
-                        messages.ForwardAnnotationSyntaxError,
-                        node,
-                        annotation.s,
-                    )
-                    return
-
-                body = tree.body
-                if len(body) != 1 or not isinstance(body[0], ast.Expr):
-                    self.report(
-                        messages.ForwardAnnotationSyntaxError,
-                        node,
-                        annotation.s,
-                    )
-                    return
-
-                parsed_annotation = tree.body[0].value
-                for descendant in ast.walk(parsed_annotation):
-                    ast.copy_location(descendant, annotation)
-
-                self.handleNode(parsed_annotation, node)
-
-            self.deferFunction(handleForwardAnnotation)
+            self.deferFunction(functools.partial(
+                self.handleStringAnnotation,
+                annotation.s,
+                node,
+                annotation.lineno,
+                annotation.col_offset,
+                messages.ForwardAnnotationSyntaxError,
+            ))
         elif self.annotationsFutureEnabled:
             self.deferFunction(lambda: self.handleNode(annotation, node))
         else:

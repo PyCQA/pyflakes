@@ -44,5 +44,5 @@ build: off
 
 test_script:
   - python -m tox
-#  - C:\pypy3-v5.10.0-win32\pypy3 setup.py test -q
-  - C:\pypy-2.6.1-win32\pypy setup.py test -q
+#  - C:\pypy3-v5.10.0-win32\pypy3 -m unittest discover pyflakes
+  - C:\pypy-2.6.1-win32\pypy -m unittest discover pyflakes

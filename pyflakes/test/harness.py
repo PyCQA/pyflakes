@@ -1,4 +1,4 @@
-
+import ast
 import textwrap
 import unittest
 
@@ -8,7 +8,6 @@ __all__ = ['TestCase', 'skip', 'skipIf']
 
 skip = unittest.skip
 skipIf = unittest.skipIf
-PyCF_ONLY_AST = 1024
 
 
 class TestCase(unittest.TestCase):
@@ -16,11 +15,12 @@ class TestCase(unittest.TestCase):
     withDoctest = False
 
     def flakes(self, input, *expectedOutputs, **kw):
-        tree = compile(textwrap.dedent(input), "<test>", "exec", PyCF_ONLY_AST)
+        tree = ast.parse(textwrap.dedent(input))
+        tokens = checker.make_tokens(textwrap.dedent(input))
         if kw.get('is_segment'):
             tree = tree.body[0]
             kw.pop('is_segment')
-        w = checker.Checker(tree, withDoctest=self.withDoctest, **kw)
+        w = checker.Checker(tree, tokens=tokens, withDoctest=self.withDoctest, **kw)
         outputs = [type(o) for o in w.messages]
         expectedOutputs = list(expectedOutputs)
         outputs.sort(key=lambda t: t.__name__)
