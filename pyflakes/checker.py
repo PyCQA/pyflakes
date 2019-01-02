@@ -49,12 +49,16 @@ if PY2:
             return [n.body]
         if isinstance(n, ast.TryExcept):
             return [n.body + n.orelse] + [[hdl] for hdl in n.handlers]
+
+    TRY_TYPES = (ast.TryFinally, ast.TryExcept)
 else:
     def getAlternatives(n):
         if isinstance(n, ast.If):
             return [n.body]
         if isinstance(n, ast.Try):
             return [n.body + n.orelse] + [[hdl] for hdl in n.handlers]
+
+    TRY_TYPES = (ast.Try,)
 
 if PY35_PLUS:
     FOR_TYPES = (ast.For, ast.AsyncFor)
@@ -114,6 +118,22 @@ def iter_child_nodes(node, omit=None, _fields_order=_FieldsOrder()):
         elif isinstance(field, list):
             for item in field:
                 yield item
+
+
+def iter_parents_in_scope(node):
+    """
+    Starting at a `node` loops upwards all parent nodes until the surrounding
+    class or function is found, or until the top is reached. This function
+    yields tuples of `(node.parent, node)`. `node.parent` is never `None`.
+
+    :param node:          AST node to be iterated upon
+    """
+    while node:
+        parent = getattr(node, 'parent', None)
+        if not parent or isinstance(parent, (ast.FunctionDef, ast.ClassDef)):
+            break
+        yield (parent, node)
+        node = parent
 
 
 def convert_to_value(item):
@@ -928,11 +948,9 @@ class Checker(object):
             """
             Return `True` if node is part of a conditional body.
             """
-            current = getattr(node, 'parent', None)
-            while current:
-                if isinstance(current, (ast.If, ast.While, ast.IfExp)):
+            for (parent, _) in iter_parents_in_scope(node):
+                if isinstance(parent, (ast.If, ast.While, ast.IfExp)):
                     return True
-                current = getattr(current, 'parent', None)
             return False
 
         name = getNodeName(node)
@@ -1241,15 +1259,12 @@ class Checker(object):
         # Walk the tree up until we see a loop (OK), a function or class
         # definition (not OK), for 'continue', a finally block (not OK), or
         # the top module scope (not OK)
-        n = node
-        while hasattr(n, 'parent'):
-            n, n_child = n.parent, n
+
+        for (n, n_child) in iter_parents_in_scope(node):
             if isinstance(n, LOOP_TYPES):
                 # Doesn't apply unless it's in the loop itself
                 if n_child not in n.orelse:
                     return
-            if isinstance(n, (ast.FunctionDef, ast.ClassDef)):
-                break
             # Handle Try/TryFinally difference in Python < and >= 3.3
             if hasattr(n, 'finalbody') and isinstance(node, ast.Continue):
                 if n_child in n.finalbody:
@@ -1273,6 +1288,14 @@ class Checker(object):
             not self.scope.returnValue
         ):
             self.scope.returnValue = node.value
+
+        # Walk up the tree to find an enclosing try/finally block.
+        for (n, n_child) in iter_parents_in_scope(node):
+            if isinstance(n, TRY_TYPES):
+                if hasattr(n, 'finalbody') and n_child in n.finalbody:
+                    self.report(messages.ReturnInsideFinallyBlock, node)
+                    break
+
         self.handleNode(node.value, node)
 
     def YIELD(self, node):

@@ -182,6 +182,15 @@ class ReturnOutsideFunction(Message):
     message = '\'return\' outside function'
 
 
+class ReturnInsideFinallyBlock(Message):
+    """
+    Indicates a `return` statement inside a finally block, which will cause the
+    try/except block to terminate without the exception, hence loosing the
+    exception information
+    """
+    message = '\'return\' inside \'finally\' block will supress exceptions'
+
+
 class YieldOutsideFunction(Message):
     """
     Indicates a yield or yield from statement outside of a function/method.
