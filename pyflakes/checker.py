@@ -10,6 +10,8 @@ import doctest
 import os
 import sys
 
+from pyflakes import messages
+
 PY2 = sys.version_info < (3, 0)
 PY35_PLUS = sys.version_info >= (3, 5)    # Python 3.5 and above
 PY36_PLUS = sys.version_info >= (3, 6)    # Python 3.6 and above
@@ -20,8 +22,6 @@ except AttributeError:
     PYPY = False
 
 builtin_vars = dir(__import__('__builtin__' if PY2 else 'builtins'))
-
-from pyflakes import messages
 
 
 if PY2:
@@ -212,8 +212,8 @@ class VariableKey(object):
 
     def __eq__(self, compare):
         return (
-            compare.__class__ == self.__class__
-            and compare.name == self.name
+            compare.__class__ == self.__class__ and
+            compare.name == self.name
         )
 
     def __hash__(self):
@@ -462,11 +462,11 @@ class FunctionScope(Scope):
         Return a generator for the assignments which have not been used.
         """
         for name, binding in self.items():
-            if (not binding.used
-                    and name != '_'  # see issue #202
-                    and name not in self.globals
-                    and not self.usesLocals
-                    and isinstance(binding, Assignment)):
+            if (not binding.used and
+                    name != '_' and  # see issue #202
+                    name not in self.globals and
+                    not self.usesLocals and
+                    isinstance(binding, Assignment)):
                 yield name, binding
 
 
@@ -1225,8 +1225,8 @@ class Checker(object):
         # Locate the name in locals / function / globals scopes.
         if isinstance(node.ctx, (ast.Load, ast.AugLoad)):
             self.handleNodeLoad(node)
-            if (node.id == 'locals' and isinstance(self.scope, FunctionScope)
-                    and isinstance(node.parent, ast.Call)):
+            if (node.id == 'locals' and isinstance(self.scope, FunctionScope) and
+                    isinstance(node.parent, ast.Call)):
                 # we are doing locals() call in current scope
                 self.scope.usesLocals = True
         elif isinstance(node.ctx, (ast.Store, ast.AugStore, ast.Param)):
