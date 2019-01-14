@@ -1206,7 +1206,7 @@ class Checker(object):
 
     # "expr" type nodes
     BOOLOP = BINOP = UNARYOP = IFEXP = SET = \
-        COMPARE = CALL = REPR = ATTRIBUTE = SUBSCRIPT = \
+        CALL = REPR = ATTRIBUTE = SUBSCRIPT = \
         STARRED = NAMECONSTANT = handleChildren
 
     NUM = STR = BYTES = ELLIPSIS = CONSTANT = ignore
@@ -1665,3 +1665,17 @@ class Checker(object):
         if node.value:
             # If the assignment has value, handle the *value* now.
             self.handleNode(node.value, node)
+
+    def COMPARE(self, node):
+        literals = (ast.Str, ast.Num)
+        if not PY2:
+            literals += (ast.Bytes,)
+
+        left = node.left
+        for op, right in zip(node.ops, node.comparators):
+            if (isinstance(op, (ast.Is, ast.IsNot)) and
+                    (isinstance(left, literals) or isinstance(right, literals))):
+                self.report(messages.IsLiteral, node)
+            left = right
+
+        self.handleChildren(node)

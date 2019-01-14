@@ -262,3 +262,7 @@ class RaiseNotImplemented(Message):
 
 class InvalidPrintSyntax(Message):
     message = 'use of >> is invalid with print function'
+
+
+class IsLiteral(Message):
+    message = 'use ==/!= to compare str, bytes, and int literals'
