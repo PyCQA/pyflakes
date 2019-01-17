@@ -20,6 +20,7 @@ from pyflakes import messages
 PY2 = sys.version_info < (3, 0)
 PY35_PLUS = sys.version_info >= (3, 5)    # Python 3.5 and above
 PY36_PLUS = sys.version_info >= (3, 6)    # Python 3.6 and above
+PY38_PLUS = sys.version_info >= (3, 8)
 try:
     sys.pypy_version_info
     PYPY = True
@@ -1073,7 +1074,7 @@ class Checker(object):
         if not isinstance(node, ast.Str):
             return (None, None)
 
-        if PYPY:
+        if PYPY or PY38_PLUS:
             doctest_lineno = node.lineno - 1
         else:
             # Computed incorrectly if the docstring has backslash
