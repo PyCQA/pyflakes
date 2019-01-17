@@ -619,6 +619,8 @@ class Checker(object):
         ast.GeneratorExp: GeneratorScope,
         ast.DictComp: GeneratorScope,
     }
+    if PY35_PLUS:
+        _ast_node_scope[ast.AsyncFunctionDef] = FunctionScope,
 
     nodeDepth = 0
     offset = None

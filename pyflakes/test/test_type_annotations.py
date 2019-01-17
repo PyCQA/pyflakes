@@ -179,6 +179,13 @@ class TestTypeAnnotations(TestCase):
         a: 'a: "A"'
         ''', m.ForwardAnnotationSyntaxError)
 
+    @skipIf(version_info < (3, 5), 'new in Python 3.5')
+    def test_annotated_async_def(self):
+        self.flakes('''
+        class c: pass
+        async def func(c: c) -> None: pass
+        ''')
+
     @skipIf(version_info < (3, 7), 'new in Python 3.7')
     def test_postponed_annotations(self):
         self.flakes('''
