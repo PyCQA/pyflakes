@@ -1,3 +1,25 @@
+2.1.0 (2019-01-??)
+
+- Allow intentional assignment to variables named ``_``
+- Recognize ``__module__`` as a valid name in class scope
+- ``pyflakes.checker.Checker`` supports checking of partial ``ast`` trees
+- Detect assign-before-use for local variables which shadow builtin names
+- Detect invalid ``print`` syntax using ``>>`` operator
+- Treat ``async for`` the same as a ``for`` loop for introducing variables
+- Add detection for list concatenation in ``__all__``
+- Exempt ``@typing.overload`` from duplicate function declaration
+- Importing a submodule of an ``as``-aliased ``import``-import is marked as
+  used
+- Report undefined names from ``__all__`` as possibly coming from a ``*``
+  import
+- Add support for changes in Python 3.8-dev
+- Add support for PEP 563 (``from __future__ import annotations``)
+- Include Python version and platform information in ``pyflakes --version``
+- Recognize ``__annotations__`` as a valid magic global in Python 3.6+
+- Mark names used in PEP 484 ``# type: ...`` comments as used
+- Add check for use of ``is`` operator with ``str``, ``bytes``, and ``int``
+  literals 
+
 2.0.0 (2018-05-20)
 
 - Drop support for EOL Python <2.7 and 3.2-3.3
