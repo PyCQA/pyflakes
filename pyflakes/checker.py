@@ -632,11 +632,11 @@ class Checker(object):
         builtIns.update(_customBuiltIns.split(','))
     del _customBuiltIns
 
-    # TODO: tokens= is required to perform checks on type comments, eventually
-    #       make this a required positional argument.  For now it is defaulted
-    #       to `()` for api compatibility.
+    # TODO: file_tokens= is required to perform checks on type comments,
+    #       eventually make this a required positional argument.  For now it
+    #       is defaulted to `()` for api compatibility.
     def __init__(self, tree, filename='(none)', builtins=None,
-                 withDoctest='PYFLAKES_DOCTEST' in os.environ, tokens=()):
+                 withDoctest='PYFLAKES_DOCTEST' in os.environ, file_tokens=()):
         self._nodeHandlers = {}
         self._deferredFunctions = []
         self._deferredAssignments = []
@@ -652,7 +652,7 @@ class Checker(object):
             raise RuntimeError('No scope implemented for the node %r' % tree)
         self.exceptHandlers = [()]
         self.root = tree
-        self._type_comments = _collect_type_comments(tree, tokens)
+        self._type_comments = _collect_type_comments(tree, file_tokens)
         for builtin in self.builtIns:
             self.addBinding(None, Builtin(builtin))
         self.handleChildren(tree)
