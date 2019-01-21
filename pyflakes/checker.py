@@ -422,21 +422,27 @@ class ExportBinding(Binding):
             self.names = list(scope['__all__'].names)
         else:
             self.names = []
+
+        def _add_to_names(container):
+            for node in container.elts:
+                if isinstance(node, ast.Str):
+                    self.names.append(node.s)
+
         if isinstance(source.value, (ast.List, ast.Tuple)):
-            self.names += ast.literal_eval(source.value)
+            _add_to_names(source.value)
         # If concatenating lists
         elif isinstance(source.value, ast.BinOp):
             currentValue = source.value
             while isinstance(currentValue.right, ast.List):
                 left = currentValue.left
                 right = currentValue.right
-                self.names += ast.literal_eval(right)
+                _add_to_names(right)
                 # If more lists are being added
                 if isinstance(left, ast.BinOp):
                     currentValue = left
                 # If just two lists are being added
                 elif isinstance(left, ast.List):
-                    self.names += ast.literal_eval(left)
+                    _add_to_names(left)
                     # All lists accounted for - done
                     break
                 # If not list concatenation
