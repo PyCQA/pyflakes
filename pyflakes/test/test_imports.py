@@ -1093,6 +1093,33 @@ class TestSpecialAll(TestCase):
         __all__ = ['a'] + ['b'] + ['c']
         ''', m.UndefinedExport, m.UndefinedExport, m.UndefinedExport, m.UnusedImport)
 
+    def test_all_with_attributes(self):
+        self.flakes('''
+        from foo import bar
+        __all__ = [bar.__name__]
+        ''')
+
+    def test_all_with_names(self):
+        # not actually valid, but shouldn't produce a crash
+        self.flakes('''
+        from foo import bar
+        __all__ = [bar]
+        ''')
+
+    def test_all_with_attributes_added(self):
+        self.flakes('''
+        from foo import bar
+        from bar import baz
+        __all__ = [bar.__name__] + [baz.__name__]
+        ''')
+
+    def test_all_mixed_attributes_and_strings(self):
+        self.flakes('''
+        from foo import bar
+        from foo import baz
+        __all__ = ['bar', baz.__name__]
+        ''')
+
     def test_unboundExported(self):
         """
         If C{__all__} includes a name which is not bound, a warning is emitted.
