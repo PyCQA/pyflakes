@@ -1037,7 +1037,10 @@ class Checker(object):
             comment = comment.split(':', 1)[1].strip()
             func_match = TYPE_FUNC_RE.match(comment)
             if func_match:
-                parts = (func_match.group(1), func_match.group(2).strip())
+                parts = (
+                    func_match.group(1).replace('*', ''),
+                    func_match.group(2).strip(),
+                )
             else:
                 parts = (comment,)
 

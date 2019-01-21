@@ -231,6 +231,14 @@ class TestTypeAnnotations(TestCase):
             return a + b
         """)
 
+    def test_typeCommentsStarArgs(self):
+        self.flakes("""
+        from mod import A, B, C, D
+        def f(a, *b, **c):
+            # type: (A, *B, **C) -> D
+            return a + b
+        """)
+
     def test_typeCommentsFullSignatureWithDocstring(self):
         self.flakes('''
         from mod import A, B, C, D
