@@ -507,6 +507,13 @@ class DoctestScope(ModuleScope):
     """Scope for a doctest."""
 
 
+class DummyNode(object):
+    """Used in place of an `ast.AST` to set error message positions"""
+    def __init__(self, lineno, col_offset):
+        self.lineno = lineno
+        self.col_offset = col_offset
+
+
 # Globally defined names which are not attributes of the builtins module, or
 # are only present on some platforms.
 _MAGIC_GLOBALS = ['__file__', '__builtins__', 'WindowsError']
@@ -1056,7 +1063,7 @@ class Checker(object):
                     part = part.replace('...', 'Ellipsis')
                 self.deferFunction(functools.partial(
                     self.handleStringAnnotation,
-                    part, node, lineno, col_offset,
+                    part, DummyNode(lineno, col_offset), lineno, col_offset,
                     messages.CommentAnnotationSyntaxError,
                 ))
 

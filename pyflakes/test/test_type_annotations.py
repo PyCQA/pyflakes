@@ -297,6 +297,13 @@ class TestTypeAnnotations(TestCase):
             pass
         """, m.CommentAnnotationSyntaxError)
 
+    def test_typeCommentsSyntaxErrorCorrectLine(self):
+        checker = self.flakes("""\
+        x = 1
+        # type: definitely not a PEP 484 comment
+        """, m.CommentAnnotationSyntaxError)
+        self.assertEqual(checker.messages[0].lineno, 2)
+
     def test_typeCommentsAssignedToPreviousNode(self):
         # This test demonstrates an issue in the implementation which
         # associates the type comment with a node above it, however the type
