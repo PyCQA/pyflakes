@@ -529,6 +529,7 @@ def is_typing_overload(value, scope):
             (
                 isinstance(node, ast.Name) and
                 node.id in scope and
+                isinstance(scope[node.id], ImportationFrom) and
                 scope[node.id].fullName == 'typing.overload'
             ) or (
                 isinstance(node, ast.Attribute) and
