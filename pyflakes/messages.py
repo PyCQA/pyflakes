@@ -10,9 +10,12 @@ class Message(object):
     def __init__(self, filename, loc):
         self.filename = filename
         self.lineno = loc.lineno
-        self.col = getattr(loc, 'col_offset', 0)
+        self.col = getattr(loc, 'col_offset', -1)
 
     def __str__(self):
+        if self.col != -1:
+            return '%s:%s:%s: %s' % (self.filename, self.lineno, self.col,
+                                  self.message % self.message_args)
         return '%s:%s: %s' % (self.filename, self.lineno,
                               self.message % self.message_args)
 
