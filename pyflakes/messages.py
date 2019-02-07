@@ -13,11 +13,9 @@ class Message(object):
         self.col = getattr(loc, 'col_offset', -1)
 
     def __str__(self):
-        if self.col != -1:
-            return '%s:%s:%s: %s' % (self.filename, self.lineno, self.col,
-                                  self.message % self.message_args)
-        return '%s:%s: %s' % (self.filename, self.lineno,
-                              self.message % self.message_args)
+        column = '%s:' % self.col if self.col != -1 else ''
+        return '%s:%s:%s %s' % (self.filename, self.lineno, column,
+                                 self.message % self.message_args)
 
 
 class UnusedImport(Message):
