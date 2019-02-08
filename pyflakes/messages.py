@@ -14,7 +14,7 @@ class Message(object):
 
     def __str__(self):
         return '%s:%s:%s %s' % (self.filename, self.lineno, self.col+1,
-                                 self.message % self.message_args)
+                                self.message % self.message_args)
 
 
 class UnusedImport(Message):
