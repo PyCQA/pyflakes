@@ -42,28 +42,6 @@ class TestTypeAnnotations(TestCase):
     def test_not_a_typing_overload(self):
         """regression test for @typing.overload detection bug in 2.1.0"""
         self.flakes("""
-            x = lambda f: f
-
-            @x
-            def t():
-                pass
-
-            y = lambda f: f
-
-            @x
-            @y
-            def t():
-                pass
-
-            @x
-            @y
-            def t():
-                pass
-        """, m.RedefinedWhileUnused, m.RedefinedWhileUnused)
-
-    def test_not_a_typing_overload2(self):
-        """regression test for @typing.overload detection bug in 2.1.0"""
-        self.flakes("""
             def foo(x):
                 return x
 
