@@ -548,8 +548,10 @@ def is_typing_overload(value, scope):
 
     return (
         isinstance(value.source, ast.FunctionDef) and
-        len(value.source.decorator_list) == 1 and
-        is_typing_overload_decorator(value.source.decorator_list[0])
+        any(
+            is_typing_overload_decorator(dec)
+            for dec in value.source.decorator_list
+        )
     )
 
 
