@@ -58,6 +58,22 @@ class TestTypeAnnotations(TestCase):
             def f(x): return x
        """)
 
+    def test_overload_in_class(self):
+        self.flakes("""
+        from typing import overload
+
+        class C:
+            @overload
+            def f(self, x):  # type: (int) -> int
+                pass
+
+            @overload
+            def f(self, x):  # type: (str) -> str
+                pass
+
+            def f(self, x): return x
+        """)
+
     def test_not_a_typing_overload(self):
         """regression test for @typing.overload detection bug in 2.1.0"""
         self.flakes("""
