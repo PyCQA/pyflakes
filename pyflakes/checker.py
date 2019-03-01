@@ -530,14 +530,21 @@ def getNodeName(node):
         return node.name
 
 
-def is_typing_overload(value, scope):
+def is_typing_overload(value, scope_stack):
+    def name_is_typing_overload(name):  # type: (str) -> bool
+        for scope in reversed(scope_stack):
+            if name in scope:
+                return (
+                    isinstance(scope[name], ImportationFrom) and
+                    scope[name].fullName == 'typing.overload'
+                )
+        else:
+            return False
+
     def is_typing_overload_decorator(node):
         return (
             (
-                isinstance(node, ast.Name) and
-                node.id in scope and
-                isinstance(scope[node.id], ImportationFrom) and
-                scope[node.id].fullName == 'typing.overload'
+                isinstance(node, ast.Name) and name_is_typing_overload(node.id)
             ) or (
                 isinstance(node, ast.Attribute) and
                 isinstance(node.value, ast.Name) and
@@ -548,8 +555,10 @@ def is_typing_overload(value, scope):
 
     return (
         isinstance(value.source, ast.FunctionDef) and
-        len(value.source.decorator_list) == 1 and
-        is_typing_overload_decorator(value.source.decorator_list[0])
+        any(
+            is_typing_overload_decorator(dec)
+            for dec in value.source.decorator_list
+        )
     )
 
 
@@ -888,7 +897,7 @@ class Checker(object):
                                 node, value.name, existing.source)
                 elif not existing.used and value.redefines(existing):
                     if value.name != '_' or isinstance(existing, Importation):
-                        if not is_typing_overload(existing, self.scope):
+                        if not is_typing_overload(existing, self.scopeStack):
                             self.report(messages.RedefinedWhileUnused,
                                         node, value.name, existing.source)
 
