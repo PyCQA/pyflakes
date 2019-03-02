@@ -214,9 +214,13 @@ class TestIterSourceCode(TestCase):
         with open(pythonw, 'w') as fd:
             fd.write('#!/usr/bin/env pythonw\n')
 
+        python3args = os.path.join(self.tempdir, 'g')
+        with open(python3args, 'w') as fd:
+            fd.write('#!/usr/bin/python3 -u\n')
+
         self.assertEqual(
             sorted(iterSourceCode([self.tempdir])),
-            sorted([python, python2, python3, pythonw]))
+            sorted([python, python2, python3, pythonw, python3args]))
 
     def test_multipleDirectories(self):
         """

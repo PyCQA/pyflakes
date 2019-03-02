@@ -14,7 +14,7 @@ from pyflakes import reporter as modReporter
 
 __all__ = ['check', 'checkPath', 'checkRecursive', 'iterSourceCode', 'main']
 
-PYTHON_SHEBANG_REGEX = re.compile(br'^#!.*\bpython[23w]?\b\s*$')
+PYTHON_SHEBANG_REGEX = re.compile(br'^#!.*\bpython[23w]?(\s|$)')
 
 
 def check(codeString, filename, reporter=None):
