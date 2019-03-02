@@ -218,9 +218,22 @@ class TestIterSourceCode(TestCase):
         with open(python3args, 'w') as fd:
             fd.write('#!/usr/bin/python3 -u\n')
 
+        python2u = os.path.join(self.tempdir, 'h')
+        with open(python2u, 'w') as fd:
+            fd.write('#!/usr/bin/python2u\n')
+
+        python3d = os.path.join(self.tempdir, 'i')
+        with open(python3d, 'w') as fd:
+            fd.write('#!/usr/local/bin/python3d\n')
+
+        python3m = os.path.join(self.tempdir, 'j')
+        with open(python3m, 'w') as fd:
+            fd.write('#! /usr/bin/env python3m\n')
+
         self.assertEqual(
             sorted(iterSourceCode([self.tempdir])),
-            sorted([python, python2, python3, pythonw, python3args]))
+            sorted([python, python2, python3, pythonw, python3args, python2u,
+                    python3d, python3m]))
 
     def test_multipleDirectories(self):
         """
