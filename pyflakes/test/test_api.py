@@ -234,6 +234,11 @@ class TestIterSourceCode(TestCase):
         with open(python27, 'w') as fd:
             fd.write('#!/usr/bin/python2.7   \n')
 
+        # Should NOT be treated as Python source
+        notfirst = os.path.join(self.tempdir, 'l')
+        with open(notfirst, 'w') as fd:
+            fd.write('#!/bin/sh\n#!/usr/bin/python\n')
+
         self.assertEqual(
             sorted(iterSourceCode([self.tempdir])),
             sorted([python, python2, python3, pythonw, python3args, python2u,
