@@ -1755,6 +1755,41 @@ class TestUnusedAssignment(TestCase):
         ''')
 
 
+class TestStringFormatting(TestCase):
+
+    @skipIf(version_info < (3, 6), 'new in Python 3.6')
+    def test_f_string_without_placeholders(self):
+        self.flakes("f'foo'", m.FStringMissingPlaceholders)
+        self.flakes('''
+            f"""foo
+            bar
+            """
+        ''', m.FStringMissingPlaceholders)
+        self.flakes('''
+            print(
+                f'foo'
+                f'bar'
+            )
+        ''', m.FStringMissingPlaceholders)
+        # this is an "escaped placeholder" but not a placeholder
+        self.flakes("f'{{}}'", m.FStringMissingPlaceholders)
+        # ok: f-string with placeholders
+        self.flakes('''
+            x = 5
+            print(f'{x}')
+        ''')
+        # ok: f-string with format specifiers
+        self.flakes('''
+            x = 'a' * 90
+            print(f'{x:.8}')
+        ''')
+        # ok: f-string with multiple format specifiers
+        self.flakes('''
+            x = y = 5
+            print(f'{x:>2} {y:>2}')
+        ''')
+
+
 class TestAsyncStatements(TestCase):
 
     @skipIf(version_info < (3, 5), 'new in Python 3.5')

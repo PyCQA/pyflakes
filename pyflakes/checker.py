@@ -1263,7 +1263,24 @@ class Checker(object):
             self.report(messages.RaiseNotImplemented, node)
 
     # additional node types
-    COMPREHENSION = KEYWORD = FORMATTEDVALUE = JOINEDSTR = handleChildren
+    COMPREHENSION = KEYWORD = FORMATTEDVALUE = handleChildren
+
+    _in_fstring = False
+
+    def JOINEDSTR(self, node):
+        if (
+                # the conversion / etc. flags are parsed as f-strings without
+                # placeholders
+                not self._in_fstring and
+                not any(isinstance(x, ast.FormattedValue) for x in node.values)
+        ):
+            self.report(messages.FStringMissingPlaceholders, node)
+
+        self._in_fstring, orig = True, self._in_fstring
+        try:
+            self.handleChildren(node)
+        finally:
+            self._in_fstring = orig
 
     def DICT(self, node):
         # Complain if there are duplicate keys with different values

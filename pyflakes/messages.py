@@ -266,3 +266,7 @@ class InvalidPrintSyntax(Message):
 
 class IsLiteral(Message):
     message = 'use ==/!= to compare str, bytes, and int literals'
+
+
+class FStringMissingPlaceholders(Message):
+    message = 'f-string is missing placeholders'
