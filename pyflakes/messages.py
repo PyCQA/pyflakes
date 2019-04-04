@@ -270,3 +270,39 @@ class IsLiteral(Message):
 
 class FStringMissingPlaceholders(Message):
     message = 'f-string is missing placeholders'
+
+
+class StringDotFormatExtraPositionalArguments(Message):
+    message = "'...'.format(...) has unused arguments at position(s): %s"
+
+    def __init__(self, filename, loc, extra_positions):
+        Message.__init__(self, filename, loc)
+        self.message_args = (extra_positions,)
+
+
+class StringDotFormatExtraNamedArguments(Message):
+    message = "'...'.format(...) has unused named argument(s): %s"
+
+    def __init__(self, filename, loc, extra_keywords):
+        Message.__init__(self, filename, loc)
+        self.message_args = (extra_keywords,)
+
+
+class StringDotFormatMissingArgument(Message):
+    message = "'...'.format(...) is missing argument(s) for placeholder(s): %s"
+
+    def __init__(self, filename, loc, missing_arguments):
+        Message.__init__(self, filename, loc)
+        self.message_args = (missing_arguments,)
+
+
+class StringDotFormatMixingAutomatic(Message):
+    message = "'...'.format(...) mixes automatic and manual numbering"
+
+
+class StringDotFormatInvalidFormat(Message):
+    message = "'...'.format(...) has invalid format string: %s"
+
+    def __init__(self, filename, loc, error):
+        Message.__init__(self, filename, loc)
+        self.message_args = (error,)

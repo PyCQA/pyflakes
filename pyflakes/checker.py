@@ -12,6 +12,7 @@ import doctest
 import functools
 import os
 import re
+import string
 import sys
 import tokenize
 
@@ -28,6 +29,8 @@ except AttributeError:
     PYPY = False
 
 builtin_vars = dir(__import__('__builtin__' if PY2 else 'builtins'))
+
+parse_format_string = string.Formatter().parse
 
 if PY2:
     tokenize_tokenize = tokenize.generate_tokens
@@ -1232,8 +1235,137 @@ class Checker(object):
 
     # "expr" type nodes
     BOOLOP = BINOP = UNARYOP = IFEXP = SET = \
-        CALL = REPR = ATTRIBUTE = SUBSCRIPT = \
+        REPR = ATTRIBUTE = SUBSCRIPT = \
         STARRED = NAMECONSTANT = handleChildren
+
+    def _handle_string_dot_format(self, node):
+        try:
+            placeholders = tuple(parse_format_string(node.func.value.s))
+        except ValueError as e:
+            self.report(messages.StringDotFormatInvalidFormat, node, e)
+            return
+
+        class state:  # py2-compatible `nonlocal`
+            auto = None
+            next_auto = 0
+
+        placeholder_positional = set()
+        placeholder_named = set()
+
+        def _add_key(fmtkey):
+            """Returns True if there is an error which should early-exit"""
+            if fmtkey is None:  # end of string or `{` / `}` escapes
+                return False
+
+            # attributes / indices are allowed in `.format(...)`
+            fmtkey, _, _ = fmtkey.partition('.')
+            fmtkey, _, _ = fmtkey.partition('[')
+
+            try:
+                fmtkey = int(fmtkey)
+            except ValueError:
+                pass
+            else:  # fmtkey was an integer
+                if state.auto is True:
+                    self.report(messages.StringDotFormatMixingAutomatic, node)
+                    return True
+                else:
+                    state.auto = False
+
+            if fmtkey == '':
+                if state.auto is False:
+                    self.report(messages.StringDotFormatMixingAutomatic, node)
+                    return True
+                else:
+                    state.auto = True
+
+                fmtkey = state.next_auto
+                state.next_auto += 1
+
+            if isinstance(fmtkey, int):
+                placeholder_positional.add(fmtkey)
+            else:
+                placeholder_named.add(fmtkey)
+
+            return False
+
+        for _, fmtkey, spec, _ in placeholders:
+            if _add_key(fmtkey):
+                return
+
+            # spec can also contain format specifiers
+            if spec is not None:
+                try:
+                    spec_placeholders = tuple(parse_format_string(spec))
+                except ValueError as e:
+                    self.report(messages.StringDotFormatInvalidFormat, node, e)
+                    return
+
+                for _, spec_fmtkey, spec_spec, _ in spec_placeholders:
+                    # can't recurse again
+                    if spec_spec is not None and '{' in spec_spec:
+                        self.report(
+                            messages.StringDotFormatInvalidFormat,
+                            node,
+                            'Max string recursion exceeded',
+                        )
+                        return
+                    if _add_key(spec_fmtkey):
+                        return
+
+        # bail early if there is *args or **kwargs
+        if (
+                # python 2.x *args / **kwargs
+                getattr(node, 'starargs', None) or
+                getattr(node, 'kwargs', None) or
+                # python 3.x *args
+                any(
+                    isinstance(arg, getattr(ast, 'Starred', ()))
+                    for arg in node.args
+                ) or
+                # python 3.x **kwargs
+                any(kwd.arg is None for kwd in node.keywords)
+        ):
+            return
+
+        substitution_positional = set(range(len(node.args)))
+        substitution_named = {kwd.arg for kwd in node.keywords}
+
+        extra_positional = substitution_positional - placeholder_positional
+        extra_named = substitution_named - placeholder_named
+
+        missing_arguments = (
+            (placeholder_positional | placeholder_named) -
+            (substitution_positional | substitution_named)
+        )
+
+        if extra_positional:
+            self.report(
+                messages.StringDotFormatExtraPositionalArguments,
+                node,
+                ', '.join(sorted(str(x) for x in extra_positional)),
+            )
+        if extra_named:
+            self.report(
+                messages.StringDotFormatExtraNamedArguments,
+                node,
+                ', '.join(sorted(extra_named)),
+            )
+        if missing_arguments:
+            self.report(
+                messages.StringDotFormatMissingArgument,
+                node,
+                ', '.join(sorted(str(x) for x in missing_arguments)),
+            )
+
+    def CALL(self, node):
+        if (
+                isinstance(node.func, ast.Attribute) and
+                isinstance(node.func.value, ast.Str) and
+                node.func.attr == 'format'
+        ):
+            self._handle_string_dot_format(node)
+        self.handleChildren(node)
 
     NUM = STR = BYTES = ELLIPSIS = CONSTANT = ignore
 

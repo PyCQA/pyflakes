@@ -1789,6 +1789,60 @@ class TestStringFormatting(TestCase):
             print(f'{x:>2} {y:>2}')
         ''')
 
+    def test_invalid_dot_format_calls(self):
+        self.flakes('''
+            '{'.format(1)
+        ''', m.StringDotFormatInvalidFormat)
+        self.flakes('''
+            '{} {1}'.format(1, 2)
+        ''', m.StringDotFormatMixingAutomatic)
+        self.flakes('''
+            '{0} {}'.format(1, 2)
+        ''', m.StringDotFormatMixingAutomatic)
+        self.flakes('''
+            '{}'.format(1, 2)
+        ''', m.StringDotFormatExtraPositionalArguments)
+        self.flakes('''
+            '{}'.format(1, bar=2)
+        ''', m.StringDotFormatExtraNamedArguments)
+        self.flakes('''
+            '{} {}'.format(1)
+        ''', m.StringDotFormatMissingArgument)
+        self.flakes('''
+            '{2}'.format()
+        ''', m.StringDotFormatMissingArgument)
+        self.flakes('''
+            '{bar}'.format()
+        ''', m.StringDotFormatMissingArgument)
+        # too much string recursion (placeholder-in-placeholder)
+        self.flakes('''
+            '{:{:{}}}'.format(1, 2, 3)
+        ''', m.StringDotFormatInvalidFormat)
+        # ok: dotted / bracketed names need to handle the param differently
+        self.flakes("'{.__class__}'.format('')")
+        self.flakes("'{foo[bar]}'.format(foo={'bar': 'barv'})")
+        # ok: placeholder-placeholders
+        self.flakes('''
+            print('{:{}} {}'.format(1, 15, 2))
+        ''')
+        # ok: not a placeholder-placeholder
+        self.flakes('''
+            print('{:2}'.format(1))
+        ''')
+        # ok: not mixed automatic
+        self.flakes('''
+            '{foo}-{}'.format(1, foo=2)
+        ''')
+        # ok: we can't determine statically the format args
+        self.flakes('''
+            a = ()
+            "{}".format(*a)
+        ''')
+        self.flakes('''
+            k = {}
+            "{foo}".format(**k)
+        ''')
+
 
 class TestAsyncStatements(TestCase):
 
