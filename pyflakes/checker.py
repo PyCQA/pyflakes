@@ -84,6 +84,87 @@ TYPE_IGNORE_RE = re.compile(TYPE_COMMENT_RE.pattern + r'ignore\s*(#|$)')
 TYPE_FUNC_RE = re.compile(r'^(\(.*?\))\s*->\s*(.*)$')
 
 
+MAPPING_KEY_RE = re.compile(r'\(([^()]*)\)')
+CONVERSION_FLAG_RE = re.compile('[#0+ -]*')
+WIDTH_RE = re.compile(r'(?:\*|\d*)')
+PRECISION_RE = re.compile(r'(?:\.(?:\*|\d*))?')
+LENGTH_RE = re.compile('[hlL]?')
+# https://docs.python.org/3/library/stdtypes.html#old-string-formatting
+VALID_CONVERSIONS = frozenset('diouxXeEfFgGcrsa%')
+
+
+def _must_match(regex, string, pos):
+    # type: (Pattern[str], str, int) -> Match[str]
+    match = regex.match(string, pos)
+    assert match is not None
+    return match
+
+
+def parse_percent_format(s):  # type: (str) -> Tuple[PercentFormat, ...]
+    """Parses the string component of a `'...' % ...` format call
+
+    Copied from https://github.com/asottile/pyupgrade at v1.20.1
+    """
+
+    def _parse_inner():
+        # type: () -> Generator[PercentFormat, None, None]
+        string_start = 0
+        string_end = 0
+        in_fmt = False
+
+        i = 0
+        while i < len(s):
+            if not in_fmt:
+                try:
+                    i = s.index('%', i)
+                except ValueError:  # no more % fields!
+                    yield s[string_start:], None
+                    return
+                else:
+                    string_end = i
+                    i += 1
+                    in_fmt = True
+            else:
+                key_match = MAPPING_KEY_RE.match(s, i)
+                if key_match:
+                    key = key_match.group(1)  # type: Optional[str]
+                    i = key_match.end()
+                else:
+                    key = None
+
+                conversion_flag_match = _must_match(CONVERSION_FLAG_RE, s, i)
+                conversion_flag = conversion_flag_match.group() or None
+                i = conversion_flag_match.end()
+
+                width_match = _must_match(WIDTH_RE, s, i)
+                width = width_match.group() or None
+                i = width_match.end()
+
+                precision_match = _must_match(PRECISION_RE, s, i)
+                precision = precision_match.group() or None
+                i = precision_match.end()
+
+                # length modifier is ignored
+                i = _must_match(LENGTH_RE, s, i).end()
+
+                try:
+                    conversion = s[i]
+                except IndexError:
+                    raise ValueError('end-of-string while parsing format')
+                i += 1
+
+                fmt = (key, conversion_flag, width, precision, conversion)
+                yield s[string_start:string_end], fmt
+
+                in_fmt = False
+                string_start = i
+
+        if in_fmt:
+            raise ValueError('end-of-string while parsing format')
+
+    return tuple(_parse_inner())
+
+
 class _FieldsOrder(dict):
     """Fix order of AST node fields."""
 
@@ -1234,7 +1315,7 @@ class Checker(object):
     PASS = ignore
 
     # "expr" type nodes
-    BOOLOP = BINOP = UNARYOP = IFEXP = SET = \
+    BOOLOP = UNARYOP = IFEXP = SET = \
         REPR = ATTRIBUTE = SUBSCRIPT = \
         STARRED = NAMECONSTANT = handleChildren
 
@@ -1365,6 +1446,117 @@ class Checker(object):
                 node.func.attr == 'format'
         ):
             self._handle_string_dot_format(node)
+        self.handleChildren(node)
+
+    def _handle_percent_format(self, node):
+        try:
+            placeholders = parse_percent_format(node.left.s)
+        except ValueError:
+            self.report(
+                messages.PercentFormatInvalidFormat,
+                node,
+                'incomplete format',
+            )
+            return
+
+        named = set()
+        positional_count = 0
+        positional = None
+        for _, placeholder in placeholders:
+            if placeholder is None:
+                continue
+            name, _, width, precision, conversion = placeholder
+
+            if conversion == '%':
+                continue
+
+            if conversion not in VALID_CONVERSIONS:
+                self.report(
+                    messages.PercentFormatUnsupportedFormatCharacter,
+                    node,
+                    conversion,
+                )
+
+            if positional is None and conversion:
+                positional = name is None
+
+            for part in (width, precision):
+                if part is not None and '*' in part:
+                    if not positional:
+                        self.report(
+                            messages.PercentFormatStarRequiresSequence,
+                            node,
+                        )
+                    else:
+                        positional_count += 1
+
+            if positional and name is not None:
+                self.report(
+                    messages.PercentFormatMixedPositionalAndNamed,
+                    node,
+                )
+                return
+            elif not positional and name is None:
+                self.report(
+                    messages.PercentFormatMixedPositionalAndNamed,
+                    node,
+                )
+                return
+
+            if positional:
+                positional_count += 1
+            else:
+                named.add(name)
+
+        if (
+                isinstance(node.right, (ast.List, ast.Tuple)) and
+                # does not have any *splats (py35+ feature)
+                not any(
+                    isinstance(elt, getattr(ast, 'Starred', ()))
+                    for elt in node.right.elts
+                )
+        ):
+            substitution_count = len(node.right.elts)
+            if positional and positional_count != substitution_count:
+                self.report(
+                    messages.PercentFormatPositionalCountMismatch,
+                    node,
+                    positional_count,
+                    substitution_count,
+                )
+            elif not positional:
+                self.report(messages.PercentFormatExpectedMapping, node)
+
+        if (
+                isinstance(node.right, ast.Dict) and
+                all(isinstance(k, ast.Str) for k in node.right.keys)
+        ):
+            if positional and positional_count > 1:
+                self.report(messages.PercentFormatExpectedSequence, node)
+                return
+
+            substitution_keys = {k.s for k in node.right.keys}
+            extra_keys = substitution_keys - named
+            missing_keys = named - substitution_keys
+            if not positional and extra_keys:
+                self.report(
+                    messages.PercentFormatExtraNamedArguments,
+                    node,
+                    ', '.join(sorted(extra_keys)),
+                )
+            if not positional and missing_keys:
+                self.report(
+                    messages.PercentFormatMissingArgument,
+                    node,
+                    ', '.join(sorted(missing_keys)),
+                )
+
+    def BINOP(self, node):
+        if (
+                isinstance(node.op, ast.Mod) and
+                isinstance(node.left, ast.Str)
+        ):
+            self._handle_percent_format(node)
         self.handleChildren(node)
 
     NUM = STR = BYTES = ELLIPSIS = CONSTANT = ignore

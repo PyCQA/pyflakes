@@ -1843,6 +1843,70 @@ class TestStringFormatting(TestCase):
             "{foo}".format(**k)
         ''')
 
+    def test_invalid_percent_format_calls(self):
+        self.flakes('''
+            '%(foo)' % {'foo': 'bar'}
+        ''', m.PercentFormatInvalidFormat)
+        self.flakes('''
+            '%s %(foo)s' % {'foo': 'bar'}
+        ''', m.PercentFormatMixedPositionalAndNamed)
+        self.flakes('''
+            '%(foo)s %s' % {'foo': 'bar'}
+        ''', m.PercentFormatMixedPositionalAndNamed)
+        self.flakes('''
+            '%j' % (1,)
+        ''', m.PercentFormatUnsupportedFormatCharacter)
+        self.flakes('''
+            '%s %s' % (1,)
+        ''', m.PercentFormatPositionalCountMismatch)
+        self.flakes('''
+            '%s %s' % (1, 2, 3)
+        ''', m.PercentFormatPositionalCountMismatch)
+        self.flakes('''
+            '%(bar)s' % {}
+        ''', m.PercentFormatMissingArgument,)
+        self.flakes('''
+            '%(bar)s' % {'bar': 1, 'baz': 2}
+        ''', m.PercentFormatExtraNamedArguments)
+        self.flakes('''
+            '%(bar)s' % (1, 2, 3)
+        ''', m.PercentFormatExpectedMapping)
+        self.flakes('''
+            '%s %s' % {'k': 'v'}
+        ''', m.PercentFormatExpectedSequence)
+        self.flakes('''
+            '%(bar)*s' % {'bar': 'baz'}
+        ''', m.PercentFormatStarRequiresSequence)
+        # ok: single %s with mapping
+        self.flakes('''
+            '%s' % {'foo': 'bar', 'baz': 'womp'}
+        ''')
+        # ok: does not cause a MemoryError (the strings aren't evaluated)
+        self.flakes('''
+            "%1000000000000f" % 1
+        ''')
+        # ok: %% should not count towards placeholder count
+        self.flakes('''
+            '%% %s %% %s' % (1, 2)
+        ''')
+        # ok: * consumes one positional argument
+        self.flakes('''
+            '%.*f' % (2, 1.1234)
+            '%*.*f' % (5, 2, 3.1234)
+        ''')
+
+    @skipIf(version_info < (3, 5), 'new in Python 3.5')
+    def test_ok_percent_format_cannot_determine_element_count(self):
+        self.flakes('''
+            a = []
+            '%s %s' % [*a]
+            '%s %s' % (*a,)
+        ''')
+        self.flakes('''
+            k = {}
+            '%(k)s' % {**k}
+        ''')
+
 
 class TestAsyncStatements(TestCase):
 

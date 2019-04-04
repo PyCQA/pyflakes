@@ -306,3 +306,59 @@ class StringDotFormatInvalidFormat(Message):
     def __init__(self, filename, loc, error):
         Message.__init__(self, filename, loc)
         self.message_args = (error,)
+
+
+class PercentFormatInvalidFormat(Message):
+    message = "'...' %% ... has invalid format string: %s"
+
+    def __init__(self, filename, loc, error):
+        Message.__init__(self, filename, loc)
+        self.message_args = (error,)
+
+
+class PercentFormatMixedPositionalAndNamed(Message):
+    message = "'...' %% ... has mixed positional and named placeholders"
+
+
+class PercentFormatUnsupportedFormatCharacter(Message):
+    message = "'...' %% ... has unsupported format character %r"
+
+    def __init__(self, filename, loc, c):
+        Message.__init__(self, filename, loc)
+        self.message_args = (c,)
+
+
+class PercentFormatPositionalCountMismatch(Message):
+    message = "'...' %% ... has %d placeholder(s) but %d substitution(s)"
+
+    def __init__(self, filename, loc, n_placeholders, n_substitutions):
+        Message.__init__(self, filename, loc)
+        self.message_args = (n_placeholders, n_substitutions)
+
+
+class PercentFormatExtraNamedArguments(Message):
+    message = "'...' %% ... has unused named argument(s): %s"
+
+    def __init__(self, filename, loc, extra_keywords):
+        Message.__init__(self, filename, loc)
+        self.message_args = (extra_keywords,)
+
+
+class PercentFormatMissingArgument(Message):
+    message = "'...' %% ... is missing argument(s) for placeholder(s): %s"
+
+    def __init__(self, filename, loc, missing_arguments):
+        Message.__init__(self, filename, loc)
+        self.message_args = (missing_arguments,)
+
+
+class PercentFormatExpectedMapping(Message):
+    message = "'...' %% ... expected mapping but got sequence"
+
+
+class PercentFormatExpectedSequence(Message):
+    message = "'...' %% ... expected sequence but got mapping"
+
+
+class PercentFormatStarRequiresSequence(Message):
+    message = "'...' %% ... `*` specifier requires sequence"
