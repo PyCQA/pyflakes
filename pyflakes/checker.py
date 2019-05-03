@@ -822,22 +822,31 @@ class Checker(object):
     def getParent(self, node):
         # Lookup the first parent which is not Tuple, List or Starred
         while True:
-            node = node.parent
+            node = node._pyflakes_parent
             if not hasattr(node, 'elts') and not hasattr(node, 'ctx'):
                 return node
 
     def getCommonAncestor(self, lnode, rnode, stop):
-        if stop in (lnode, rnode) or not (hasattr(lnode, 'parent') and
-                                          hasattr(rnode, 'parent')):
+        if (
+                stop in (lnode, rnode) or
+                not (
+                    hasattr(lnode, '_pyflakes_parent') and
+                    hasattr(rnode, '_pyflakes_parent')
+                )
+        ):
             return None
         if lnode is rnode:
             return lnode
 
-        if (lnode.depth > rnode.depth):
-            return self.getCommonAncestor(lnode.parent, rnode, stop)
-        if (lnode.depth < rnode.depth):
-            return self.getCommonAncestor(lnode, rnode.parent, stop)
-        return self.getCommonAncestor(lnode.parent, rnode.parent, stop)
+        if (lnode._pyflakes_depth > rnode._pyflakes_depth):
+            return self.getCommonAncestor(lnode._pyflakes_parent, rnode, stop)
+        if (lnode._pyflakes_depth < rnode._pyflakes_depth):
+            return self.getCommonAncestor(lnode, rnode._pyflakes_parent, stop)
+        return self.getCommonAncestor(
+            lnode._pyflakes_parent,
+            rnode._pyflakes_parent,
+            stop,
+        )
 
     def descendantOf(self, node, ancestors, stop):
         for a in ancestors:
@@ -875,7 +884,7 @@ class Checker(object):
         - `node` is the statement responsible for the change
         - `value` is the new value, a Binding instance
         """
-        # assert value.source in (node, node.parent):
+        # assert value.source in (node, node._pyflakes_parent):
         for scope in self.scopeStack[::-1]:
             if value.name in scope:
                 break
@@ -1014,11 +1023,11 @@ class Checker(object):
 
         parent_stmt = self.getParent(node)
         if isinstance(parent_stmt, (FOR_TYPES, ast.comprehension)) or (
-                parent_stmt != node.parent and
+                parent_stmt != node._pyflakes_parent and
                 not self.isLiteralTupleUnpacking(parent_stmt)):
             binding = Binding(name, node)
         elif name == '__all__' and isinstance(self.scope, ModuleScope):
-            binding = ExportBinding(name, node.parent, self.scope)
+            binding = ExportBinding(name, node._pyflakes_parent, self.scope)
         elif isinstance(getattr(node, 'ctx', None), ast.Param):
             binding = Argument(name, self.getScopeNode(node))
         else:
@@ -1031,11 +1040,11 @@ class Checker(object):
             """
             Return `True` if node is part of a conditional body.
             """
-            current = getattr(node, 'parent', None)
+            current = getattr(node, '_pyflakes_parent', None)
             while current:
                 if isinstance(current, (ast.If, ast.While, ast.IfExp)):
                     return True
-                current = getattr(current, 'parent', None)
+                current = getattr(current, '_pyflakes_parent', None)
             return False
 
         name = getNodeName(node)
@@ -1122,8 +1131,8 @@ class Checker(object):
                                         self.isDocstring(node)):
             self.futuresAllowed = False
         self.nodeDepth += 1
-        node.depth = self.nodeDepth
-        node.parent = parent
+        node._pyflakes_depth = self.nodeDepth
+        node._pyflakes_parent = parent
         try:
             handler = self.getNodeHandler(node.__class__)
             handler(node)
@@ -1355,7 +1364,7 @@ class Checker(object):
         if isinstance(node.ctx, (ast.Load, ast.AugLoad)):
             self.handleNodeLoad(node)
             if (node.id == 'locals' and isinstance(self.scope, FunctionScope) and
-                    isinstance(node.parent, ast.Call)):
+                    isinstance(node._pyflakes_parent, ast.Call)):
                 # we are doing locals() call in current scope
                 self.scope.usesLocals = True
         elif isinstance(node.ctx, (ast.Store, ast.AugStore, ast.Param)):
@@ -1371,8 +1380,8 @@ class Checker(object):
         # definition (not OK), for 'continue', a finally block (not OK), or
         # the top module scope (not OK)
         n = node
-        while hasattr(n, 'parent'):
-            n, n_child = n.parent, n
+        while hasattr(n, '_pyflakes_parent'):
+            n, n_child = n._pyflakes_parent, n
             if isinstance(n, LOOP_TYPES):
                 # Doesn't apply unless it's in the loop itself
                 if n_child not in n.orelse:
