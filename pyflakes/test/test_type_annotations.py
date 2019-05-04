@@ -77,24 +77,16 @@ class TestTypeAnnotations(TestCase):
     def test_not_a_typing_overload(self):
         """regression test for @typing.overload detection bug in 2.1.0"""
         self.flakes("""
-            x = lambda f: f
+            def foo(x):
+                return x
 
-            @x
-            def t():
+            @foo
+            def bar():
                 pass
 
-            y = lambda f: f
-
-            @x
-            @y
-            def t():
+            def bar():
                 pass
-
-            @x
-            @y
-            def t():
-                pass
-        """, m.RedefinedWhileUnused, m.RedefinedWhileUnused)
+        """, m.RedefinedWhileUnused)
 
     @skipIf(version_info < (3, 6), 'new in Python 3.6')
     def test_variable_annotations(self):
