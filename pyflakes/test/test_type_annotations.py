@@ -343,7 +343,7 @@ class TestTypeAnnotations(TestCase):
         # type: F
         """)
 
-    @skipIf(version_info < (3, 5), 'new in Python 3.5')
+    @skipIf(version_info < (3,), 'new in Python 3')
     def test_return_annotation_is_class_scope_variable(self):
         self.flakes("""
         from typing import TypeVar
@@ -354,7 +354,7 @@ class TestTypeAnnotations(TestCase):
                 return x
         """)
 
-    @skipIf(version_info < (3, 5), 'new in Python 3.5')
+    @skipIf(version_info < (3,), 'new in Python 3')
     def test_return_annotation_is_function_body_variable(self):
         self.flakes("""
         class Test:
