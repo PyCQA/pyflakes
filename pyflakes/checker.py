@@ -1480,7 +1480,7 @@ class Checker(object):
 
             self.pushScope()
 
-            self.handleChildren(node, omit='decorator_list')
+            self.handleChildren(node, omit=['decorator_list', 'returns'])
 
             def checkUnusedAssignments():
                 """
