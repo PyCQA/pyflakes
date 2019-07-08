@@ -1162,7 +1162,8 @@ class Checker(object):
         self.scopeStack = [self.scopeStack[0]]
         node_offset = self.offset or (0, 0)
         self.pushScope(DoctestScope)
-        self.addBinding(None, Builtin('_'))
+        if '_' not in self.scopeStack[0]:
+            self.addBinding(None, Builtin('_'))
         for example in examples:
             try:
                 tree = ast.parse(example.source, "<doctest>")
