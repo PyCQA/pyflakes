@@ -433,6 +433,16 @@ class Test(TestCase):
             return 1
         ''')
 
+    def test_globalUnderscoreInDoctest(self):
+        self.flakes("""
+        from gettext import ugettext as _
+
+        def doctest_stuff():
+            '''
+                >>> pass
+            '''
+        """, m.UnusedImport)
+
 
 class TestOther(_DoctestMixin, TestOther):
     """Run TestOther with each test wrapped in a doctest."""
