@@ -1,3 +1,7 @@
+2.1.1 (2019-02-28)
+- Fix reported line number for type comment errors
+- Fix typing.overload check to only check imported names
+
 2.1.0 (2019-01-23)
 
 - Allow intentional assignment to variables named ``_``
