@@ -152,6 +152,10 @@ class CollectTypeCommentsTests(TestCase):
         ret = self._collect('x = 1 #type:int')
         self.assertSetEqual(ret, {(ast.Assign, ('#type:int',))})
 
+    def test_type_comment_starts_with_word_ignore(self):
+        ret = self._collect('x = 1 # type: ignore[T]')
+        self.assertSetEqual(ret, set())
+
     def test_last_node_wins(self):
         """
         Test that when two typeable nodes are present on a line, the last
