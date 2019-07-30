@@ -1755,6 +1755,159 @@ class TestUnusedAssignment(TestCase):
         ''')
 
 
+class TestStringFormatting(TestCase):
+
+    @skipIf(version_info < (3, 6), 'new in Python 3.6')
+    def test_f_string_without_placeholders(self):
+        self.flakes("f'foo'", m.FStringMissingPlaceholders)
+        self.flakes('''
+            f"""foo
+            bar
+            """
+        ''', m.FStringMissingPlaceholders)
+        self.flakes('''
+            print(
+                f'foo'
+                f'bar'
+            )
+        ''', m.FStringMissingPlaceholders)
+        # this is an "escaped placeholder" but not a placeholder
+        self.flakes("f'{{}}'", m.FStringMissingPlaceholders)
+        # ok: f-string with placeholders
+        self.flakes('''
+            x = 5
+            print(f'{x}')
+        ''')
+        # ok: f-string with format specifiers
+        self.flakes('''
+            x = 'a' * 90
+            print(f'{x:.8}')
+        ''')
+        # ok: f-string with multiple format specifiers
+        self.flakes('''
+            x = y = 5
+            print(f'{x:>2} {y:>2}')
+        ''')
+
+    def test_invalid_dot_format_calls(self):
+        self.flakes('''
+            '{'.format(1)
+        ''', m.StringDotFormatInvalidFormat)
+        self.flakes('''
+            '{} {1}'.format(1, 2)
+        ''', m.StringDotFormatMixingAutomatic)
+        self.flakes('''
+            '{0} {}'.format(1, 2)
+        ''', m.StringDotFormatMixingAutomatic)
+        self.flakes('''
+            '{}'.format(1, 2)
+        ''', m.StringDotFormatExtraPositionalArguments)
+        self.flakes('''
+            '{}'.format(1, bar=2)
+        ''', m.StringDotFormatExtraNamedArguments)
+        self.flakes('''
+            '{} {}'.format(1)
+        ''', m.StringDotFormatMissingArgument)
+        self.flakes('''
+            '{2}'.format()
+        ''', m.StringDotFormatMissingArgument)
+        self.flakes('''
+            '{bar}'.format()
+        ''', m.StringDotFormatMissingArgument)
+        # too much string recursion (placeholder-in-placeholder)
+        self.flakes('''
+            '{:{:{}}}'.format(1, 2, 3)
+        ''', m.StringDotFormatInvalidFormat)
+        # ok: dotted / bracketed names need to handle the param differently
+        self.flakes("'{.__class__}'.format('')")
+        self.flakes("'{foo[bar]}'.format(foo={'bar': 'barv'})")
+        # ok: placeholder-placeholders
+        self.flakes('''
+            print('{:{}} {}'.format(1, 15, 2))
+        ''')
+        # ok: not a placeholder-placeholder
+        self.flakes('''
+            print('{:2}'.format(1))
+        ''')
+        # ok: not mixed automatic
+        self.flakes('''
+            '{foo}-{}'.format(1, foo=2)
+        ''')
+        # ok: we can't determine statically the format args
+        self.flakes('''
+            a = ()
+            "{}".format(*a)
+        ''')
+        self.flakes('''
+            k = {}
+            "{foo}".format(**k)
+        ''')
+
+    def test_invalid_percent_format_calls(self):
+        self.flakes('''
+            '%(foo)' % {'foo': 'bar'}
+        ''', m.PercentFormatInvalidFormat)
+        self.flakes('''
+            '%s %(foo)s' % {'foo': 'bar'}
+        ''', m.PercentFormatMixedPositionalAndNamed)
+        self.flakes('''
+            '%(foo)s %s' % {'foo': 'bar'}
+        ''', m.PercentFormatMixedPositionalAndNamed)
+        self.flakes('''
+            '%j' % (1,)
+        ''', m.PercentFormatUnsupportedFormatCharacter)
+        self.flakes('''
+            '%s %s' % (1,)
+        ''', m.PercentFormatPositionalCountMismatch)
+        self.flakes('''
+            '%s %s' % (1, 2, 3)
+        ''', m.PercentFormatPositionalCountMismatch)
+        self.flakes('''
+            '%(bar)s' % {}
+        ''', m.PercentFormatMissingArgument,)
+        self.flakes('''
+            '%(bar)s' % {'bar': 1, 'baz': 2}
+        ''', m.PercentFormatExtraNamedArguments)
+        self.flakes('''
+            '%(bar)s' % (1, 2, 3)
+        ''', m.PercentFormatExpectedMapping)
+        self.flakes('''
+            '%s %s' % {'k': 'v'}
+        ''', m.PercentFormatExpectedSequence)
+        self.flakes('''
+            '%(bar)*s' % {'bar': 'baz'}
+        ''', m.PercentFormatStarRequiresSequence)
+        # ok: single %s with mapping
+        self.flakes('''
+            '%s' % {'foo': 'bar', 'baz': 'womp'}
+        ''')
+        # ok: does not cause a MemoryError (the strings aren't evaluated)
+        self.flakes('''
+            "%1000000000000f" % 1
+        ''')
+        # ok: %% should not count towards placeholder count
+        self.flakes('''
+            '%% %s %% %s' % (1, 2)
+        ''')
+        # ok: * consumes one positional argument
+        self.flakes('''
+            '%.*f' % (2, 1.1234)
+            '%*.*f' % (5, 2, 3.1234)
+        ''')
+
+    @skipIf(version_info < (3, 5), 'new in Python 3.5')
+    def test_ok_percent_format_cannot_determine_element_count(self):
+        self.flakes('''
+            a = []
+            '%s %s' % [*a]
+            '%s %s' % (*a,)
+        ''')
+        self.flakes('''
+            k = {}
+            '%(k)s' % {**k}
+        ''')
+
+
 class TestAsyncStatements(TestCase):
 
     @skipIf(version_info < (3, 5), 'new in Python 3.5')
