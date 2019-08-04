@@ -14,7 +14,7 @@ from pyflakes import reporter as modReporter
 
 __all__ = ['check', 'checkPath', 'checkRecursive', 'iterSourceCode', 'main']
 
-PYTHON_SHEBANG_REGEX = re.compile(br'^#!.*\bpython[23w]?\b\s*$')
+PYTHON_SHEBANG_REGEX = re.compile(br'^#!.*\bpython([23](\.\d+)?|w)?[dmu]?\s')
 
 
 def check(codeString, filename, reporter=None):
@@ -118,8 +118,7 @@ def isPythonFile(filename):
     except IOError:
         return False
 
-    first_line = text.splitlines()[0]
-    return PYTHON_SHEBANG_REGEX.match(first_line)
+    return PYTHON_SHEBANG_REGEX.match(text)
 
 
 def iterSourceCode(paths):

@@ -214,9 +214,35 @@ class TestIterSourceCode(TestCase):
         with open(pythonw, 'w') as fd:
             fd.write('#!/usr/bin/env pythonw\n')
 
+        python3args = os.path.join(self.tempdir, 'g')
+        with open(python3args, 'w') as fd:
+            fd.write('#!/usr/bin/python3 -u\n')
+
+        python2u = os.path.join(self.tempdir, 'h')
+        with open(python2u, 'w') as fd:
+            fd.write('#!/usr/bin/python2u\n')
+
+        python3d = os.path.join(self.tempdir, 'i')
+        with open(python3d, 'w') as fd:
+            fd.write('#!/usr/local/bin/python3d\n')
+
+        python38m = os.path.join(self.tempdir, 'j')
+        with open(python38m, 'w') as fd:
+            fd.write('#! /usr/bin/env python3.8m\n')
+
+        python27 = os.path.join(self.tempdir, 'k')
+        with open(python27, 'w') as fd:
+            fd.write('#!/usr/bin/python2.7   \n')
+
+        # Should NOT be treated as Python source
+        notfirst = os.path.join(self.tempdir, 'l')
+        with open(notfirst, 'w') as fd:
+            fd.write('#!/bin/sh\n#!/usr/bin/python\n')
+
         self.assertEqual(
             sorted(iterSourceCode([self.tempdir])),
-            sorted([python, python2, python3, pythonw]))
+            sorted([python, python2, python3, pythonw, python3args, python2u,
+                    python3d, python38m, python27]))
 
     def test_multipleDirectories(self):
         """
