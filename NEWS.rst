@@ -1,4 +1,5 @@
 2.1.1 (2019-02-28)
+
 - Fix reported line number for type comment errors
 - Fix typing.overload check to only check imported names
 
