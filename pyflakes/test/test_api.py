@@ -11,7 +11,7 @@ import tempfile
 
 from pyflakes.checker import PY2
 from pyflakes.messages import UnusedImport
-from pyflakes.reporter import Reporter
+from pyflakes.reporter import Reporter, ListReporter
 from pyflakes.api import (
     main,
     checkPath,
@@ -346,6 +346,77 @@ class TestReporter(TestCase):
         message = UnusedImport('foo.py', Node(42), 'bar')
         reporter.flake(message)
         self.assertEqual(out.getvalue(), "%s\n" % (message,))
+
+
+class TestListReporter(TestCase):
+    """
+    Tests for L{ListReporter}.
+    """
+
+    def test_syntaxError(self):
+        """
+        C{syntaxError} reports that there was a syntax error in the source
+        file.  It reports to the log and includes the filename, line
+        number, error message, actual line of source and a caret pointing to
+        where the error is.
+        """
+        reporter = ListReporter()
+        reporter.syntaxError('foo.py', 'a problem', 3,
+                             8 if sys.version_info >= (3, 8) else 7,
+                             'bad line of source')
+        self.assertEqual(len(reporter.entries), 1)
+        self.assertIsInstance(reporter.entries[0], dict)
+        self.assertEqual(reporter.entries[0]['filename'], 'foo.py')
+
+    def test_syntaxErrorNoOffset(self):
+        """
+        C{syntaxError} doesn't include a caret pointing to the error if
+        C{offset} is passed as C{None}.
+        """
+        reporter = ListReporter()
+        reporter.syntaxError('foo.py', 'a problem', 3, None,
+                             'bad line of source')
+        self.assertEqual(len(reporter.entries), 1)
+        self.assertIsInstance(reporter.entries[0], dict)
+        self.assertIsNone(reporter.entries[0]['offset'])
+
+    def test_multiLineSyntaxError(self):
+        """
+        If there's a multi-line syntax error, then we only report the last
+        line.  The offset is adjusted so that it is relative to the start of
+        the last line.
+        """
+        reporter = ListReporter()
+        lines = [
+            'bad line of source',
+            'more bad lines of source',
+        ]
+        reporter.syntaxError('foo.py', 'a problem', 3, len(lines[0]) + 7,
+                             '\n'.join(lines))
+        self.assertEqual(len(reporter.entries), 1)
+        self.assertIsInstance(reporter.entries[0], dict)
+        self.assertIsNotNone(reporter.entries[0]['lineno'])
+
+    def test_unexpectedError(self):
+        """
+        C{unexpectedError} reports an error processing a source file.
+        """
+        reporter = ListReporter()
+        reporter.unexpectedError('source.py', 'error message')
+        self.assertEqual(len(reporter.entries), 1)
+        self.assertIsInstance(reporter.entries[0], dict)
+        self.assertEqual(reporter.entries[0]['filename'], 'source.py')
+
+    def test_flake(self):
+        """
+        C{flake} reports a code warning from Pyflakes.
+        """
+        reporter = ListReporter()
+        message = UnusedImport('foo.py', Node(42), 'bar')
+        reporter.flake(message)
+        self.assertEqual(len(reporter.entries), 1)
+        self.assertIsInstance(reporter.entries[0], dict)
+        self.assertEqual(reporter.entries[0]['filename'], 'foo.py')
 
 
 class CheckTests(TestCase):
