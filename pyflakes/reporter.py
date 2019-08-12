@@ -76,7 +76,8 @@ class Reporter(object):
 
 
 class ListReporter(object):
-    """Simple reporter class that logs all entries to list of dictionaries with consistent structure."""
+    """Simple reporter class that logs all entries to list of
+    dictionaries with consistent structure."""
 
     def __init__(self):
         """
