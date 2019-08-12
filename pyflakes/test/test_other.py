@@ -1754,6 +1754,15 @@ class TestUnusedAssignment(TestCase):
         print(f'\x7b4*baz\N{RIGHT CURLY BRACKET}')
         ''')
 
+    @skipIf(version_info < (3, 8), 'new in Python 3.8')
+    def test_assign_expr(self):
+        """Test PEP 572 assignment expressions are treated as usage / write."""
+        self.flakes('''
+        from foo import y
+        print(x := y)
+        print(x)
+        ''')
+
 
 class TestStringFormatting(TestCase):
 

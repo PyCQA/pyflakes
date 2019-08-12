@@ -1329,7 +1329,7 @@ class Checker(object):
     # "expr" type nodes
     BOOLOP = UNARYOP = IFEXP = SET = \
         REPR = ATTRIBUTE = SUBSCRIPT = \
-        STARRED = NAMECONSTANT = handleChildren
+        STARRED = NAMECONSTANT = NAMEDEXPR = handleChildren
 
     def _handle_string_dot_format(self, node):
         try:
