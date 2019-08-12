@@ -154,7 +154,7 @@ class CollectTypeCommentsTests(TestCase):
 
     def test_type_comment_starts_with_word_ignore(self):
         ret = self._collect('x = 1 # type: ignore[T]')
-        self.assertSetEqual(ret, {(ast.Assign, ('# type: ignore[T]',))})
+        self.assertSetEqual(ret, set())
 
     def test_last_node_wins(self):
         """

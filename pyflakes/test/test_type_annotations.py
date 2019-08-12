@@ -343,6 +343,27 @@ class TestTypeAnnotations(TestCase):
         # type: F
         """)
 
+    def test_typeIgnore(self):
+        self.flakes("""
+        a = 0  # type: ignore
+        b = 0  # type: ignore[excuse]
+        c = 0  # type: ignore=excuse
+        d = 0  # type: ignore [excuse]
+        e = 0  # type: ignore whatever
+        """)
+
+    def test_typeIgnoreBogus(self):
+        self.flakes("""
+        x = 1  # type: ignored
+        """, m.UndefinedName)
+
+    def test_typeIgnoreBogusUnicode(self):
+        error = (m.CommentAnnotationSyntaxError if version_info < (3,)
+                 else m.UndefinedName)
+        self.flakes("""
+        x = 2  # type: ignore\xc3
+        """, error)
+
     @skipIf(version_info < (3,), 'new in Python 3')
     def test_return_annotation_is_class_scope_variable(self):
         self.flakes("""
