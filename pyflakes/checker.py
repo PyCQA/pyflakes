@@ -624,8 +624,8 @@ def is_typing_overload(value, scope_stack):
                     isinstance(scope[name], ImportationFrom) and
                     scope[name].fullName == 'typing.overload'
                 )
-        else:
-            return False
+
+        return False
 
     def is_typing_overload_decorator(node):
         return (
