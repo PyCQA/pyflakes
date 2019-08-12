@@ -75,6 +75,43 @@ class Reporter(object):
         self._stdout.write('\n')
 
 
+class ListReporter(object):
+    """Simple reporter class that logs all entries to list of dictionaries with consistent structure."""
+
+    def __init__(self):
+        """
+        Initialize empty list for entries.
+        """
+        self.entries = []
+
+    def unexpectedError(self, filename, msg):
+        self.entries.append({"message_class": "error",
+                             "message_type": "unexpected_error",
+                             "filename": filename,
+                             "lineno": None,
+                             "offset": None,
+                             "message": msg,
+                             "source": None, })
+
+    def syntaxError(self, filename, msg, lineno, offset, text):
+        self.entries.append({"message_class": "error",
+                             "message_type": "syntax_error",
+                             "filename": filename,
+                             "lineno": lineno,
+                             "offset": offset,
+                             "message": msg,
+                             "source": text, })
+
+    def flake(self, message):
+        self.entries.append({"message_class": "warning",
+                             "message_type": "flake_warning",
+                             "filename": message.filename,
+                             "lineno": message.lineno,
+                             "offset": message.col,
+                             "message": message.message % message.message_args,
+                             "source": None, })
+
+
 def _makeDefaultReporter():
     """
     Make a reporter that can be used when no reporter is specified.
