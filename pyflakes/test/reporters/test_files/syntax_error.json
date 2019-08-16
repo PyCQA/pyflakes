@@ -1,0 +1,12 @@
+{
+  "results": {
+    "cli": [
+      {
+        "column": 4,
+        "file": "syntax_error.py",
+        "line": 1,
+        "message": "invalid syntax"
+      }
+    ]
+  }
+}
