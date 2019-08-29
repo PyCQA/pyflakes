@@ -39,6 +39,23 @@ class TestTypeAnnotations(TestCase):
             return s
         """)
 
+    def test_typingExtensionsOverload(self):
+        """Allow intentional redefinitions via @typing_extensions.overload"""
+        self.flakes("""
+        from typing_extensions import overload
+
+        @overload
+        def f(s):  # type: (None) -> None
+            pass
+
+        @overload
+        def f(s):  # type: (int) -> int
+            pass
+
+        def f(s):
+            return s
+        """)
+
     def test_overload_with_multiple_decorators(self):
         self.flakes("""
             from typing import overload
