@@ -473,6 +473,16 @@ class Test(TestCase):
                 a
         ''', m.UndefinedName)
 
+    def test_RedefinedDeletedName(self):
+        self.flakes('''
+        a = 1
+        def func():
+            a = 2
+            del a
+            a = 3
+            a
+        ''')
+
     def test_globalFromNestedScope(self):
         """Global names are available from nested scopes."""
         self.flakes('''

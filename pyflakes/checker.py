@@ -1104,6 +1104,8 @@ class Checker(object):
         name = getNodeName(node)
         if not name:
             return
+        if name in self.scope.deleted_names:
+            self.scope.deleted_names.remove(name)
         # if the name hasn't already been defined in the current scope
         if isinstance(self.scope, FunctionScope) and name not in self.scope:
             # for each function or module scope above us
