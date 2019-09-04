@@ -540,6 +540,9 @@ class ExportBinding(Binding):
 class Scope(dict):
     importStarred = False       # set to True when import * is found
 
+    def __init__(self):
+        self.deleted_names = []
+
     def __repr__(self):
         scope_cls = self.__class__.__name__
         return '<%s at 0x%x %s>' % (scope_cls, id(self), dict.__repr__(self))
@@ -1021,6 +1024,10 @@ class Checker(object):
         in_generators = None
         importStarred = None
 
+        if name in self.scope.deleted_names:
+            self.report(messages.UndefinedName, node, name)
+            return
+
         # try enclosing function scopes and global scope
         for scope in self.scopeStack[-1::-1]:
             if isinstance(scope, ClassScope):
@@ -1144,11 +1151,14 @@ class Checker(object):
 
         if isinstance(self.scope, FunctionScope) and name in self.scope.globals:
             self.scope.globals.remove(name)
+            self.scope.deleted_names.append(name)
         else:
             try:
                 del self.scope[name]
             except KeyError:
                 self.report(messages.UndefinedName, node, name)
+            else:
+                self.scope.deleted_names.append(name)
 
     def _handle_type_comments(self, node):
         for (lineno, col_offset), comment in self._type_comments.get(node, ()):
