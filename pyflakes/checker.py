@@ -16,6 +16,11 @@ import string
 import sys
 import tokenize
 
+try:
+    from collections import UserDict
+except ImportError:
+    from UserDict import IterableUserDict as UserDict
+
 from pyflakes import messages
 
 PY2 = sys.version_info < (3, 0)
@@ -537,10 +542,11 @@ class ExportBinding(Binding):
         super(ExportBinding, self).__init__(name, source)
 
 
-class Scope(dict):
+class Scope(UserDict, object):
     importStarred = False       # set to True when import * is found
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        super(Scope, self).__init__(*args, **kwargs)
         self.deleted_names = []
 
     def __repr__(self):
@@ -562,8 +568,8 @@ class FunctionScope(Scope):
     alwaysUsed = {'__tracebackhide__', '__traceback_info__',
                   '__traceback_supplement__'}
 
-    def __init__(self):
-        super(FunctionScope, self).__init__()
+    def __init__(self, *args, **kwargs):
+        super(FunctionScope, self).__init__(*args, **kwargs)
         # Simplify: manage the special locals as globals
         self.globals = self.alwaysUsed.copy()
         self.returnValue = None     # First non-empty return
