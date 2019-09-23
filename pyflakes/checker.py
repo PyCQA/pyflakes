@@ -72,9 +72,11 @@ else:
 if PY35_PLUS:
     FOR_TYPES = (ast.For, ast.AsyncFor)
     LOOP_TYPES = (ast.While, ast.For, ast.AsyncFor)
+    FUNCTION_TYPES = (ast.FunctionDef, ast.AsyncFunctionDef)
 else:
     FOR_TYPES = (ast.For,)
     LOOP_TYPES = (ast.While, ast.For)
+    FUNCTION_TYPES = (ast.FunctionDef,)
 
 # https://github.com/python/typed_ast/blob/1.4.0/ast27/Parser/tokenizer.c#L102-L104
 TYPE_COMMENT_RE = re.compile(r'^#\s*type:\s*')
@@ -642,7 +644,7 @@ def is_typing_overload(value, scope_stack):
         )
 
     return (
-        isinstance(value.source, ast.FunctionDef) and
+        isinstance(value.source, FUNCTION_TYPES) and
         any(
             is_typing_overload_decorator(dec)
             for dec in value.source.decorator_list
