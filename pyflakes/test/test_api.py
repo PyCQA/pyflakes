@@ -9,7 +9,6 @@ import shutil
 import subprocess
 import tempfile
 
-from pyflakes.checker import PY2
 from pyflakes.messages import UnusedImport
 from pyflakes.reporter import Reporter
 from pyflakes.api import (
@@ -449,7 +448,7 @@ def baz():
 
         with self.makeTempFile(source) as sourcePath:
             if PYPY:
-                message = 'EOF while scanning triple-quoted string literal'
+                message = 'end of file (EOF) while scanning triple-quoted string literal'
             else:
                 message = 'invalid syntax'
 
@@ -491,8 +490,8 @@ def foo(
         syntax error reflects the cause for the syntax error.
         """
         with self.makeTempFile("if True:\n\tfoo =") as sourcePath:
-            column = 5 if PYPY else 7
-            last_line = '\t   ^' if PYPY else '\t     ^'
+            column = 6 if PYPY else 7
+            last_line = '\t    ^' if PYPY else '\t     ^'
 
             self.assertHasErrors(
                 sourcePath,
@@ -514,7 +513,12 @@ def foo(bar=baz, bax):
 """
         with self.makeTempFile(source) as sourcePath:
             if ERROR_HAS_LAST_LINE:
-                column = 9 if sys.version_info >= (3, 8) else 8
+                if PYPY and sys.version_info >= (3,):
+                    column = 7
+                elif sys.version_info >= (3, 8):
+                    column = 9
+                else:
+                    column = 8
                 last_line = ' ' * (column - 1) + '^\n'
                 columnstr = '%d:' % column
             else:
@@ -537,7 +541,12 @@ foo(bar=baz, bax)
 """
         with self.makeTempFile(source) as sourcePath:
             if ERROR_HAS_LAST_LINE:
-                column = 14 if sys.version_info >= (3, 8) else 13
+                if PYPY and sys.version_info >= (3,):
+                    column = 12
+                elif sys.version_info >= (3, 8):
+                    column = 14
+                else:
+                    column = 13
                 last_line = ' ' * (column - 1) + '^\n'
                 columnstr = '%d:' % column
             else:
@@ -707,6 +716,12 @@ class IntegrationTests(TestCase):
     Tests of the pyflakes script that actually spawn the script.
     """
 
+    # https://bitbucket.org/pypy/pypy/issues/3069/pypy36-on-windows-incorrect-line-separator
+    if PYPY and sys.version_info >= (3,) and WIN:
+        LINESEP = '\n'
+    else:
+        LINESEP = os.linesep
+
     def setUp(self):
         self.tempdir = tempfile.mkdtemp()
         self.tempfilepath = os.path.join(self.tempdir, 'temp')
@@ -747,9 +762,6 @@ class IntegrationTests(TestCase):
         if sys.version_info >= (3,):
             stdout = stdout.decode('utf-8')
             stderr = stderr.decode('utf-8')
-        # Workaround https://bitbucket.org/pypy/pypy/issues/2350
-        if PYPY and PY2 and WIN:
-            stderr = stderr.replace('\r\r\n', '\r\n')
         return (stdout, stderr, rv)
 
     def test_goodFile(self):
@@ -770,7 +782,7 @@ class IntegrationTests(TestCase):
             fd.write("import contraband\n".encode('ascii'))
         d = self.runPyflakes([self.tempfilepath])
         expected = UnusedImport(self.tempfilepath, Node(1), 'contraband')
-        self.assertEqual(d, ("%s%s" % (expected, os.linesep), '', 1))
+        self.assertEqual(d, ("%s%s" % (expected, self.LINESEP), '', 1))
 
     def test_errors_io(self):
         """
@@ -780,7 +792,7 @@ class IntegrationTests(TestCase):
         """
         d = self.runPyflakes([self.tempfilepath])
         error_msg = '%s: No such file or directory%s' % (self.tempfilepath,
-                                                         os.linesep)
+                                                         self.LINESEP)
         self.assertEqual(d, ('', error_msg, 1))
 
     def test_errors_syntax(self):
@@ -792,8 +804,8 @@ class IntegrationTests(TestCase):
         with open(self.tempfilepath, 'wb') as fd:
             fd.write("import".encode('ascii'))
         d = self.runPyflakes([self.tempfilepath])
-        error_msg = '{0}:1:{2}: invalid syntax{1}import{1}    {3}^{1}'.format(
-            self.tempfilepath, os.linesep, 5 if PYPY else 7, '' if PYPY else '  ')
+        error_msg = '{0}:1:{2}: invalid syntax{1}import{1}     {3}^{1}'.format(
+            self.tempfilepath, self.LINESEP, 6 if PYPY else 7, '' if PYPY else ' ')
         self.assertEqual(d, ('', error_msg, 1))
 
     def test_readFromStdin(self):
@@ -802,13 +814,14 @@ class IntegrationTests(TestCase):
         """
         d = self.runPyflakes([], stdin='import contraband')
         expected = UnusedImport('<stdin>', Node(1), 'contraband')
-        self.assertEqual(d, ("%s%s" % (expected, os.linesep), '', 1))
+        self.assertEqual(d, ("%s%s" % (expected, self.LINESEP), '', 1))
 
 
 class TestMain(IntegrationTests):
     """
     Tests of the pyflakes main function.
     """
+    LINESEP = os.linesep
 
     def runPyflakes(self, paths, stdin=None):
         try:

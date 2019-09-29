@@ -2,25 +2,17 @@
 install:
   - python -m pip install --upgrade tox virtualenv
 
-  # Fetch the three main PyPy releases
-  - ps: (New-Object Net.WebClient).DownloadFile('https://bitbucket.org/pypy/pypy/downloads/pypy-2.6.1-win32.zip', "$env:appveyor_build_folder\pypy-2.6.1-win32.zip")
-  - ps: 7z x pypy-2.6.1-win32.zip | Out-Null
-  - move pypy-2.6.1-win32 C:\
+  - ps: (New-Object Net.WebClient).DownloadFile('https://bitbucket.org/pypy/pypy/downloads/pypy2.7-v7.1.1-win32.zip', "$env:appveyor_build_folder\pypy2.7-v7.1.1-win32.zip")
+  - ps: 7z x pypy2.7-v7.1.1-win32.zip | Out-Null
+  - move pypy2.7-v7.1.1-win32 C:\
+  - 'SET PATH=C:\pypy2.7-v7.1.1-win32\;%PATH%'
 
-  - ps: (New-Object Net.WebClient).DownloadFile('https://bitbucket.org/pypy/pypy/downloads/pypy2-v5.3.1-win32.zip', "$env:appveyor_build_folder\pypy2-v5.3.1-win32.zip")
-  - ps: 7z x pypy2-v5.3.1-win32.zip | Out-Null
-  - move pypy2-v5.3.1-win32 C:\
-
-  # TODO: pypy 6.0.0 offsets are different
-  #- ps: (New-Object Net.WebClient).DownloadFile('https://bitbucket.org/pypy/pypy/downloads/pypy3-v6.0.0-win32.zip', "$env:appveyor_build_folder\pypy3-v6.0.0-win32.zip")
-  #- ps: 7z x pypy3-v6.0.0-win32.zip | Out-Null
-  #- move pypy3-v6.0.0-win32 C:\
+  - ps: (New-Object Net.WebClient).DownloadFile('https://bitbucket.org/pypy/pypy/downloads/pypy3.6-v7.1.1-win32.zip', "$env:appveyor_build_folder\pypy3.6-v7.1.1-win32.zip")
+  - ps: 7z x pypy3.6-v7.1.1-win32.zip | Out-Null
+  - move pypy3.6-v7.1.1-win32 C:\
+  - 'SET PATH=C:\pypy3.6-v7.1.1-win32\;%PATH%'
 
 build: off
 
 test_script:
   - python -m tox
-  - C:\pypy-2.6.1-win32\pypy -m unittest discover pyflakes
-  - C:\pypy2-v5.3.1-win32\pypy -m unittest discover pyflakes
-  # TODO: pypy 6.0.0 offsets are different
-  #- C:\pypy3-v6.0.0-win32\pypy3 -m unittest discover pyflakes

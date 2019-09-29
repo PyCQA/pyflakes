@@ -631,7 +631,9 @@ def is_typing_overload(value, scope_stack):
             if name in scope:
                 return (
                     isinstance(scope[name], ImportationFrom) and
-                    scope[name].fullName == 'typing.overload'
+                    scope[name].fullName in (
+                        'typing.overload', 'typing_extensions.overload',
+                    )
                 )
 
         return False
