@@ -56,6 +56,24 @@ class TestTypeAnnotations(TestCase):
             return s
         """)
 
+    @skipIf(version_info < (3, 5), 'new in Python 3.5')
+    def test_typingOverloadAsync(self):
+        """Allow intentional redefinitions via @typing.overload (async)"""
+        self.flakes("""
+        from typing import overload
+
+        @overload
+        async def f(s):  # type: (None) -> None
+            pass
+
+        @overload
+        async def f(s):  # type: (int) -> int
+            pass
+
+        async def f(s):
+            return s
+        """)
+
     def test_overload_with_multiple_decorators(self):
         self.flakes("""
             from typing import overload
