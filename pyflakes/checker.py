@@ -618,38 +618,53 @@ def getNodeName(node):
         return node.name
 
 
-def is_typing_overload(value, scope_stack):
-    def name_is_typing_overload(name):  # type: (str) -> bool
+def _is_typing(node, typing_attr, scope_stack):
+    def _bare_name_is_attr(name):
+        expected_typing_names = {
+            'typing.{}'.format(typing_attr),
+            'typing_extensions.{}'.format(typing_attr),
+        }
         for scope in reversed(scope_stack):
             if name in scope:
                 return (
                     isinstance(scope[name], ImportationFrom) and
-                    scope[name].fullName in (
-                        'typing.overload', 'typing_extensions.overload',
-                    )
+                    scope[name].fullName in expected_typing_names
                 )
 
         return False
 
-    def is_typing_overload_decorator(node):
-        return (
-            (
-                isinstance(node, ast.Name) and name_is_typing_overload(node.id)
-            ) or (
-                isinstance(node, ast.Attribute) and
-                isinstance(node.value, ast.Name) and
-                node.value.id == 'typing' and
-                node.attr == 'overload'
-            )
+    return (
+        (
+            isinstance(node, ast.Name) and
+            _bare_name_is_attr(node.id)
+        ) or (
+            isinstance(node, ast.Attribute) and
+            isinstance(node.value, ast.Name) and
+            node.value.id in {'typing', 'typing_extensions'} and
+            node.attr == typing_attr
         )
+    )
 
+
+def is_typing_overload(value, scope_stack):
     return (
         isinstance(value.source, FUNCTION_TYPES) and
         any(
-            is_typing_overload_decorator(dec)
+            _is_typing(dec, 'overload', scope_stack)
             for dec in value.source.decorator_list
         )
     )
+
+
+def in_annotation(func):
+    @functools.wraps(func)
+    def in_annotation_func(self, *args, **kwargs):
+        orig, self._in_annotation = self._in_annotation, True
+        try:
+            return func(self, *args, **kwargs)
+        finally:
+            self._in_annotation = orig
+    return in_annotation_func
 
 
 def make_tokens(code):
@@ -738,6 +753,9 @@ class Checker(object):
     nodeDepth = 0
     offset = None
     traceTree = False
+    _in_annotation = False
+    _in_typing_literal = False
+    _in_deferred = False
 
     builtIns = set(builtin_vars).union(_MAGIC_GLOBALS)
     _customBuiltIns = os.environ.get('PYFLAKES_BUILTINS')
@@ -769,6 +787,7 @@ class Checker(object):
         for builtin in self.builtIns:
             self.addBinding(None, Builtin(builtin))
         self.handleChildren(tree)
+        self._in_deferred = True
         self.runDeferred(self._deferredFunctions)
         # Set _deferredFunctions to None so that deferFunction will fail
         # noisily if called after we've run through the deferred functions.
@@ -1281,6 +1300,7 @@ class Checker(object):
         self.popScope()
         self.scopeStack = saved_stack
 
+    @in_annotation
     def handleStringAnnotation(self, s, node, ref_lineno, ref_col_offset, err):
         try:
             tree = ast.parse(s)
@@ -1304,6 +1324,7 @@ class Checker(object):
 
         self.handleNode(parsed_annotation, node)
 
+    @in_annotation
     def handleAnnotation(self, annotation, node):
         if isinstance(annotation, ast.Str):
             # Defer handling forward annotation.
@@ -1316,7 +1337,8 @@ class Checker(object):
                 messages.ForwardAnnotationSyntaxError,
             ))
         elif self.annotationsFutureEnabled:
-            self.deferFunction(lambda: self.handleNode(annotation, node))
+            fn = in_annotation(Checker.handleNode)
+            self.deferFunction(lambda: fn(self, annotation, node))
         else:
             self.handleNode(annotation, node)
 
@@ -1332,8 +1354,18 @@ class Checker(object):
 
     # "expr" type nodes
     BOOLOP = UNARYOP = IFEXP = SET = \
-        REPR = ATTRIBUTE = SUBSCRIPT = \
+        REPR = ATTRIBUTE = \
         STARRED = NAMECONSTANT = NAMEDEXPR = handleChildren
+
+    def SUBSCRIPT(self, node):
+        if _is_typing(node.value, 'Literal', self.scopeStack):
+            orig, self._in_typing_literal = self._in_typing_literal, True
+            try:
+                self.handleChildren(node)
+            finally:
+                self._in_typing_literal = orig
+        else:
+            self.handleChildren(node)
 
     def _handle_string_dot_format(self, node):
         try:
@@ -1575,7 +1607,27 @@ class Checker(object):
             self._handle_percent_format(node)
         self.handleChildren(node)
 
-    NUM = STR = BYTES = ELLIPSIS = CONSTANT = ignore
+    def STR(self, node):
+        if self._in_annotation and not self._in_typing_literal:
+            fn = functools.partial(
+                self.handleStringAnnotation,
+                node.s,
+                node,
+                node.lineno,
+                node.col_offset,
+                messages.ForwardAnnotationSyntaxError,
+            )
+            if self._in_deferred:
+                fn()
+            else:
+                self.deferFunction(fn)
+
+    if PY38_PLUS:
+        def CONSTANT(self, node):
+            if isinstance(node.value, str):
+                return self.STR(node)
+    else:
+        NUM = BYTES = ELLIPSIS = CONSTANT = ignore
 
     # "slice" type nodes
     SLICE = EXTSLICE = INDEX = handleChildren
