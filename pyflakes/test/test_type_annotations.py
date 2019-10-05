@@ -332,7 +332,7 @@ class TestTypeAnnotations(TestCase):
             return a + b
         ''')
 
-    def test_typeCommentsAdditionalComemnt(self):
+    def test_typeCommentsAdditionalComment(self):
         self.flakes("""
         from mod import F
 
