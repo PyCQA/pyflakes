@@ -265,7 +265,7 @@ class InvalidPrintSyntax(Message):
 
 
 class IsLiteral(Message):
-    message = 'use ==/!= to compare str, bytes, and int literals'
+    message = 'use ==/!= to compare constant literals (str, bytes, int, float, tuple)'
 
 
 class FStringMissingPlaceholders(Message):
