@@ -1412,6 +1412,7 @@ class TestUnusedAssignment(TestCase):
             def bar():
                 def baz():
                     return foo
+                return baz
             return bar
         ''')
 

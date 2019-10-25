@@ -302,6 +302,8 @@ class Test(TestCase):
             def baz():
                 def fu():
                     pass
+                return fu
+            return baz
         ''', m.RedefinedWhileUnused, m.UnusedImport)
 
     def test_redefinedInNestedFunctionTwice(self):
@@ -316,6 +318,8 @@ class Test(TestCase):
             def baz():
                 def fu():
                     pass
+                return fu
+            return baz
         ''',
                     m.RedefinedWhileUnused, m.RedefinedWhileUnused,
                     m.UnusedImport, m.UnusedImport)
@@ -729,6 +733,7 @@ class Test(TestCase):
             def b():
                 fu
             import fu
+            return b
         ''')
 
     def test_nestedClassAndFunctionScope(self):
@@ -738,6 +743,7 @@ class Test(TestCase):
             class b:
                 def c(self):
                     print(fu)
+            return b
         ''')
 
     def test_importStar(self):
