@@ -568,7 +568,7 @@ class FunctionScope(Scope):
         self.returnValue = None     # First non-empty return
         self.isGenerator = False    # Detect a generator
 
-    def unusedAssignments(self):
+    def unusedBindings(self):
         """
         Return a generator for the assignments which have not been used.
         """
@@ -576,8 +576,7 @@ class FunctionScope(Scope):
             if (not binding.used and
                     name != '_' and  # see issue #202
                     name not in self.globals and
-                    not self.usesLocals and
-                    isinstance(binding, Assignment)):
+                    not self.usesLocals):
                 yield name, binding
 
 
@@ -1839,13 +1838,18 @@ class Checker(object):
 
             self.handleChildren(node, omit=['decorator_list', 'returns'])
 
-            def checkUnusedAssignments():
+            def checkUnusedBindings():
                 """
                 Check to see if any assignments have not been used.
                 """
-                for name, binding in self.scope.unusedAssignments():
-                    self.report(messages.UnusedVariable, binding.source, name)
-            self.deferAssignment(checkUnusedAssignments)
+                for name, binding in self.scope.unusedBindings():
+                    if isinstance(binding, Assignment):
+                        self.report(messages.UnusedVariable, binding.source, name)
+                    elif isinstance(binding, ClassDefinition):
+                        self.report(messages.UnusedClass, binding.source, name)
+                    elif isinstance(binding, FunctionDefinition):
+                        self.report(messages.UnusedFunction, binding.source, name)
+            self.deferAssignment(checkUnusedBindings)
 
             if PY2:
                 def checkReturnWithArgumentInsideGenerator():
