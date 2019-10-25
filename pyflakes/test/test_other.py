@@ -1767,6 +1767,60 @@ class TestUnusedAssignment(TestCase):
         ''')
 
 
+class TestUnusedFunction(TestCase):
+    """
+    Tests for warning about unused functions.
+    """
+
+    def test_unusedFunction(self):
+        """
+        Warn when a function inside a function is defined but never used.
+        """
+        self.flakes('''
+        def a():
+            def b():
+                pass
+        ''', m.UnusedFunction)
+
+    def test_unusedUnderscoreFunction(self):
+        """
+        Don't warn when the magic "_" (underscore) name is unused.
+        See issue #202.
+        """
+        self.flakes('''
+        def a():
+            def _():
+                pass
+        ''')
+
+
+class TestUnusedClass(TestCase):
+    """
+    Tests for warning about unused classes.
+    """
+
+    def test_unusedClass(self):
+        """
+        Warn when a class inside a function is defined but never used.
+        """
+        self.flakes('''
+        def a():
+            class B:
+                pass
+        ''', m.UnusedClass)
+
+    def test_unusedUnderscoreClass(self):
+        """
+        Don't warn when the magic "_" (underscore) name is unused.
+        See issue #202.
+        """
+        self.flakes('''
+        def a():
+            class _:
+                pass
+        ''')
+
+
 class TestStringFormatting(TestCase):
 
     @skipIf(version_info < (3, 6), 'new in Python 3.6')
