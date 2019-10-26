@@ -1845,9 +1845,15 @@ class Checker(object):
                 for name, binding in self.scope.unusedBindings():
                     if isinstance(binding, Assignment):
                         self.report(messages.UnusedVariable, binding.source, name)
-                    elif isinstance(binding, ClassDefinition):
+                    elif (
+                        isinstance(binding, ClassDefinition)
+                        and not binding.source.decorator_list
+                    ):
                         self.report(messages.UnusedClass, binding.source, name)
-                    elif isinstance(binding, FunctionDefinition):
+                    elif (
+                        isinstance(binding, FunctionDefinition)
+                        and not binding.source.decorator_list
+                    ):
                         self.report(messages.UnusedFunction, binding.source, name)
             self.deferAssignment(checkUnusedBindings)
 

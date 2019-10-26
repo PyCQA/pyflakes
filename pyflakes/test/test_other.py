@@ -1793,6 +1793,20 @@ class TestUnusedFunction(TestCase):
                 pass
         ''')
 
+    def test_usedDecoratedFunction(self):
+        """
+        Don't warn when the function is decorated because decorators can do
+        anything, like copy it into global state.
+        """
+        self.flakes('''
+        from somewhere import decorator
+
+        def a():
+            @decorator
+            def b():
+                pass
+        ''')
+
 
 class TestUnusedClass(TestCase):
     """
@@ -1817,6 +1831,20 @@ class TestUnusedClass(TestCase):
         self.flakes('''
         def a():
             class _:
+                pass
+        ''')
+
+    def test_usedDecoratedClass(self):
+        """
+        Don't warn when the class is decorated because decorators can do
+        anything, like copy it into global state.
+        """
+        self.flakes('''
+        from somewhere import decorator
+
+        def a():
+            @decorator
+            class B:
                 pass
         ''')
 
