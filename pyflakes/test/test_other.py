@@ -493,8 +493,10 @@ class Test(TestCase):
                     continue
         ''')
 
+    @skipIf(version_info > (3, 8), "Python <= 3.8 only")
     def test_continueInFinally(self):
         # 'continue' inside 'finally' is a special syntax error
+        # that is removed in 3.8
         self.flakes('''
         while True:
             try:
@@ -2003,6 +2005,7 @@ class TestAsyncStatements(TestCase):
         ''', m.BreakOutsideLoop)
 
     @skipIf(version_info < (3, 5), 'new in Python 3.5')
+    @skipIf(version_info > (3, 8), "Python <= 3.8 only")
     def test_continueInAsyncForFinally(self):
         self.flakes('''
         async def read_data(db):

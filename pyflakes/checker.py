@@ -1738,7 +1738,7 @@ class Checker(object):
                 break
             # Handle Try/TryFinally difference in Python < and >= 3.3
             if hasattr(n, 'finalbody') and isinstance(node, ast.Continue):
-                if n_child in n.finalbody:
+                if n_child in n.finalbody and not PY38_PLUS:
                     self.report(messages.ContinueInFinally, node)
                     return
         if isinstance(node, ast.Continue):
