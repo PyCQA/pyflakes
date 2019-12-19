@@ -83,7 +83,7 @@ TYPE_COMMENT_RE = re.compile(r'^#\s*type:\s*')
 # https://github.com/python/typed_ast/blob/1.4.0/ast27/Parser/tokenizer.c#L1408-L1413
 ASCII_NON_ALNUM = ''.join([chr(i) for i in range(128) if not chr(i).isalnum()])
 TYPE_IGNORE_RE = re.compile(
-    TYPE_COMMENT_RE.pattern + r'ignore([{}]|$)'.format(ASCII_NON_ALNUM))
+    TYPE_COMMENT_RE.pattern + r'ignore([{} ,-]|$)'.format(ASCII_NON_ALNUM))
 # https://github.com/python/typed_ast/blob/1.4.0/ast27/Grammar/Grammar#L147
 TYPE_FUNC_RE = re.compile(r'^(\(.*?\))\s*->\s*(.*)$')
 
