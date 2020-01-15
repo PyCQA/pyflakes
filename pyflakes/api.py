@@ -201,7 +201,7 @@ def main(prog=None, args=None):
 
     parser = argparse.ArgumentParser(prog=prog,
                                      description='Check Python source files for errors')
-    parser.add_argument('--version', action='version', version=_get_version())
+    parser.add_argument('-V', '--version', action='version', version=_get_version())
     parser.add_argument('path', nargs='*',
                         help='Path(s) of Python file(s) to check. STDIN if not given.')
     args = parser.parse_args(args=args).path
