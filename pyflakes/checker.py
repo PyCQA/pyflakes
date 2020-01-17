@@ -1799,6 +1799,10 @@ class Checker(object):
             addArgs(node.args.args)
             defaults = node.args.defaults
         else:
+            if PY38_PLUS:
+                for arg in node.args.posonlyargs:
+                    args.append(arg.arg)
+                    annotations.append(arg.annotation)
             for arg in node.args.args + node.args.kwonlyargs:
                 args.append(arg.arg)
                 annotations.append(arg.annotation)
