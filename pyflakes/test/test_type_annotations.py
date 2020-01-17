@@ -418,3 +418,11 @@ class TestTypeAnnotations(TestCase):
                 Y = 2
                 return Y
         """, m.UndefinedName)
+
+    @skipIf(version_info < (3, 8), 'new in Python 3.8')
+    def test_positional_only_argument_annotations(self):
+        self.flakes("""
+        from x import C
+
+        def f(c: C, /): ...
+        """)
