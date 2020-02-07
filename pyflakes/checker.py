@@ -1009,12 +1009,30 @@ class Checker(object):
 
         self.scope[value.name] = value
 
+    def _unknown_handler(self, node):
+        # this environment variable configures whether to error on unknown
+        # ast types.
+        #
+        # this is silent by default but the error is enabled for the pyflakes
+        # testsuite.
+        #
+        # this allows new syntax to be added to python without *requiring*
+        # changes from the pyflakes side.  but will still produce an error
+        # in the pyflakes testsuite (so more specific handling can be added if
+        # needed).
+        if os.environ.get('PYFLAKES_ERROR_UNKNOWN'):
+            raise NotImplementedError('Unexpected type: {}'.format(type(node)))
+        else:
+            self.handleChildren(node)
+
     def getNodeHandler(self, node_class):
         try:
             return self._nodeHandlers[node_class]
         except KeyError:
             nodeType = getNodeType(node_class)
-        self._nodeHandlers[node_class] = handler = getattr(self, nodeType)
+        self._nodeHandlers[node_class] = handler = getattr(
+            self, nodeType, self._unknown_handler,
+        )
         return handler
 
     def handleNodeLoad(self, node):
