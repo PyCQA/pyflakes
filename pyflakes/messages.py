@@ -237,7 +237,7 @@ class IfTuple(Message):
     """
     Conditional test is a tuple, which are always True.
     """
-    message = 'if condition is always true, perhaps remove parentheses?'
+    message = '\'if tuple literal\' is always true, perhaps remove accidental comma?'
 
 
 class AssertTuple(Message):
