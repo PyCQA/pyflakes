@@ -124,3 +124,49 @@ class TestCodeSegments(TestCase):
         self.assertIsInstance(function_scope_bar['g'], Argument)
         self.assertIsInstance(function_scope_bar['h'], Argument)
         self.assertIsInstance(function_scope_bar['i'], Argument)
+
+    def test_scope_async_function(self):
+        checker = self.flakes('''
+        async def foo(a, b=1, *d, **e):
+            def bar(f, g=1, *h, **i):
+                pass
+        ''', is_segment=True)
+
+        scopes = checker.deadScopes
+        module_scopes = [
+            scope for scope in scopes if scope.__class__ is ModuleScope]
+        function_scopes = [
+            scope for scope in scopes if scope.__class__ is FunctionScope]
+
+        # Ensure module scope is not present because we are analysing
+        # the inner contents of foo
+        self.assertEqual(len(module_scopes), 0)
+        self.assertEqual(len(function_scopes), 2)
+
+        function_scope_foo = function_scopes[1]
+        function_scope_bar = function_scopes[0]
+
+        self.assertIsInstance(function_scope_foo, FunctionScope)
+        self.assertIsInstance(function_scope_bar, FunctionScope)
+
+        self.assertIn('a', function_scope_foo)
+        self.assertIn('b', function_scope_foo)
+        self.assertIn('d', function_scope_foo)
+        self.assertIn('e', function_scope_foo)
+        self.assertIn('bar', function_scope_foo)
+
+        self.assertIn('f', function_scope_bar)
+        self.assertIn('g', function_scope_bar)
+        self.assertIn('h', function_scope_bar)
+        self.assertIn('i', function_scope_bar)
+
+        self.assertIsInstance(function_scope_foo['bar'], FunctionDefinition)
+        self.assertIsInstance(function_scope_foo['a'], Argument)
+        self.assertIsInstance(function_scope_foo['b'], Argument)
+        self.assertIsInstance(function_scope_foo['d'], Argument)
+        self.assertIsInstance(function_scope_foo['e'], Argument)
+
+        self.assertIsInstance(function_scope_bar['f'], Argument)
+        self.assertIsInstance(function_scope_bar['g'], Argument)
+        self.assertIsInstance(function_scope_bar['h'], Argument)
+        self.assertIsInstance(function_scope_bar['i'], Argument)
