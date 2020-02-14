@@ -42,6 +42,7 @@ class TestTypeAnnotations(TestCase):
     def test_typingExtensionsOverload(self):
         """Allow intentional redefinitions via @typing_extensions.overload"""
         self.flakes("""
+        import typing_extensions
         from typing_extensions import overload
 
         @overload
@@ -53,6 +54,17 @@ class TestTypeAnnotations(TestCase):
             pass
 
         def f(s):
+            return s
+
+        @typing_extensions.overload
+        def g(s):  # type: (None) -> None
+            pass
+
+        @typing_extensions.overload
+        def g(s):  # type: (int) -> int
+            pass
+
+        def g(s):
             return s
         """)
 
@@ -425,4 +437,65 @@ class TestTypeAnnotations(TestCase):
         from x import C
 
         def f(c: C, /): ...
+        """)
+
+    @skipIf(version_info < (3,), 'new in Python 3')
+    def test_partially_quoted_type_annotation(self):
+        self.flakes("""
+        from queue import Queue
+        from typing import Optional
+
+        def f() -> Optional['Queue[str]']:
+            return None
+        """)
+
+    @skipIf(version_info < (3,), 'new in Python 3')
+    def test_literal_type_typing(self):
+        self.flakes("""
+        from typing import Literal
+
+        def f(x: Literal['some string']) -> None:
+            return None
+        """)
+
+    @skipIf(version_info < (3,), 'new in Python 3')
+    def test_literal_type_typing_extensions(self):
+        self.flakes("""
+        from typing_extensions import Literal
+
+        def f(x: Literal['some string']) -> None:
+            return None
+        """)
+
+    @skipIf(version_info < (3,), 'new in Python 3')
+    def test_literal_union_type_typing(self):
+        self.flakes("""
+        from typing import Literal
+
+        def f(x: Literal['some string', 'foo bar']) -> None:
+            return None
+        """)
+
+    @skipIf(version_info < (3,), 'new in Python 3')
+    def test_deferred_twice_annotation(self):
+        self.flakes("""
+            from queue import Queue
+            from typing import Optional
+
+
+            def f() -> "Optional['Queue[str]']":
+                return None
+        """)
+
+    @skipIf(version_info < (3, 7), 'new in Python 3.7')
+    def test_partial_string_annotations_with_future_annotations(self):
+        self.flakes("""
+            from __future__ import annotations
+
+            from queue import Queue
+            from typing import Optional
+
+
+            def f() -> Optional['Queue[str]']:
+                return None
         """)
