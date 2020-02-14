@@ -233,6 +233,13 @@ class TooManyExpressionsInStarredAssignment(Message):
     message = 'too many expressions in star-unpacking assignment'
 
 
+class IfTuple(Message):
+    """
+    Conditional test is a tuple, which are always True.
+    """
+    message = 'if condition is always true, perhaps remove parentheses?'
+
+
 class AssertTuple(Message):
     """
     Assertion test is a tuple, which are always True.

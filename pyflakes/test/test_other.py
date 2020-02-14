@@ -1433,6 +1433,29 @@ class TestUnusedAssignment(TestCase):
         self.flakes("a = foo if True else 'oink'", m.UndefinedName)
         self.flakes("a = 'moo' if True else bar", m.UndefinedName)
 
+    def test_if_tuple(self):
+        """
+        Test C{if (foo,)} conditions.
+        """
+        self.flakes("""if (): pass""")
+        self.flakes("""
+        if (
+            True
+        ):
+            pass
+        """)
+        self.flakes("""
+        if (
+            True,
+        ):
+            pass
+        """, m.IfTuple)
+        self.flakes("""
+        x = 1 if (
+            True,
+        ) else 2
+        """, m.IfTuple)
+
     def test_withStatementNoNames(self):
         """
         No warnings are emitted for using inside or after a nameless C{with}

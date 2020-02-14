@@ -1364,14 +1364,14 @@ class Checker(object):
         pass
 
     # "stmt" type nodes
-    DELETE = PRINT = FOR = ASYNCFOR = WHILE = IF = WITH = WITHITEM = \
+    DELETE = PRINT = FOR = ASYNCFOR = WHILE = WITH = WITHITEM = \
         ASYNCWITH = ASYNCWITHITEM = TRYFINALLY = EXEC = \
         EXPR = ASSIGN = handleChildren
 
     PASS = ignore
 
     # "expr" type nodes
-    BOOLOP = UNARYOP = IFEXP = SET = \
+    BOOLOP = UNARYOP = SET = \
         REPR = ATTRIBUTE = \
         STARRED = NAMECONSTANT = NAMEDEXPR = handleChildren
 
@@ -1727,6 +1727,13 @@ class Checker(object):
                             key,
                         )
         self.handleChildren(node)
+
+    def IF(self, node):
+        if isinstance(node.test, ast.Tuple) and node.test.elts != []:
+            self.report(messages.IfTuple, node)
+        self.handleChildren(node)
+
+    IFEXP = IF
 
     def ASSERT(self, node):
         if isinstance(node.test, ast.Tuple) and node.test.elts != []:
