@@ -78,6 +78,51 @@ else:
     LOOP_TYPES = (ast.While, ast.For)
     FUNCTION_TYPES = (ast.FunctionDef,)
 
+
+if PY38_PLUS:
+    def _is_singleton(node):  # type: (ast.AST) -> bool
+        return (
+            isinstance(node, ast.Constant) and
+            isinstance(node.value, (bool, type(Ellipsis), type(None)))
+        )
+elif not PY2:
+    def _is_singleton(node):  # type: (ast.AST) -> bool
+        return isinstance(node, (ast.NameConstant, ast.Ellipsis))
+else:
+    def _is_singleton(node):  # type: (ast.AST) -> bool
+        return (
+            isinstance(node, ast.Name) and
+            node.id in {'True', 'False', 'Ellipsis', 'None'}
+        )
+
+
+def _is_tuple_constant(node):  # type: (ast.AST) -> bool
+    return (
+        isinstance(node, ast.Tuple) and
+        all(_is_constant(elt) for elt in node.elts)
+    )
+
+
+if PY38_PLUS:
+    def _is_constant(node):
+        return isinstance(node, ast.Constant) or _is_tuple_constant(node)
+else:
+    _const_tps = (ast.Str, ast.Num)
+    if not PY2:
+        _const_tps += (ast.Bytes,)
+
+    def _is_constant(node):
+        return (
+            isinstance(node, _const_tps) or
+            _is_singleton(node) or
+            _is_tuple_constant(node)
+        )
+
+
+def _is_const_non_singleton(node):  # type: (ast.AST) -> bool
+    return _is_constant(node) and not _is_singleton(node)
+
+
 # https://github.com/python/typed_ast/blob/1.4.0/ast27/Parser/tokenizer.c#L102-L104
 TYPE_COMMENT_RE = re.compile(r'^#\s*type:\s*')
 # https://github.com/python/typed_ast/blob/1.4.0/ast27/Parser/tokenizer.c#L1408-L1413
@@ -2124,14 +2169,14 @@ class Checker(object):
             self.handleNode(node.value, node)
 
     def COMPARE(self, node):
-        literals = (ast.Str, ast.Num)
-        if not PY2:
-            literals += (ast.Bytes,)
-
         left = node.left
         for op, right in zip(node.ops, node.comparators):
-            if (isinstance(op, (ast.Is, ast.IsNot)) and
-                    (isinstance(left, literals) or isinstance(right, literals))):
+            if (
+                    isinstance(op, (ast.Is, ast.IsNot)) and (
+                        _is_const_non_singleton(left) or
+                        _is_const_non_singleton(right)
+                    )
+            ):
                 self.report(messages.IsLiteral, node)
             left = right
 

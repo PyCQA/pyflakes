@@ -198,3 +198,25 @@ class Test(TestCase):
         if 4 < x is 'foo':
             pass
         """, IsLiteral)
+
+    def test_is_tuple_constant(self):
+        self.flakes('''\
+            x = 5
+            if x is ():
+                pass
+        ''', IsLiteral)
+
+    def test_is_tuple_constant_containing_constants(self):
+        self.flakes('''\
+            x = 5
+            if x is (1, '2', True, (1.5, ())):
+                pass
+        ''', IsLiteral)
+
+    def test_is_tuple_containing_variables_ok(self):
+        # a bit nonsensical, but does not trigger a SyntaxWarning
+        self.flakes('''\
+            x = 5
+            if x is (x,):
+                pass
+        ''')
