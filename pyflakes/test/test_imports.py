@@ -107,6 +107,10 @@ class Test(TestCase):
     def test_unusedImport(self):
         self.flakes('import fu, bar', m.UnusedImport, m.UnusedImport)
         self.flakes('from baz import fu, bar', m.UnusedImport, m.UnusedImport)
+        
+    def test_unusedImport_subsumed(self):
+        self.flakes('import fu; import fu.bar; fu.bar.baz()', m.UnusedImport)
+        self.flakes('import fu.bar; import fu; fu.bar.baz()', m.UnusedImport)
 
     def test_unusedImport_relative(self):
         self.flakes('from . import fu', m.UnusedImport)
