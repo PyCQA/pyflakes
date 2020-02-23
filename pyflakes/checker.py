@@ -1563,6 +1563,15 @@ class Checker(object):
                 node.func.attr == 'format'
         ):
             self._handle_string_dot_format(node)
+
+        if (
+            _is_typing(node.func, 'cast', self.scopeStack) and
+            len(node.args) >= 1 and
+            isinstance(node.args[0], ast.Str)
+        ):
+            with self._enter_annotation():
+                self.handleNode(node.args[0], node)
+
         self.handleChildren(node)
 
     def _handle_percent_format(self, node):

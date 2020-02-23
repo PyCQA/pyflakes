@@ -449,6 +449,23 @@ class TestTypeAnnotations(TestCase):
             return None
         """)
 
+    def test_quoted_type_cast(self):
+        self.flakes("""
+        from typing import cast, Optional
+
+        maybe_int = cast('Optional[int]', 42)
+        """)
+
+    def test_type_cast_literal_str_to_str(self):
+        # Checks that our handling of quoted type annotations in the first
+        # argument to `cast` doesn't cause issues when (only) the _second_
+        # argument is a literal str which looks a bit like a type annoation.
+        self.flakes("""
+        from typing import cast
+
+        a_string = cast(str, 'Optional[int]')
+        """)
+
     @skipIf(version_info < (3,), 'new in Python 3')
     def test_literal_type_typing(self):
         self.flakes("""
