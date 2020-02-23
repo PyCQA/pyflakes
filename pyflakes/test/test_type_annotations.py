@@ -466,6 +466,13 @@ class TestTypeAnnotations(TestCase):
         a_string = cast(str, 'Optional[int]')
         """)
 
+    def test_quoted_type_cast_renamed_import(self):
+        self.flakes("""
+        from typing import cast as tsac, Optional as Maybe
+
+        maybe_int = tsac('Maybe[int]', 42)
+        """)
+
     @skipIf(version_info < (3,), 'new in Python 3')
     def test_literal_type_typing(self):
         self.flakes("""

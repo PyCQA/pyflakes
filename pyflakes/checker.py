@@ -664,17 +664,26 @@ def getNodeName(node):
         return node.name
 
 
-def _is_typing(node, typing_attr, scope_stack):
+TYPING_MODULES = frozenset(('typing', 'typing_extensions'))
+
+
+def _is_typing_helper(node, is_name_match_fn, scope_stack):
+    """
+    Internal helper to determine whether or not something is a member of a
+    typing module. This is used as part of working out whether we are within a
+    type annotation context.
+
+    Note: you probably don't want to use this function directly. Instead see the
+    util below which wraps it (`_is_typing`).
+    """
+
     def _bare_name_is_attr(name):
-        expected_typing_names = {
-            'typing.{}'.format(typing_attr),
-            'typing_extensions.{}'.format(typing_attr),
-        }
         for scope in reversed(scope_stack):
             if name in scope:
                 return (
                     isinstance(scope[name], ImportationFrom) and
-                    scope[name].fullName in expected_typing_names
+                    scope[name].module in TYPING_MODULES and
+                    is_name_match_fn(scope[name].real_name)
                 )
 
         return False
@@ -686,10 +695,21 @@ def _is_typing(node, typing_attr, scope_stack):
         ) or (
             isinstance(node, ast.Attribute) and
             isinstance(node.value, ast.Name) and
-            node.value.id in {'typing', 'typing_extensions'} and
-            node.attr == typing_attr
+            node.value.id in TYPING_MODULES and
+            is_name_match_fn(node.attr)
         )
     )
+
+
+def _is_typing(node, typing_attr, scope_stack):
+    """
+    Determine whether `node` represents the member of a typing module specified
+    by `typing_attr`.
+
+    This is used as part of working out whether we are within a type annotation
+    context.
+    """
+    return _is_typing_helper(node, typing_attr.__eq__, scope_stack)
 
 
 def is_typing_overload(value, scope_stack):
