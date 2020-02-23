@@ -8,6 +8,7 @@ import __future__
 import ast
 import bisect
 import collections
+import contextlib
 import doctest
 import functools
 import os
@@ -704,11 +705,8 @@ def is_typing_overload(value, scope_stack):
 def in_annotation(func):
     @functools.wraps(func)
     def in_annotation_func(self, *args, **kwargs):
-        orig, self._in_annotation = self._in_annotation, True
-        try:
+        with self._enter_annotation():
             return func(self, *args, **kwargs)
-        finally:
-            self._in_annotation = orig
     return in_annotation_func
 
 
@@ -1235,6 +1233,14 @@ class Checker(object):
                 del self.scope[name]
             except KeyError:
                 self.report(messages.UndefinedName, node, name)
+
+    @contextlib.contextmanager
+    def _enter_annotation(self):
+        orig, self._in_annotation = self._in_annotation, True
+        try:
+            yield
+        finally:
+            self._in_annotation = orig
 
     def _handle_type_comments(self, node):
         for (lineno, col_offset), comment in self._type_comments.get(node, ()):
