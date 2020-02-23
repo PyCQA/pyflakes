@@ -674,7 +674,7 @@ def _is_typing_helper(node, is_name_match_fn, scope_stack):
     type annotation context.
 
     Note: you probably don't want to use this function directly. Instead see the
-    util below which wraps it (`_is_typing`).
+    utils below which wrap it (`_is_typing` and `_is_any_typing_member`).
     """
 
     def _bare_name_is_attr(name):
@@ -710,6 +710,16 @@ def _is_typing(node, typing_attr, scope_stack):
     context.
     """
     return _is_typing_helper(node, typing_attr.__eq__, scope_stack)
+
+
+def _is_any_typing_member(node, scope_stack):
+    """
+    Determine whether `node` represents any member of a typing module.
+
+    This is used as part of working out whether we are within a type annotation
+    context.
+    """
+    return _is_typing_helper(node, lambda x: True, scope_stack)
 
 
 def is_typing_overload(value, scope_stack):
@@ -1454,7 +1464,11 @@ class Checker(object):
             finally:
                 self._in_typing_literal = orig
         else:
-            self.handleChildren(node)
+            if _is_any_typing_member(node.value, self.scopeStack):
+                with self._enter_annotation():
+                    self.handleChildren(node)
+            else:
+                self.handleChildren(node)
 
     def _handle_string_dot_format(self, node):
         try:
