@@ -457,6 +457,14 @@ class TestTypeAnnotations(TestCase):
         MaybeQueue = Optional['Queue[str]']
         """)
 
+    def test_nested_partially_quoted_type_assignment(self):
+        self.flakes("""
+        from queue import Queue
+        from typing import Callable
+
+        Func = Callable[['Queue[str]'], None]
+        """)
+
     def test_quoted_type_cast(self):
         self.flakes("""
         from typing import cast, Optional
