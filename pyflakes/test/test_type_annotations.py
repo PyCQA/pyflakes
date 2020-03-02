@@ -468,6 +468,19 @@ class TestTypeAnnotations(TestCase):
         """)
 
     @skipIf(version_info < (3,), 'new in Python 3')
+    def test_literal_type_some_other_module(self):
+        """err on the side of false-negatives for types named Literal"""
+        self.flakes("""
+        from my_module import compat
+        from my_module.compat import Literal
+
+        def f(x: compat.Literal['some string']) -> None:
+            return None
+        def g(x: Literal['some string']) -> None:
+            return None
+        """)
+
+    @skipIf(version_info < (3,), 'new in Python 3')
     def test_literal_union_type_typing(self):
         self.flakes("""
         from typing import Literal
