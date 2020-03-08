@@ -980,6 +980,17 @@ class Checker(object):
             if not hasattr(node, 'elts') and not hasattr(node, 'ctx'):
                 return node
 
+    def has_parent_type(self, node, cls):
+        """Check if node has any parent of type cls."""
+        while node:
+            try:
+                node = self.getParent(node)
+            except AttributeError:
+                return False
+            if isinstance(node, cls):
+                return True
+        return False
+
     def getCommonAncestor(self, lnode, rnode, stop):
         if (
                 stop in (lnode, rnode) or
@@ -2089,6 +2100,19 @@ class Checker(object):
                 importation = ImportationFrom(name, node,
                                               module, alias.name)
             self.addBinding(node, importation)
+
+    def RAISE(self, node):
+        try:
+            next(iter_child_nodes(node))
+            has_children = True
+        except StopIteration:
+            has_children = False
+
+        if not has_children:
+            if not self.has_parent_type(node, ast.ExceptHandler):
+                self.report(messages.ReraiseOutsideExcept, node)
+
+        self.handleChildren(node)
 
     def TRY(self, node):
         handler_names = []
