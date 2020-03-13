@@ -1,7 +1,9 @@
+from sys import version_info
+
 from pyflakes import messages as m
 from pyflakes.checker import (FunctionScope, ClassScope, ModuleScope,
                               Argument, FunctionDefinition, Assignment)
-from pyflakes.test.harness import TestCase
+from pyflakes.test.harness import TestCase, skipIf
 
 
 class TestCodeSegments(TestCase):
@@ -124,3 +126,7 @@ class TestCodeSegments(TestCase):
         self.assertIsInstance(function_scope_bar['g'], Argument)
         self.assertIsInstance(function_scope_bar['h'], Argument)
         self.assertIsInstance(function_scope_bar['i'], Argument)
+
+    @skipIf(version_info < (3, 5), 'new in Python 3.5')
+    def test_scope_async_function(self):
+        self.flakes('async def foo(): pass', is_segment=True)

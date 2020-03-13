@@ -793,7 +793,7 @@ class Checker(object):
         ast.DictComp: GeneratorScope,
     }
     if PY35_PLUS:
-        _ast_node_scope[ast.AsyncFunctionDef] = FunctionScope,
+        _ast_node_scope[ast.AsyncFunctionDef] = FunctionScope
 
     nodeDepth = 0
     offset = None
