@@ -235,7 +235,7 @@ class TooManyExpressionsInStarredAssignment(Message):
 
 class IfTuple(Message):
     """
-    Conditional test is a tuple, which are always True.
+    Conditional test is a non-empty tuple literal, which are always True.
     """
     message = '\'if tuple literal\' is always true, perhaps remove accidental comma?'
 
