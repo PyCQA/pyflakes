@@ -709,7 +709,7 @@ def _is_typing(node, typing_attr, scope_stack):
     This is used as part of working out whether we are within a type annotation
     context.
     """
-    return _is_typing_helper(node, typing_attr.__eq__, scope_stack)
+    return _is_typing_helper(node, lambda x: x == typing_attr, scope_stack)
 
 
 def _is_any_typing_member(node, scope_stack):
