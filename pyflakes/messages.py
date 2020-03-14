@@ -235,7 +235,7 @@ class TooManyExpressionsInStarredAssignment(Message):
 
 class AssertTuple(Message):
     """
-    Assertion test is a tuple, which are always True.
+    Assertion test is a non-empty tuple literal, which are always True.
     """
     message = 'assertion is always true, perhaps remove parentheses?'
 
