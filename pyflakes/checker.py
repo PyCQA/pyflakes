@@ -1457,7 +1457,15 @@ class Checker(object):
         STARRED = NAMECONSTANT = NAMEDEXPR = handleChildren
 
     def SUBSCRIPT(self, node):
-        if _is_typing(node.value, 'Literal', self.scopeStack):
+        if (
+                (
+                    isinstance(node.value, ast.Name) and
+                    node.value.id == 'Literal'
+                ) or (
+                    isinstance(node.value, ast.Attribute) and
+                    node.value.attr == 'Literal'
+                )
+        ):
             orig, self._in_typing_literal = self._in_typing_literal, True
             try:
                 self.handleChildren(node)
