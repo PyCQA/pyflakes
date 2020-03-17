@@ -1,3 +1,30 @@
+2.2.0 (2020-04-08)
+
+- Include column information in error messages
+- Fix ``@overload`` detection with other decorators and in non-global scopes
+- Fix return-type annotation being a class member
+- Fix assignment to ``_`` in doctests with existing ``_`` name
+- Namespace attributes which are attached to ast nodes with ``_pyflakes_`` to
+  avoid conflicts with other libraries (notably bandit)
+- Add check for f-strings without placeholders
+- Add check for unused/extra/invalid ``'string literal'.format(...)``
+- Add check for unused/extra/invalid ``'string literal % ...``
+- Improve python shebang detection
+- Allow type ignore to be followed by a code ``# type: ignore[attr-defined]``
+- Add support for assignment expressions (PEP 572)
+- Support ``@overload`` detection from ``typing_extensions`` as well
+- Fix ``@overload`` detection for async functions
+- Allow ``continue`` inside ``finally`` in python 3.8+
+- Fix handling of annotations in positional-only arguments
+- Make pyflakes more resistant to future syntax additions
+- Fix false positives in partially quoted type annotations
+- Warn about ``is`` comparison to tuples
+- Fix ``Checker`` usage with async function subtrees
+- Add check for ``if`` of non-empty tuple
+- Switch from ``optparse`` to ``argparse``
+- Fix false positives in partially quoted type annotations in unusual contexts
+- Be more cautious when identifying ``Literal`` type expressions
+
 2.1.1 (2019-02-28)
 
 - Fix reported line number for type comment errors
