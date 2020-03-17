@@ -193,14 +193,18 @@ def _get_version():
 
 def main(prog=None, args=None):
     """Entry point for the script "pyflakes"."""
-    import optparse
+    import argparse
 
     # Handle "Keyboard Interrupt" and "Broken pipe" gracefully
     _exitOnSignal('SIGINT', '... stopped')
     _exitOnSignal('SIGPIPE', 1)
 
-    parser = optparse.OptionParser(prog=prog, version=_get_version())
-    (__, args) = parser.parse_args(args=args)
+    parser = argparse.ArgumentParser(prog=prog,
+                                     description='Check Python source files for errors')
+    parser.add_argument('-V', '--version', action='version', version=_get_version())
+    parser.add_argument('path', nargs='*',
+                        help='Path(s) of Python file(s) to check. STDIN if not given.')
+    args = parser.parse_args(args=args).path
     reporter = modReporter._makeDefaultReporter()
     if args:
         warnings = checkRecursive(args, reporter)
