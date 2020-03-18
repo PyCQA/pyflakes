@@ -1888,13 +1888,13 @@ class Checker(object):
         Handle occurrence of Name (which can be a load/store/delete access.)
         """
         # Locate the name in locals / function / globals scopes.
-        if isinstance(node.ctx, (ast.Load, ast.AugLoad)):
+        if isinstance(node.ctx, ast.Load):
             self.handleNodeLoad(node)
             if (node.id == 'locals' and isinstance(self.scope, FunctionScope) and
                     isinstance(node._pyflakes_parent, ast.Call)):
                 # we are doing locals() call in current scope
                 self.scope.usesLocals = True
-        elif isinstance(node.ctx, (ast.Store, ast.AugStore)):
+        elif isinstance(node.ctx, ast.Store):
             self.handleNodeStore(node)
         elif PY2 and isinstance(node.ctx, ast.Param):
             self.handleNodeStore(node)
