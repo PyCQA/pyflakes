@@ -1228,7 +1228,7 @@ class Checker(object):
             binding = Binding(name, node)
         elif name == '__all__' and isinstance(self.scope, ModuleScope):
             binding = ExportBinding(name, node._pyflakes_parent, self.scope)
-        elif isinstance(getattr(node, 'ctx', None), ast.Param):
+        elif PY2 and isinstance(getattr(node, 'ctx', None), ast.Param):
             binding = Argument(name, self.getScopeNode(node))
         else:
             binding = Assignment(name, node)
@@ -1888,13 +1888,15 @@ class Checker(object):
         Handle occurrence of Name (which can be a load/store/delete access.)
         """
         # Locate the name in locals / function / globals scopes.
-        if isinstance(node.ctx, (ast.Load, ast.AugLoad)):
+        if isinstance(node.ctx, ast.Load):
             self.handleNodeLoad(node)
             if (node.id == 'locals' and isinstance(self.scope, FunctionScope) and
                     isinstance(node._pyflakes_parent, ast.Call)):
                 # we are doing locals() call in current scope
                 self.scope.usesLocals = True
-        elif isinstance(node.ctx, (ast.Store, ast.AugStore, ast.Param)):
+        elif isinstance(node.ctx, ast.Store):
+            self.handleNodeStore(node)
+        elif PY2 and isinstance(node.ctx, ast.Param):
             self.handleNodeStore(node)
         elif isinstance(node.ctx, ast.Del):
             self.handleNodeDelete(node)
