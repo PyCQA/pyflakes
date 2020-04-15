@@ -310,11 +310,11 @@ class Binding(object):
                 the node that this binding was last used.
     """
 
-    def __init__(self, name, source):
+    def __init__(self, name, source, during_type_checking=False):
         self.name = name
         self.source = source
         self.used = False
-        self.during_type_checking = False
+        self.during_type_checking = during_type_checking
 
     def __str__(self):
         return self.name
@@ -1074,6 +1074,8 @@ class Checker(object):
                 break
         existing = scope.get(value.name)
 
+        value.during_type_checking = self._in_type_checking
+
         if (existing and not isinstance(existing, Builtin) and
                 not self.differentForks(node, existing.source)):
 
@@ -1162,15 +1164,15 @@ class Checker(object):
                 # alias of other Importation and the alias
                 # is used, SubImportation also should be marked as used.
                 n = scope[name]
-                if isinstance(n, Importation):
-                    if n._has_alias():
-                        try:
-                            scope[n.fullName].used = (self.scope, node)
-                        except KeyError:
-                            pass
-                    if n.during_type_checking and not self._in_annotation:
-                        # Only defined during type-checking; this does not count.
-                        continue
+                if isinstance(n, Importation) and n._has_alias():
+                    try:
+                        scope[n.fullName].used = (self.scope, node)
+                    except KeyError:
+                        pass
+                if n.during_type_checking and not self._in_annotation:
+                    # Only defined during type-checking; this does not count. Real code
+                    # (not an annotation) using this binding will not work.
+                    continue
             except KeyError:
                 pass
             else:
@@ -2131,7 +2133,6 @@ class Checker(object):
             else:
                 name = alias.asname or alias.name
                 importation = Importation(name, node, alias.name)
-            importation.during_type_checking = self._in_type_checking
             self.addBinding(node, importation)
 
     def IMPORTFROM(self, node):
@@ -2166,7 +2167,6 @@ class Checker(object):
             else:
                 importation = ImportationFrom(name, node,
                                               module, alias.name)
-            importation.during_type_checking = self._in_type_checking
             self.addBinding(node, importation)
 
     def TRY(self, node):

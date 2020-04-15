@@ -1040,6 +1040,16 @@ class Test(TestCase):
         b()
         ''', m.UndefinedName)
 
+    def test_ignoresTypingClassDefinitino(self):
+        """Ignores definitions within 'if TYPE_CHECKING' checking normal code."""
+        self.flakes('''
+        from typing import TYPE_CHECKING
+        if TYPE_CHECKING:
+            class T:
+                ...
+        t = T()
+        ''', m.UndefinedName)
+
     def test_usesTypingImportsForAnnotations(self):
         """Uses imports within 'if TYPE_CHECKING' checking annotations."""
         self.flakes('''
