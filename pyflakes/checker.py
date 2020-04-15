@@ -314,6 +314,7 @@ class Binding(object):
         self.name = name
         self.source = source
         self.used = False
+        self.during_type_checking = False
 
     def __str__(self):
         return self.name
@@ -829,6 +830,7 @@ class Checker(object):
     _in_annotation = False
     _in_typing_literal = False
     _in_deferred = False
+    _in_type_checking = False
 
     builtIns = set(builtin_vars).union(_MAGIC_GLOBALS)
     _customBuiltIns = os.environ.get('PYFLAKES_BUILTINS')
@@ -1160,11 +1162,15 @@ class Checker(object):
                 # alias of other Importation and the alias
                 # is used, SubImportation also should be marked as used.
                 n = scope[name]
-                if isinstance(n, Importation) and n._has_alias():
-                    try:
-                        scope[n.fullName].used = (self.scope, node)
-                    except KeyError:
-                        pass
+                if isinstance(n, Importation):
+                    if n._has_alias():
+                        try:
+                            scope[n.fullName].used = (self.scope, node)
+                        except KeyError:
+                            pass
+                    if n.during_type_checking and not self._in_annotation:
+                        # Only defined during type-checking; this does not count.
+                        continue
             except KeyError:
                 pass
             else:
@@ -1833,7 +1839,12 @@ class Checker(object):
     def IF(self, node):
         if isinstance(node.test, ast.Tuple) and node.test.elts != []:
             self.report(messages.IfTuple, node)
+
+        prev = self._in_type_checking
+        if _is_typing(node.test, 'TYPE_CHECKING', self.scopeStack):
+            self._in_type_checking = True
         self.handleChildren(node)
+        self._in_type_checking = prev
 
     IFEXP = IF
 
@@ -2120,6 +2131,7 @@ class Checker(object):
             else:
                 name = alias.asname or alias.name
                 importation = Importation(name, node, alias.name)
+            importation.during_type_checking = self._in_type_checking
             self.addBinding(node, importation)
 
     def IMPORTFROM(self, node):
@@ -2154,6 +2166,7 @@ class Checker(object):
             else:
                 importation = ImportationFrom(name, node,
                                               module, alias.name)
+            importation.during_type_checking = self._in_type_checking
             self.addBinding(node, importation)
 
     def TRY(self, node):

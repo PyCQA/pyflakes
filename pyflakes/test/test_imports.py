@@ -1031,6 +1031,25 @@ class Test(TestCase):
         from __future__ import *
         ''', m.FutureFeatureNotDefined)
 
+    def test_ignoresTypingImports(self):
+        """Ignores imports within 'if TYPE_CHECKING' checking normal code."""
+        self.flakes('''
+        from typing import TYPE_CHECKING
+        if TYPE_CHECKING:
+            from a import b
+        b()
+        ''', m.UndefinedName)
+
+    def test_usesTypingImportsForAnnotations(self):
+        """Uses imports within 'if TYPE_CHECKING' checking annotations."""
+        self.flakes('''
+        from typing import TYPE_CHECKING
+        if TYPE_CHECKING:
+            from a import b
+        def f() -> "b":
+            pass
+        ''')
+
 
 class TestSpecialAll(TestCase):
     """
