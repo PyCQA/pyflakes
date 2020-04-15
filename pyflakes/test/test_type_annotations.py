@@ -552,3 +552,33 @@ class TestTypeAnnotations(TestCase):
             def f() -> Optional['Queue[str]']:
                 return None
         """)
+
+    def test_idomiatic_typing_guards(self):
+        # typing.TYPE_CHECKING: python3.5.3+
+        self.flakes("""
+            from typing import TYPE_CHECKING
+
+            if TYPE_CHECKING:
+                from t import T
+
+            def f():  # type: () -> T
+                pass
+        """)
+        # False: the old, more-compatible approach
+        self.flakes("""
+            if False:
+                from t import T
+
+            def f():  # type: () -> T
+                pass
+        """)
+        # some choose to assign a constant and do it that way
+        self.flakes("""
+            MYPY = False
+
+            if MYPY:
+                from t import T
+
+            def f():  # type: () -> T
+                pass
+        """)
