@@ -310,11 +310,11 @@ class Binding(object):
                 the node that this binding was last used.
     """
 
-    def __init__(self, name, source, during_type_checking=False):
+    def __init__(self, name, source):
         self.name = name
         self.source = source
         self.used = False
-        self.during_type_checking = during_type_checking
+        self.during_type_checking = False
 
     def __str__(self):
         return self.name
