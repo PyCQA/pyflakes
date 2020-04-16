@@ -314,6 +314,7 @@ class Binding(object):
         self.name = name
         self.source = source
         self.used = False
+        self.during_type_checking = False
 
     def __str__(self):
         return self.name
@@ -587,17 +588,6 @@ class ExportBinding(Binding):
 
 class Scope(dict):
     importStarred = False       # set to True when import * is found
-    # Special key for checking whether a binding is defined only for type checking.
-    TYPE_CHECKING_ONLY = object()
-
-    def __init__(self):
-        super(Scope, self).__init__(self)
-        self[self.TYPE_CHECKING_ONLY] = collections.defaultdict(bool)
-
-    def items(self):
-        for key, val in super(Scope, self).items():
-            if key != self.TYPE_CHECKING_ONLY:
-                yield key, val
 
     def __repr__(self):
         scope_cls = self.__class__.__name__
@@ -1084,6 +1074,8 @@ class Checker(object):
                 break
         existing = scope.get(value.name)
 
+        value.during_type_checking = self._in_type_checking
+
         if (existing and not isinstance(existing, Builtin) and
                 not self.differentForks(node, existing.source)):
 
@@ -1111,7 +1103,6 @@ class Checker(object):
             # then assume the rebound name is used as a global or within a loop
             value.used = self.scope[value.name].used
 
-        self.scope[Scope.TYPE_CHECKING_ONLY][value.name] = self._in_type_checking
         self.scope[value.name] = value
 
     def _unknown_handler(self, node):
@@ -1178,8 +1169,7 @@ class Checker(object):
                         scope[n.fullName].used = (self.scope, node)
                     except KeyError:
                         pass
-                if (self.scope[Scope.TYPE_CHECKING_ONLY][name]
-                        and not self._in_annotation):
+                if n.during_type_checking and not self._in_annotation:
                     # Only defined during type-checking; this does not count. Real code
                     # (not an annotation) using this binding will not work.
                     continue
