@@ -582,3 +582,17 @@ class TestTypeAnnotations(TestCase):
             def f():  # type: () -> T
                 pass
         """)
+
+    def test_typing_guard_for_protocol(self):
+        self.flakes("""
+            from typing import TYPE_CHECKING
+
+            if TYPE_CHECKING:
+                from typing import Protocol
+            else:
+                Protocol = object
+
+            class C(Protocol):
+                def f():  # type: () -> int
+                    pass
+        """)
