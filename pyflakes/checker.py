@@ -310,12 +310,12 @@ class Binding(object):
                 the node that this binding was last used.
     """
 
-    def __init__(self, name, source, during_type_checking):
+    def __init__(self, name, source, for_annotations):
         self.name = name
         self.source = source
         self.used = False
-        assert isinstance(during_type_checking, bool)
-        self.during_type_checking = during_type_checking
+        assert isinstance(for_annotations, bool)
+        self.for_annotations = for_annotations
 
     def __str__(self):
         return self.name
@@ -340,7 +340,7 @@ class Builtin(Definition):
     """A definition created for all Python builtins."""
 
     def __init__(self, name):
-        super(Builtin, self).__init__(name, None, during_type_checking=False)
+        super(Builtin, self).__init__(name, None, for_annotations=False)
 
     def __repr__(self):
         return '<%s object %r at 0x%x>' % (self.__class__.__name__,
@@ -382,11 +382,11 @@ class Importation(Definition):
     @type fullName: C{str}
     """
 
-    def __init__(self, name, source, during_type_checking, full_name=None):
+    def __init__(self, name, source, for_annotations, full_name=None):
         self.fullName = full_name or name
         self.redefined = []
         super(Importation, self).__init__(name, source,
-                                          during_type_checking=during_type_checking)
+                                          for_annotations=for_annotations)
 
     def redefines(self, other):
         if isinstance(other, SubmoduleImportation):
@@ -431,12 +431,12 @@ class SubmoduleImportation(Importation):
     name is also the same, to avoid false positives.
     """
 
-    def __init__(self, name, source, during_type_checking):
+    def __init__(self, name, source, for_annotations):
         # A dot should only appear in the name when it is a submodule import
         assert '.' in name and (not source or isinstance(source, ast.Import))
         package_name = name.split('.')[0]
         super(SubmoduleImportation, self).__init__(
-            package_name, source, during_type_checking=during_type_checking)
+            package_name, source, for_annotations=for_annotations)
         self.fullName = name
 
     def redefines(self, other):
@@ -454,7 +454,7 @@ class SubmoduleImportation(Importation):
 
 class ImportationFrom(Importation):
 
-    def __init__(self, name, source, module, during_type_checking, real_name=None):
+    def __init__(self, name, source, module, for_annotations, real_name=None):
         self.module = module
         self.real_name = real_name or name
 
@@ -464,7 +464,7 @@ class ImportationFrom(Importation):
             full_name = module + '.' + self.real_name
 
         super(ImportationFrom, self).__init__(name, source, full_name=full_name,
-                                              during_type_checking=during_type_checking)
+                                              for_annotations=for_annotations)
 
     def __str__(self):
         """Return import full name with alias."""
@@ -486,9 +486,9 @@ class ImportationFrom(Importation):
 class StarImportation(Importation):
     """A binding created by a 'from x import *' statement."""
 
-    def __init__(self, name, source, during_type_checking):
+    def __init__(self, name, source, for_annotations):
         super(StarImportation, self).__init__('*', source,
-                                              during_type_checking=during_type_checking)
+                                              for_annotations=for_annotations)
         # Each star importation needs a unique name, and
         # may not be the module name otherwise it will be deemed imported
         self.name = name + '.*'
@@ -515,7 +515,7 @@ class FutureImportation(ImportationFrom):
 
     def __init__(self, name, source, scope):
         super(FutureImportation, self).__init__(name, source, '__future__',
-                                                during_type_checking=False)
+                                                for_annotations=False)
         self.used = (scope, source)
 
 
@@ -524,7 +524,7 @@ class Argument(Binding):
     Represents binding a name as an argument.
     """
     def __init__(self, name, source):
-        super(Argument, self).__init__(name, source, during_type_checking=False)
+        super(Argument, self).__init__(name, source, for_annotations=False)
 
 
 class Assignment(Binding):
@@ -560,7 +560,7 @@ class ExportBinding(Binding):
     C{__all__} will not have an unused import warning reported for them.
     """
 
-    def __init__(self, name, source, scope, during_type_checking):
+    def __init__(self, name, source, scope, for_annotations):
         if '__all__' in scope and isinstance(source, ast.AugAssign):
             self.names = list(scope['__all__'].names)
         else:
@@ -591,7 +591,7 @@ class ExportBinding(Binding):
                 # If not list concatenation
                 else:
                     break
-        super(ExportBinding, self).__init__(name, source, during_type_checking)
+        super(ExportBinding, self).__init__(name, source, for_annotations)
 
 
 class Scope(dict):
@@ -1175,7 +1175,7 @@ class Checker(object):
                         scope[n.fullName].used = (self.scope, node)
                     except KeyError:
                         pass
-                if n.during_type_checking and not self._in_annotation:
+                if n.for_annotations and not self._in_annotation:
                     # Only defined during type-checking; this does not count. Real code
                     # (not an annotation) using this binding will not work.
                     continue
@@ -1239,14 +1239,14 @@ class Checker(object):
         if isinstance(parent_stmt, (FOR_TYPES, ast.comprehension)) or (
                 parent_stmt != node._pyflakes_parent and
                 not self.isLiteralTupleUnpacking(parent_stmt)):
-            binding = Binding(name, node, during_type_checking=self._in_type_checking)
+            binding = Binding(name, node, for_annotations=self._in_type_checking)
         elif name == '__all__' and isinstance(self.scope, ModuleScope):
             binding = ExportBinding(name, node._pyflakes_parent, self.scope,
-                                    during_type_checking=self._in_type_checking)
+                                    for_annotations=self._in_type_checking)
         elif PY2 and isinstance(getattr(node, 'ctx', None), ast.Param):
             binding = Argument(name, self.getScopeNode(node))
         else:
-            binding = Assignment(name, node, during_type_checking=self._in_type_checking)
+            binding = Assignment(name, node, for_annotations=self._in_type_checking)
         self.addBinding(node, binding)
 
     def handleNodeDelete(self, node):
@@ -1875,7 +1875,7 @@ class Checker(object):
             # One 'global' statement can bind multiple (comma-delimited) names.
             for node_name in node.names:
                 node_value = Assignment(node_name, node,
-                                        during_type_checking=self._in_type_checking)
+                                        for_annotations=self._in_type_checking)
 
                 # Remove UndefinedName messages already reported for this name.
                 # TODO: if the global is not used in this scope, it does not
@@ -1978,7 +1978,7 @@ class Checker(object):
             self.handleNode(deco, node)
         self.LAMBDA(node)
         self.addBinding(node, FunctionDefinition(
-            node.name, node, during_type_checking=self._in_type_checking))
+            node.name, node, for_annotations=self._in_type_checking))
         # doctest does not process doctest within a doctest,
         # or in nested functions.
         if (self.withDoctest and
@@ -2104,7 +2104,7 @@ class Checker(object):
             self.handleNode(stmt, node)
         self.popScope()
         self.addBinding(node, ClassDefinition(
-            node.name, node, during_type_checking=self._in_type_checking))
+            node.name, node, for_annotations=self._in_type_checking))
 
     def AUGASSIGN(self, node):
         self.handleNodeLoad(node.target)
@@ -2140,11 +2140,11 @@ class Checker(object):
         for alias in node.names:
             if '.' in alias.name and not alias.asname:
                 importation = SubmoduleImportation(
-                    alias.name, node, during_type_checking=self._in_type_checking)
+                    alias.name, node, for_annotations=self._in_type_checking)
             else:
                 name = alias.asname or alias.name
                 importation = Importation(name, node, full_name=alias.name,
-                                          during_type_checking=self._in_type_checking)
+                                          for_annotations=self._in_type_checking)
             self.addBinding(node, importation)
 
     def IMPORTFROM(self, node):
@@ -2175,11 +2175,11 @@ class Checker(object):
                 self.scope.importStarred = True
                 self.report(messages.ImportStarUsed, node, module)
                 importation = StarImportation(
-                    module, node, during_type_checking=self._in_type_checking)
+                    module, node, for_annotations=self._in_type_checking)
             else:
                 importation = ImportationFrom(
                     name, node, module, real_name=alias.name,
-                    during_type_checking=self._in_type_checking)
+                    for_annotations=self._in_type_checking)
             self.addBinding(node, importation)
 
     def TRY(self, node):
