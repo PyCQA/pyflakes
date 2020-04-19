@@ -1069,6 +1069,7 @@ class Test(TestCase):
             pass
         ''')
 
+
 class TestSpecialAll(TestCase):
     """
     Tests for suppression of unused import warnings by C{__all__}.
