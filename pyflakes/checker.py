@@ -1244,8 +1244,7 @@ class Checker(object):
             binding = ExportBinding(name, node._pyflakes_parent, self.scope,
                                     during_type_checking=self._in_type_checking)
         elif PY2 and isinstance(getattr(node, 'ctx', None), ast.Param):
-            binding = Argument(name, self.getScopeNode(node),
-                               during_type_checking=self._in_type_checking)
+            binding = Argument(name, self.getScopeNode(node))
         else:
             binding = Assignment(name, node, during_type_checking=self._in_type_checking)
         self.addBinding(node, binding)
