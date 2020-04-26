@@ -80,7 +80,7 @@ else:
     FUNCTION_TYPES = (ast.FunctionDef,)
 
 if PY36_PLUS:
-    ANNASSIGN_TYPES = (ast.AnnAssign)
+    ANNASSIGN_TYPES = (ast.AnnAssign,)
 else:
     ANNASSIGN_TYPES = ()
 
