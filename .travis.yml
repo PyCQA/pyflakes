@@ -12,5 +12,10 @@ matrix:
       dist: xenial
     - python: nightly
       dist: xenial
+# TODO: https://bugs.python.org/issue40334
+# the PEG parser is currently broken in some cases
+  allow_failures:
+    - python: nightly
+      dist: xenial
 install: pip install tox
 script: tox -e py
