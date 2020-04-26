@@ -746,6 +746,12 @@ def is_typing_overload(value, scope_stack):
     )
 
 
+class AnnotationState:
+    NONE = 0
+    STRING = 1
+    BARE = 2
+
+
 def in_annotation(func):
     @functools.wraps(func)
     def in_annotation_func(self, *args, **kwargs):
@@ -757,7 +763,7 @@ def in_annotation(func):
 def in_string_annotation(func):
     @functools.wraps(func)
     def in_annotation_func(self, *args, **kwargs):
-        with self._enter_annotation(string=True):
+        with self._enter_annotation(AnnotationState.STRING):
             return func(self, *args, **kwargs)
     return in_annotation_func
 
@@ -848,7 +854,7 @@ class Checker(object):
     nodeDepth = 0
     offset = None
     traceTree = False
-    _in_annotation = None  # other possible values: "bare", "string"
+    _in_annotation = AnnotationState.NONE
     _in_typing_literal = False
     _in_deferred = False
 
@@ -1292,8 +1298,8 @@ class Checker(object):
                 self.report(messages.UndefinedName, node, name)
 
     @contextlib.contextmanager
-    def _enter_annotation(self, string=False):
-        orig, self._in_annotation = self._in_annotation, "string" if string else "bare"
+    def _enter_annotation(self, ann_type=AnnotationState.BARE):
+        orig, self._in_annotation = self._in_annotation, ann_type
         try:
             yield
         finally:
@@ -1301,7 +1307,10 @@ class Checker(object):
 
     @property
     def _in_postponed_annotation(self):
-        return self._in_annotation == "string" or self.annotationsFutureEnabled
+        return (
+            self._in_annotation == AnnotationState.STRING or
+            self.annotationsFutureEnabled
+        )
 
     def _handle_type_comments(self, node):
         for (lineno, col_offset), comment in self._type_comments.get(node, ()):
@@ -1642,7 +1651,7 @@ class Checker(object):
             len(node.args) >= 1 and
             isinstance(node.args[0], ast.Str)
         ):
-            with self._enter_annotation(string=True):
+            with self._enter_annotation(AnnotationState.STRING):
                 self.handleNode(node.args[0], node)
 
         self.handleChildren(node)
