@@ -285,10 +285,23 @@ class TestTypeAnnotations(TestCase):
 
     @skipIf(version_info < (3, 6), 'new in Python 3.6')
     def test_unused_annotation(self):
+        # Unused annotations are fine in module and class scope
+        self.flakes('''
+        x: int
+        class Cls:
+            y: int
+        ''')
+        # TODO: this should print a UnusedVariable message
         self.flakes('''
         def f():
-            x_is_unused: int
+            x: int
         ''')
+        # This should only print one UnusedVariable message
+        self.flakes('''
+        def f():
+            x: int
+            x = 3
+        ''', m.UnusedVariable)
 
     @skipIf(version_info < (3, 5), 'new in Python 3.5')
     def test_annotated_async_def(self):
