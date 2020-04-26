@@ -263,6 +263,14 @@ class TestTypeAnnotations(TestCase):
         class A: pass
         ''')
         self.flakes('''
+        T: object
+        def f(t: T): pass
+        ''', m.UndefinedName)
+        self.flakes('''
+        T: object
+        def g(t: 'T'): pass
+        ''')
+        self.flakes('''
         a: 'A B'
         ''', m.ForwardAnnotationSyntaxError)
         self.flakes('''
@@ -299,6 +307,13 @@ class TestTypeAnnotations(TestCase):
             b: Undefined
         class B: pass
         ''', m.UndefinedName)
+
+        self.flakes('''
+        from __future__ import annotations
+        T: object
+        def f(t: T): pass
+        def g(t: 'T'): pass
+        ''')
 
     def test_typeCommentsMarkImportsAsUsed(self):
         self.flakes("""

@@ -79,6 +79,10 @@ else:
     LOOP_TYPES = (ast.While, ast.For)
     FUNCTION_TYPES = (ast.FunctionDef,)
 
+if PY36_PLUS:
+    ANNASSIGN_TYPES = (ast.AnnAssign)
+else:
+    ANNASSIGN_TYPES = ()
 
 if PY38_PLUS:
     def _is_singleton(node):  # type: (ast.AST) -> bool
@@ -528,6 +532,16 @@ class Assignment(Binding):
     """
 
 
+class Annotation(Binding):
+    """
+    Represents binding a name to a type without an associated value.
+
+    As long as this name is not assigned a value in another binding, it is considered
+    undefined for most purposes. One notable exception is using the name as a type
+    annotation.
+    """
+
+
 class FunctionDefinition(Definition):
     pass
 
@@ -740,6 +754,14 @@ def in_annotation(func):
     return in_annotation_func
 
 
+def in_string_annotation(func):
+    @functools.wraps(func)
+    def in_annotation_func(self, *args, **kwargs):
+        with self._enter_annotation(string=True):
+            return func(self, *args, **kwargs)
+    return in_annotation_func
+
+
 def make_tokens(code):
     # PY3: tokenize.tokenize requires readline of bytes
     if not isinstance(code, bytes):
@@ -826,7 +848,7 @@ class Checker(object):
     nodeDepth = 0
     offset = None
     traceTree = False
-    _in_annotation = False
+    _in_annotation = None  # other possible values: "bare", "string"
     _in_typing_literal = False
     _in_deferred = False
 
@@ -1146,8 +1168,11 @@ class Checker(object):
                     # iteration
                     continue
 
-            if (name == 'print' and
-                    isinstance(scope.get(name, None), Builtin)):
+            binding = scope.get(name, None)
+            if isinstance(binding, Annotation) and not self._in_postponed_annotation:
+                continue
+
+            if name == 'print' and isinstance(binding, Builtin):
                 parent = self.getParent(node)
                 if (isinstance(parent, ast.BinOp) and
                         isinstance(parent.op, ast.RShift)):
@@ -1222,7 +1247,9 @@ class Checker(object):
                     break
 
         parent_stmt = self.getParent(node)
-        if isinstance(parent_stmt, (FOR_TYPES, ast.comprehension)) or (
+        if isinstance(parent_stmt, ANNASSIGN_TYPES) and parent_stmt.value is None:
+            binding = Annotation(name, node)
+        elif isinstance(parent_stmt, (FOR_TYPES, ast.comprehension)) or (
                 parent_stmt != node._pyflakes_parent and
                 not self.isLiteralTupleUnpacking(parent_stmt)):
             binding = Binding(name, node)
@@ -1265,12 +1292,16 @@ class Checker(object):
                 self.report(messages.UndefinedName, node, name)
 
     @contextlib.contextmanager
-    def _enter_annotation(self):
-        orig, self._in_annotation = self._in_annotation, True
+    def _enter_annotation(self, string=False):
+        orig, self._in_annotation = self._in_annotation, "string" if string else "bare"
         try:
             yield
         finally:
             self._in_annotation = orig
+
+    @property
+    def _in_postponed_annotation(self):
+        return self._in_annotation == "string" or self.annotationsFutureEnabled
 
     def _handle_type_comments(self, node):
         for (lineno, col_offset), comment in self._type_comments.get(node, ()):
@@ -1399,7 +1430,7 @@ class Checker(object):
         self.popScope()
         self.scopeStack = saved_stack
 
-    @in_annotation
+    @in_string_annotation
     def handleStringAnnotation(self, s, node, ref_lineno, ref_col_offset, err):
         try:
             tree = ast.parse(s)
@@ -1611,7 +1642,7 @@ class Checker(object):
             len(node.args) >= 1 and
             isinstance(node.args[0], ast.Str)
         ):
-            with self._enter_annotation():
+            with self._enter_annotation(string=True):
                 self.handleNode(node.args[0], node)
 
         self.handleChildren(node)
@@ -2224,11 +2255,7 @@ class Checker(object):
             self.scope[node.name] = prev_definition
 
     def ANNASSIGN(self, node):
-        if node.value:
-            # Only bind the *targets* if the assignment has a value.
-            # Otherwise it's not really ast.Store and shouldn't silence
-            # UndefinedLocal warnings.
-            self.handleNode(node.target, node)
+        self.handleNode(node.target, node)
         self.handleAnnotation(node.annotation, node)
         if node.value:
             # If the assignment has value, handle the *value* now.
