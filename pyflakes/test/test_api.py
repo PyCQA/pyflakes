@@ -449,6 +449,8 @@ def baz():
         with self.makeTempFile(source) as sourcePath:
             if PYPY:
                 message = 'end of file (EOF) while scanning triple-quoted string literal'
+            elif sys.version_info >= (3, 9):
+                message = 'invalid string prefix'
             else:
                 message = 'invalid syntax'
 
