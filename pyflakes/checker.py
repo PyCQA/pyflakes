@@ -1852,8 +1852,16 @@ class Checker(object):
         prev = self._in_type_checking
         if _is_typing(node.test, 'TYPE_CHECKING', self.scopeStack):
             self._in_type_checking = True
-        self.handleChildren(node)
+        # Handle the body of this if statement.
+        body_nodes = node.body
+        if not isinstance(body_nodes, list):
+            body_nodes = [body_nodes]
+        for body_node in body_nodes:
+            self.handleNode(body_node, node)
         self._in_type_checking = prev
+
+        # Handle the test of the if statement (elif, else).
+        self.handleChildren(node, omit=["body"])
 
     IFEXP = IF
 

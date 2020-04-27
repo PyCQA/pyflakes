@@ -596,3 +596,23 @@ class TestTypeAnnotations(TestCase):
                 def f():  # type: () -> int
                     pass
         """)
+
+    def test_typing_guard_with_elif_branch(self):
+        # This test will actually not raise an error, even though it by analysis can
+        # be shown to have an error (Protocol is not defined outside TYPE_CHECKING).
+        # Pyflakes currently does not to case analysis.
+
+        self.flakes("""
+            from typing import TYPE_CHECKING
+
+            if TYPE_CHECKING:
+                from typing import Protocol
+            elif False:
+                Protocol = object
+            else:
+                pass
+
+            class C(Protocol):
+                def f():  # type: () -> int
+                    pass
+        """)
