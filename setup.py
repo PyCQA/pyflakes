@@ -16,6 +16,9 @@ else:
         'entry_points': {
             'console_scripts': ['pyflakes = pyflakes.api:main'],
         },
+        'project_urls': {
+            'Changelog': 'https://github.com/PyCQA/pyflakes/blob/master/NEWS.rst',
+        },
     }
 
 
