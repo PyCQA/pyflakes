@@ -827,6 +827,7 @@ class Checker(object):
     offset = None
     traceTree = False
     _in_annotation = False
+    _in_typing_annotated = False
     _in_typing_literal = False
     _in_deferred = False
 
@@ -1271,6 +1272,14 @@ class Checker(object):
             yield
         finally:
             self._in_annotation = orig
+    
+    @contextlib.contextmanager
+    def _enter_typing_annotated(self):
+        orig, self._in_typing_annotated = self._in_typing_annotated, True
+        try:
+            yield
+        finally:
+            self._in_typing_annotated = orig
 
     def _handle_type_comments(self, node):
         for (lineno, col_offset), comment in self._type_comments.get(node, ()):
@@ -1471,6 +1480,33 @@ class Checker(object):
                 self.handleChildren(node)
             finally:
                 self._in_typing_literal = orig
+        elif (
+                (
+                    isinstance(node.value, ast.Name) and
+                    node.value.id == 'Annotated'
+                ) or (
+                    isinstance(node.value, ast.Attribute) and
+                    node.value.attr == 'Annotated'
+                )
+        ):
+            orig = self._in_typing_annotated
+            self.handleNode(node.value, node)
+
+            if (
+                isinstance(node.slice, ast.Index) and
+                isinstance(node.slice.value, ast.Tuple)):
+                slice_children = list(iter_child_nodes(node.slice.value))
+                if slice_children:
+                    self.handleNode(slice_children[0], node.slice)
+                # Only the first argument of an Annotated type will always
+                # correspond to an actual type.
+                with self._enter_typing_annotated():
+                    for slice_child in slice_children[1:]:
+                        self.handleNode(slice_child, node)
+            else:
+                self.handleNode(node.slice, node)
+
+            self.handleNode(node.ctx, node)
         else:
             if _is_any_typing_member(node.value, self.scopeStack):
                 with self._enter_annotation():
@@ -1728,7 +1764,10 @@ class Checker(object):
         self.handleChildren(node)
 
     def STR(self, node):
-        if self._in_annotation and not self._in_typing_literal:
+        if (
+                self._in_annotation and
+                not self._in_typing_literal and
+                not self._in_typing_annotated):
             fn = functools.partial(
                 self.handleStringAnnotation,
                 node.s,

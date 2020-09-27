@@ -506,6 +506,49 @@ class TestTypeAnnotations(TestCase):
         def f(x: Literal['some string']) -> None:
             return None
         """)
+    
+    def test_forward_ref_valid(self):
+        self.flakes("""
+        from typing import Optional
+
+        def f(x: Optional['int']) -> None:
+            return None
+        """)
+
+    def test_forward_ref_missing(self):
+        self.flakes("""
+        from typing import Optional
+
+        def f(x: Optional['integer']) -> None:
+            return None
+        """, m.UndefinedName)
+
+    @skipIf(version_info < (3, 6), 'new in Python 3.6')
+    def test_annotated_type_typing_missing_forward_type(self):
+        self.flakes("""
+        from typing import Annotated
+
+        def f(x: Annotated['integer']) -> None:
+            return None
+        """, m.UndefinedName)
+
+    @skipIf(version_info < (3, 6), 'new in Python 3.6')
+    def test_annotated_type_typing_missing_forward_type_multiple_args(self):
+        self.flakes("""
+        from typing import Annotated
+
+        def f(x: Annotated['integer', 1]) -> None:
+            return None
+        """, m.UndefinedName)
+
+    @skipIf(version_info < (3, 6), 'new in Python 3.6')
+    def test_annotated_type_typing_with_string_args(self):
+        self.flakes("""
+        from typing import Annotated
+
+        def f(x: Annotated[int, '> 0']) -> None:
+            return None
+        """)
 
     @skipIf(version_info < (3,), 'new in Python 3')
     def test_literal_type_some_other_module(self):
