@@ -506,7 +506,7 @@ class TestTypeAnnotations(TestCase):
         def f(x: Literal['some string']) -> None:
             return None
         """)
-    
+
     def test_forward_ref_valid(self):
         self.flakes("""
         from typing import Optional
