@@ -1272,7 +1272,7 @@ class Checker(object):
             yield
         finally:
             self._in_annotation = orig
-    
+
     @contextlib.contextmanager
     def _enter_typing_annotated(self):
         orig, self._in_typing_annotated = self._in_typing_annotated, True
@@ -1493,8 +1493,9 @@ class Checker(object):
             self.handleNode(node.value, node)
 
             if (
-                isinstance(node.slice, ast.Index) and
-                isinstance(node.slice.value, ast.Tuple)):
+                    isinstance(node.slice, ast.Index) and
+                    isinstance(node.slice.value, ast.Tuple)
+            ):
                 slice_children = list(iter_child_nodes(node.slice.value))
                 if slice_children:
                     self.handleNode(slice_children[0], node.slice)
@@ -1767,7 +1768,8 @@ class Checker(object):
         if (
                 self._in_annotation and
                 not self._in_typing_literal and
-                not self._in_typing_annotated):
+                not self._in_typing_annotated
+        ):
             fn = functools.partial(
                 self.handleStringAnnotation,
                 node.s,

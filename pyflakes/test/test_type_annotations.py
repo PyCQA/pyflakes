@@ -507,6 +507,7 @@ class TestTypeAnnotations(TestCase):
             return None
         """)
 
+    @skipIf(version_info < (3,), 'new in Python 3')
     def test_forward_ref_valid(self):
         self.flakes("""
         from typing import Optional
@@ -515,6 +516,7 @@ class TestTypeAnnotations(TestCase):
             return None
         """)
 
+    @skipIf(version_info < (3,), 'new in Python 3')
     def test_forward_ref_missing(self):
         self.flakes("""
         from typing import Optional
