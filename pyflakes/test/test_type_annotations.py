@@ -263,6 +263,14 @@ class TestTypeAnnotations(TestCase):
         class A: pass
         ''')
         self.flakes('''
+        T: object
+        def f(t: T): pass
+        ''', m.UndefinedName)
+        self.flakes('''
+        T: object
+        def g(t: 'T'): pass
+        ''')
+        self.flakes('''
         a: 'A B'
         ''', m.ForwardAnnotationSyntaxError)
         self.flakes('''
@@ -274,6 +282,26 @@ class TestTypeAnnotations(TestCase):
         self.flakes('''
         a: 'a: "A"'
         ''', m.ForwardAnnotationSyntaxError)
+
+    @skipIf(version_info < (3, 6), 'new in Python 3.6')
+    def test_unused_annotation(self):
+        # Unused annotations are fine in module and class scope
+        self.flakes('''
+        x: int
+        class Cls:
+            y: int
+        ''')
+        # TODO: this should print a UnusedVariable message
+        self.flakes('''
+        def f():
+            x: int
+        ''')
+        # This should only print one UnusedVariable message
+        self.flakes('''
+        def f():
+            x: int
+            x = 3
+        ''', m.UnusedVariable)
 
     @skipIf(version_info < (3, 5), 'new in Python 3.5')
     def test_annotated_async_def(self):
@@ -299,6 +327,13 @@ class TestTypeAnnotations(TestCase):
             b: Undefined
         class B: pass
         ''', m.UndefinedName)
+
+        self.flakes('''
+        from __future__ import annotations
+        T: object
+        def f(t: T): pass
+        def g(t: 'T'): pass
+        ''')
 
     def test_typeCommentsMarkImportsAsUsed(self):
         self.flakes("""

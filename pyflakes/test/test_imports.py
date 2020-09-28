@@ -1084,13 +1084,22 @@ class TestSpecialAll(TestCase):
             __all__ += ['c', 'd']
         ''', m.UndefinedExport, m.UndefinedExport)
 
-    def test_concatenationAssignment(self):
+    def test_list_concatenation_assignment(self):
         """
         The C{__all__} variable is defined through list concatenation.
         """
         self.flakes('''
         import sys
         __all__ = ['a'] + ['b'] + ['c']
+        ''', m.UndefinedExport, m.UndefinedExport, m.UndefinedExport, m.UnusedImport)
+
+    def test_tuple_concatenation_assignment(self):
+        """
+        The C{__all__} variable is defined through tuple concatenation.
+        """
+        self.flakes('''
+        import sys
+        __all__ = ('a',) + ('b',) + ('c',)
         ''', m.UndefinedExport, m.UndefinedExport, m.UndefinedExport, m.UnusedImport)
 
     def test_all_with_attributes(self):
