@@ -1305,14 +1305,6 @@ class Checker(object):
         finally:
             self._in_annotation = orig
 
-    @contextlib.contextmanager
-    def _exit_annotation(self):
-        orig, self._in_annotation = self._in_annotation, AnnotationState.NONE
-        try:
-            yield
-        finally:
-            self._in_annotation = orig
-
     @property
     def _in_postponed_annotation(self):
         return (
@@ -1539,7 +1531,7 @@ class Checker(object):
                     self.handleNode(slice_children[0], node.slice)
                 # Only the first argument of an Annotated type will always
                 # correspond to an actual type.
-                with self._exit_annotation():
+                with self._enter_annotation(AnnotationState.NONE):
                     for slice_child in slice_children[1:]:
                         self.handleNode(slice_child, node)
             else:
