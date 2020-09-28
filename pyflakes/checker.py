@@ -542,7 +542,7 @@ class ExportBinding(Binding):
     can be determined statically, they will be treated as names for export and
     additional checking applied to them.
 
-    The only recognized C{__all__} assignment via list concatenation is in the
+    The only recognized C{__all__} assignment via list/tuple concatenation is in the
     following format:
 
         __all__ = ['a'] + ['b'] + ['c']
@@ -564,10 +564,10 @@ class ExportBinding(Binding):
 
         if isinstance(source.value, (ast.List, ast.Tuple)):
             _add_to_names(source.value)
-        # If concatenating lists
+        # If concatenating lists or tuples
         elif isinstance(source.value, ast.BinOp):
             currentValue = source.value
-            while isinstance(currentValue.right, ast.List):
+            while isinstance(currentValue.right, (ast.List, ast.Tuple)):
                 left = currentValue.left
                 right = currentValue.right
                 _add_to_names(right)
@@ -575,7 +575,7 @@ class ExportBinding(Binding):
                 if isinstance(left, ast.BinOp):
                     currentValue = left
                 # If just two lists are being added
-                elif isinstance(left, ast.List):
+                elif isinstance(left, (ast.List, ast.Tuple)):
                     _add_to_names(left)
                     # All lists accounted for - done
                     break
