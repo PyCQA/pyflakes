@@ -827,7 +827,6 @@ class Checker(object):
     offset = None
     traceTree = False
     _in_annotation = False
-    _in_typing_annotated = False
     _in_typing_literal = False
     _in_deferred = False
 
@@ -1273,6 +1272,14 @@ class Checker(object):
         finally:
             self._in_annotation = orig
 
+    @contextlib.contextmanager
+    def _exit_annotation(self):
+        orig, self._in_annotation = self._in_annotation, False
+        try:
+            yield
+        finally:
+            self._in_annotation = orig
+
     def _handle_type_comments(self, node):
         for (lineno, col_offset), comment in self._type_comments.get(node, ()):
             comment = comment.split(':', 1)[1].strip()
@@ -1481,7 +1488,6 @@ class Checker(object):
                     node.value.attr == 'Annotated'
                 )
         ):
-            orig = self._in_typing_annotated
             self.handleNode(node.value, node)
 
             if (
@@ -1493,9 +1499,9 @@ class Checker(object):
                     self.handleNode(slice_children[0], node.slice)
                 # Only the first argument of an Annotated type will always
                 # correspond to an actual type.
-                self._in_annotation = False
-                for slice_child in slice_children[1:]:
-                    self.handleNode(slice_child, node)
+                with self._exit_annotation():
+                    for slice_child in slice_children[1:]:
+                        self.handleNode(slice_child, node)
             else:
                 self.handleNode(node.slice, node)
 
