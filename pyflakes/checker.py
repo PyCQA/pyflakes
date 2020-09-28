@@ -1273,14 +1273,6 @@ class Checker(object):
         finally:
             self._in_annotation = orig
 
-    @contextlib.contextmanager
-    def _enter_typing_annotated(self):
-        orig, self._in_typing_annotated = self._in_typing_annotated, True
-        try:
-            yield
-        finally:
-            self._in_typing_annotated = orig
-
     def _handle_type_comments(self, node):
         for (lineno, col_offset), comment in self._type_comments.get(node, ()):
             comment = comment.split(':', 1)[1].strip()
@@ -1501,9 +1493,9 @@ class Checker(object):
                     self.handleNode(slice_children[0], node.slice)
                 # Only the first argument of an Annotated type will always
                 # correspond to an actual type.
-                with self._enter_typing_annotated():
-                    for slice_child in slice_children[1:]:
-                        self.handleNode(slice_child, node)
+                self._in_annotation = False
+                for slice_child in slice_children[1:]:
+                    self.handleNode(slice_child, node)
             else:
                 self.handleNode(node.slice, node)
 
@@ -1765,11 +1757,7 @@ class Checker(object):
         self.handleChildren(node)
 
     def STR(self, node):
-        if (
-                self._in_annotation and
-                not self._in_typing_literal and
-                not self._in_typing_annotated
-        ):
+        if self._in_annotation and not self._in_typing_literal:
             fn = functools.partial(
                 self.handleStringAnnotation,
                 node.s,
