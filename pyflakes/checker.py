@@ -128,6 +128,13 @@ def _is_const_non_singleton(node):  # type: (ast.AST) -> bool
     return _is_constant(node) and not _is_singleton(node)
 
 
+def _is_name_or_attr(node, name):  # type: (ast.Ast, str) -> bool
+    return (
+        (isinstance(node, ast.Name) and node.id == name) or
+        (isinstance(node, ast.Attribute) and node.attr == name)
+    )
+
+
 # https://github.com/python/typed_ast/blob/1.4.0/ast27/Parser/tokenizer.c#L102-L104
 TYPE_COMMENT_RE = re.compile(r'^#\s*type:\s*')
 # https://github.com/python/typed_ast/blob/1.4.0/ast27/Parser/tokenizer.c#L1408-L1413
@@ -1497,20 +1504,39 @@ class Checker(object):
         STARRED = NAMECONSTANT = NAMEDEXPR = handleChildren
 
     def SUBSCRIPT(self, node):
-        if (
-                (
-                    isinstance(node.value, ast.Name) and
-                    node.value.id == 'Literal'
-                ) or (
-                    isinstance(node.value, ast.Attribute) and
-                    node.value.attr == 'Literal'
-                )
-        ):
+        if _is_name_or_attr(node.value, 'Literal'):
             orig, self._in_typing_literal = self._in_typing_literal, True
             try:
                 self.handleChildren(node)
             finally:
                 self._in_typing_literal = orig
+        elif _is_name_or_attr(node.value, 'Annotated'):
+            self.handleNode(node.value, node)
+
+            # py39+
+            if isinstance(node.slice, ast.Tuple):
+                slice_tuple = node.slice
+            # <py39
+            elif (
+                    isinstance(node.slice, ast.Index) and
+                    isinstance(node.slice.value, ast.Tuple)
+            ):
+                slice_tuple = node.slice.value
+            else:
+                slice_tuple = None
+
+            # not a multi-arg `Annotated`
+            if slice_tuple is None or len(slice_tuple.elts) < 2:
+                self.handleNode(node.slice, node)
+            else:
+                # the first argument is the type
+                self.handleNode(slice_tuple.elts[0], node)
+                # the rest of the arguments are not
+                with self._enter_annotation(AnnotationState.NONE):
+                    for arg in slice_tuple.elts[1:]:
+                        self.handleNode(arg, node)
+
+            self.handleNode(node.ctx, node)
         else:
             if _is_any_typing_member(node.value, self.scopeStack):
                 with self._enter_annotation():

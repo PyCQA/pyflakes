@@ -543,6 +543,42 @@ class TestTypeAnnotations(TestCase):
         """)
 
     @skipIf(version_info < (3,), 'new in Python 3')
+    def test_annotated_type_typing_missing_forward_type(self):
+        self.flakes("""
+        from typing import Annotated
+
+        def f(x: Annotated['integer']) -> None:
+            return None
+        """, m.UndefinedName)
+
+    @skipIf(version_info < (3,), 'new in Python 3')
+    def test_annotated_type_typing_missing_forward_type_multiple_args(self):
+        self.flakes("""
+        from typing import Annotated
+
+        def f(x: Annotated['integer', 1]) -> None:
+            return None
+        """, m.UndefinedName)
+
+    @skipIf(version_info < (3,), 'new in Python 3')
+    def test_annotated_type_typing_with_string_args(self):
+        self.flakes("""
+        from typing import Annotated
+
+        def f(x: Annotated[int, '> 0']) -> None:
+            return None
+        """)
+
+    @skipIf(version_info < (3,), 'new in Python 3')
+    def test_annotated_type_typing_with_string_args_in_union(self):
+        self.flakes("""
+        from typing import Annotated, Union
+
+        def f(x: Union[Annotated['int', '>0'], 'integer']) -> None:
+            return None
+        """, m.UndefinedName)
+
+    @skipIf(version_info < (3,), 'new in Python 3')
     def test_literal_type_some_other_module(self):
         """err on the side of false-negatives for types named Literal"""
         self.flakes("""
