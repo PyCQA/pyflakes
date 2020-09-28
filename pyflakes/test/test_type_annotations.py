@@ -535,7 +535,7 @@ class TestTypeAnnotations(TestCase):
         """)
 
     @skipIf(version_info < (3,), 'new in Python 3')
-    def test_annotated_type_typing_with_string_args(self):
+    def test_annotated_type_typing_with_string_args_in_union(self):
         self.flakes("""
         from typing import Annotated, Union
 
