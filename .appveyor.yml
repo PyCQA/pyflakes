@@ -2,12 +2,12 @@
 install:
   - python -m pip install --upgrade tox virtualenv
 
-  - ps: (New-Object Net.WebClient).DownloadFile('https://bitbucket.org/pypy/pypy/downloads/pypy2.7-v7.1.1-win32.zip', "$env:appveyor_build_folder\pypy2.7-v7.1.1-win32.zip")
+  - ps: (New-Object Net.WebClient).DownloadFile('https://downloads.python.org/pypy/pypy2.7-v7.1.1-win32.zip', "$env:appveyor_build_folder\pypy2.7-v7.1.1-win32.zip")
   - ps: 7z x pypy2.7-v7.1.1-win32.zip | Out-Null
   - move pypy2.7-v7.1.1-win32 C:\
   - 'SET PATH=C:\pypy2.7-v7.1.1-win32\;%PATH%'
 
-  - ps: (New-Object Net.WebClient).DownloadFile('https://bitbucket.org/pypy/pypy/downloads/pypy3.6-v7.1.1-win32.zip', "$env:appveyor_build_folder\pypy3.6-v7.1.1-win32.zip")
+  - ps: (New-Object Net.WebClient).DownloadFile('https://downloads.python.org/pypy/pypy3.6-v7.1.1-win32.zip', "$env:appveyor_build_folder\pypy3.6-v7.1.1-win32.zip")
   - ps: 7z x pypy3.6-v7.1.1-win32.zip | Out-Null
   - move pypy3.6-v7.1.1-win32 C:\
   - 'SET PATH=C:\pypy3.6-v7.1.1-win32\;%PATH%'
