@@ -6,7 +6,7 @@ A simple program which checks Python source files for errors.
 
 Pyflakes analyzes programs and detects various errors.  It works by
 parsing the source file, not importing it, so it is safe to use on
-modules with side effects.  It's also much faster.
+modules with side effects.  It is also much faster.
 
 It is `available on PyPI <https://pypi.org/project/pyflakes/>`_
 and it supports all active versions of Python: 2.7 and 3.4 to 3.8.
@@ -37,7 +37,7 @@ Useful tips:
 Design Principles
 -----------------
 Pyflakes makes a simple promise: it will never complain about style,
-and it will try very, very hard to never emit false positives.
+and it will try harder to never emit false positives.
 
 Pyflakes is also faster than Pylint_
 or Pychecker_. This is
