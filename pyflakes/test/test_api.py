@@ -449,8 +449,6 @@ def baz():
         with self.makeTempFile(source) as sourcePath:
             if PYPY:
                 message = 'end of file (EOF) while scanning triple-quoted string literal'
-            elif sys.version_info >= (3, 9):
-                message = 'invalid string prefix'
             else:
                 message = 'invalid syntax'
 
@@ -517,6 +515,8 @@ def foo(bar=baz, bax):
             if ERROR_HAS_LAST_LINE:
                 if PYPY:
                     column = 7
+                elif sys.version_info >= (3, 9):
+                    column = 21
                 elif sys.version_info >= (3, 8):
                     column = 9
                 else:
@@ -545,6 +545,8 @@ foo(bar=baz, bax)
             if ERROR_HAS_LAST_LINE:
                 if PYPY:
                     column = 12
+                elif sys.version_info >= (3, 9):
+                    column = 17
                 elif sys.version_info >= (3, 8):
                     column = 14
                 else:
@@ -579,6 +581,8 @@ foo(bar=baz, bax)
                 position_end = 1
                 if PYPY:
                     column = 5
+                elif ver >= (3, 9):
+                    column = 13
                 else:
                     column = 7
                     # Column has been "fixed" since 3.2.4 and 3.3.1
