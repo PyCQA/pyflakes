@@ -6,8 +6,8 @@ matrix:
     - python: 3.4
     - python: 3.5
     - python: 3.6
-    - python: pypy
-    - python: pypy3
+    - python: pypy2.7-7.3.1
+    - python: pypy3.6-7.3.1
     - python: 3.7
       dist: xenial
     - python: 3.8
