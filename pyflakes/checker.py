@@ -862,7 +862,6 @@ class Checker(object):
     offset = None
     traceTree = False
     _in_annotation = AnnotationState.NONE
-    _in_typing_literal = False
     _in_deferred = False
 
     builtIns = set(builtin_vars).union(_MAGIC_GLOBALS)
@@ -1505,11 +1504,8 @@ class Checker(object):
 
     def SUBSCRIPT(self, node):
         if _is_name_or_attr(node.value, 'Literal'):
-            orig, self._in_typing_literal = self._in_typing_literal, True
-            try:
+            with self._enter_annotation(AnnotationState.NONE):
                 self.handleChildren(node)
-            finally:
-                self._in_typing_literal = orig
         elif _is_name_or_attr(node.value, 'Annotated'):
             self.handleNode(node.value, node)
 
@@ -1794,7 +1790,7 @@ class Checker(object):
         self.handleChildren(node)
 
     def STR(self, node):
-        if self._in_annotation and not self._in_typing_literal:
+        if self._in_annotation:
             fn = functools.partial(
                 self.handleStringAnnotation,
                 node.s,
