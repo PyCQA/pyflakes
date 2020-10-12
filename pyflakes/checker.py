@@ -669,6 +669,10 @@ class DummyNode(object):
         self.col_offset = col_offset
 
 
+class DetectClassScopedMagic:
+    names = dir()
+
+
 # Globally defined names which are not attributes of the builtins module, or
 # are only present on some platforms.
 _MAGIC_GLOBALS = ['__file__', '__builtins__', 'WindowsError']
@@ -1231,7 +1235,7 @@ class Checker(object):
             # the special name __path__ is valid only in packages
             return
 
-        if name == '__module__' and isinstance(self.scope, ClassScope):
+        if name in DetectClassScopedMagic.names and isinstance(self.scope, ClassScope):
             return
 
         # protected with a NameError handler?
