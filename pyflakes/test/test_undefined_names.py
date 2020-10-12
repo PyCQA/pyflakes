@@ -279,6 +279,23 @@ class Test(TestCase):
                 __module__
         ''', m.UndefinedName)
 
+    @skipIf(version_info < (3, 3), "Python >= 3.3 only")
+    def test_magicQualnameInClassScope(self):
+        """
+        Use of the C{__qualname__} magic builtin should not emit an undefined
+        name warning if used in class scope.
+        """
+        self.flakes('__qualname__', m.UndefinedName)
+        self.flakes('''
+        class Foo:
+            __qualname__
+        ''')
+        self.flakes('''
+        class Foo:
+            def bar(self):
+                __qualname__
+        ''', m.UndefinedName)
+
     def test_globalImportStar(self):
         """Can't find undefined names with import *."""
         self.flakes('from fu import *; bar',
