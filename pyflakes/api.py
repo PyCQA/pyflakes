@@ -186,8 +186,7 @@ def _get_version():
     """
     Retrieve and format package version along with python version & OS used
     """
-    return ('%s Python %s on %s' %
-            (__version__, platform.python_version(), platform.system()))
+    return (f'{__version__} Python {platform.python_version()} on {platform.system()}')
 
 
 def main(prog=None, args=None):

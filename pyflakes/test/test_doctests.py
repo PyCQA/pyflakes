@@ -35,9 +35,9 @@ class _DoctestMixin:
                   line.startswith('else:') or
                   line.startswith('elif ') or
                   (lines and lines[-1].startswith(('>>> @', '... @')))):
-                line = "... %s" % line
+                line = f"... {line}"
             else:
-                line = ">>> %s" % line
+                line = f">>> {line}"
             lines.append(line)
         doctestificator = textwrap.dedent('''\
             def doctest_something():

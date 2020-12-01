@@ -463,17 +463,15 @@ def baz():
         """
         with self.makeTempFile("def foo(") as sourcePath:
             if PYPY:
-                result = """\
-{}:1:7: parenthesis is never closed
+                result = f"""{sourcePath}:1:7: parenthesis is never closed
 def foo(
       ^
-""".format(sourcePath)
+"""
             else:
-                result = """\
-{}:1:9: unexpected EOF while parsing
+                result = f"""{sourcePath}:1:9: unexpected EOF while parsing
 def foo(
         ^
-""".format(sourcePath)
+"""
 
             self.assertHasErrors(
                 sourcePath,
@@ -490,11 +488,10 @@ def foo(
 
             self.assertHasErrors(
                 sourcePath,
-                ["""\
-{}:2:{}: invalid syntax
+                [f"""{sourcePath}:2:{column}: invalid syntax
 \tfoo =
-{}
-""".format(sourcePath, column, last_line)])
+{last_line}
+"""])
 
     def test_nonDefaultFollowsDefaultSyntaxError(self):
         """
@@ -549,10 +546,9 @@ foo(bar=baz, bax)
 
             self.assertHasErrors(
                 sourcePath,
-                ["""\
-{}:1:{} {}
+                [f"""{sourcePath}:1:{columnstr} {message}
 foo(bar=baz, bax)
-{}""".format(sourcePath, columnstr, message, last_line)])
+{last_line}"""])
 
     def test_invalidEscape(self):
         """
@@ -572,7 +568,7 @@ foo(bar=baz, bax)
                 else:
                     column = 7
 
-                last_line = '%s^\n' % (' ' * (column - 1))
+                last_line = f"{' ' * (column - 1)}^\n"
 
                 decoding_error = """\
 %s:1:%d: (unicode error) 'unicodeescape' codec can't decode bytes \
@@ -616,10 +612,9 @@ foo = '\\xyz'
         If source file declares the correct encoding, no error is reported.
         """
         SNOWMAN = unichr(0x2603)
-        source = ("""\
-# coding: utf-8
-x = "%s"
-""" % SNOWMAN).encode('utf-8')
+        source = f"""# coding: utf-8
+x = "{SNOWMAN}\"
+""".encode('utf-8')
         with self.makeTempFile(source) as sourcePath:
             self.assertHasErrors(sourcePath, [])
 
@@ -636,10 +631,9 @@ x = "%s"
         reported on stderr.
         """
         SNOWMAN = unichr(0x2603)
-        source = ("""\
-# coding: ascii
-x = "%s"
-""" % SNOWMAN).encode('utf-8')
+        source = f"""# coding: ascii
+x = "{SNOWMAN}\"
+""".encode('utf-8')
         with self.makeTempFile(source) as sourcePath:
             result = f"{sourcePath}: problem decoding source\n"
 
@@ -652,10 +646,9 @@ x = "%s"
         reported on stderr.
         """
         SNOWMAN = unichr(0x2603)
-        source = ("""\
-# coding: ascii
-x = "%s"
-""" % SNOWMAN).encode('utf-16')
+        source = f"""# coding: ascii
+x = "{SNOWMAN}\"
+""".encode('utf-16')
         with self.makeTempFile(source) as sourcePath:
             self.assertHasErrors(
                 sourcePath, [f"{sourcePath}: problem decoding source\n"])
@@ -759,8 +752,7 @@ class IntegrationTests(TestCase):
         printed to stderr.
         """
         d = self.runPyflakes([self.tempfilepath])
-        error_msg = '{}: No such file or directory{}'.format(self.tempfilepath,
-                                                             os.linesep)
+        error_msg = f'{self.tempfilepath}: No such file or directory{os.linesep}'
         self.assertEqual(d, ('', error_msg, 1))
 
     def test_errors_syntax(self):

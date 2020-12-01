@@ -55,10 +55,9 @@ class Reporter:
         if offset is not None:
             if sys.version_info < (3, 8):
                 offset = offset - (len(text) - len(line)) + 1
-            self._stderr.write('%s:%d:%d: %s\n' %
-                               (filename, lineno, offset, msg))
+            self._stderr.write(f'{filename}:{lineno}:{offset}: {msg}\n')
         else:
-            self._stderr.write('%s:%d: %s\n' % (filename, lineno, msg))
+            self._stderr.write(f'{filename}:{lineno}: {msg}\n')
         self._stderr.write(line)
         self._stderr.write('\n')
         if offset is not None:

@@ -679,7 +679,7 @@ class Test(TestCase):
 
     def test_usedInExec(self):
         exec_stmt = 'exec("print(1)", fu.bar)'
-        self.flakes('import fu; %s' % exec_stmt)
+        self.flakes(f'import fu; {exec_stmt}')
 
     def test_usedInLambda(self):
         self.flakes('import fu; lambda: fu')

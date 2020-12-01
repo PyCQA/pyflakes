@@ -310,9 +310,7 @@ class Builtin(Definition):
         super().__init__(name, None)
 
     def __repr__(self):
-        return '<{} object {!r} at 0x{:x}>'.format(self.__class__.__name__,
-                                                   self.name,
-                                                   id(self))
+        return f'<{self.__class__.__name__} object {self.name!r} at 0x{id(self):x}>'
 
 
 class UnhandledKeyType:
@@ -370,7 +368,7 @@ class Importation(Definition):
         if self._has_alias():
             return f'import {self.fullName} as {self.name}'
         else:
-            return 'import %s' % self.fullName
+            return f'import {self.fullName}'
 
     def __str__(self):
         """Return import full name with alias."""
@@ -440,9 +438,7 @@ class ImportationFrom(Importation):
     @property
     def source_statement(self):
         if self.real_name != self.name:
-            return 'from {} import {} as {}'.format(self.module,
-                                                    self.real_name,
-                                                    self.name)
+            return f'from {self.module} import {self.real_name} as {self.name}'
         else:
             return f'from {self.module} import {self.name}'
 
@@ -569,7 +565,7 @@ class Scope(dict):
 
     def __repr__(self):
         scope_cls = self.__class__.__name__
-        return '<{} at 0x{:x} {}>'.format(scope_cls, id(self), dict.__repr__(self))
+        return f'<{scope_cls} at 0x{id(self):x} {dict.__repr__(self)}>'
 
 
 class ClassScope(Scope):
@@ -846,7 +842,7 @@ class Checker:
         try:
             self.scopeStack = [Checker._ast_node_scope[type(tree)]()]
         except KeyError:
-            raise RuntimeError('No scope implemented for the node %r' % tree)
+            raise RuntimeError(f'No scope implemented for the node {tree!r}')
         self.exceptHandlers = [()]
         self.root = tree
         self._type_comments = _collect_type_comments(tree, file_tokens)
@@ -1106,7 +1102,7 @@ class Checker:
         # in the pyflakes testsuite (so more specific handling can be added if
         # needed).
         if os.environ.get('PYFLAKES_ERROR_UNKNOWN'):
-            raise NotImplementedError('Unexpected type: {}'.format(type(node)))
+            raise NotImplementedError(f'Unexpected type: {type(node)}')
         else:
             self.handleChildren(node)
 
