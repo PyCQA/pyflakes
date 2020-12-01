@@ -110,7 +110,7 @@ class CollectTypeCommentsTests(TestCase):
         """
         Test that the function works for text source
         """
-        ret = self._collect(u'x = 1  # type: int')
+        ret = self._collect('x = 1  # type: int')
         self.assertEqual(ret, {(ast.Assign, ('# type: int',))})
 
     def test_non_type_comment_ignored(self):

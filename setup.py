@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # Copyright 2005-2011 Divmod, Inc.
 # Copyright 2013 Florent Xicluna.  See LICENSE file for details
-from __future__ import with_statement
 
 import os.path
 

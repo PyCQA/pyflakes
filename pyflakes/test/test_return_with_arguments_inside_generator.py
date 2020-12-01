@@ -1,4 +1,3 @@
-
 from sys import version_info
 
 from pyflakes import messages as m

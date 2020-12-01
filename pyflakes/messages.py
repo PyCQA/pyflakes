@@ -3,7 +3,7 @@ Provide the class Message and its subclasses.
 """
 
 
-class Message(object):
+class Message:
     message = ''
     message_args = ()
 
@@ -13,8 +13,8 @@ class Message(object):
         self.col = getattr(loc, 'col_offset', 0)
 
     def __str__(self):
-        return '%s:%s:%s %s' % (self.filename, self.lineno, self.col+1,
-                                self.message % self.message_args)
+        return '{}:{}:{} {}'.format(self.filename, self.lineno, self.col+1,
+                                    self.message % self.message_args)
 
 
 class UnusedImport(Message):

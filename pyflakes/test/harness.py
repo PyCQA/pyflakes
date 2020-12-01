@@ -29,39 +29,39 @@ class TestCase(unittest.TestCase):
         expectedOutputs.sort(key=lambda t: t.__name__)
         self.assertEqual(outputs, expectedOutputs, '''\
 for input:
-%s
+{}
 expected outputs:
-%r
+{!r}
 but got:
-%s''' % (input, expectedOutputs, '\n'.join([str(o) for o in w.messages])))
+{}'''.format(input, expectedOutputs, '\n'.join([str(o) for o in w.messages])))
         return w
 
     if not hasattr(unittest.TestCase, 'assertIs'):
 
         def assertIs(self, expr1, expr2, msg=None):
             if expr1 is not expr2:
-                self.fail(msg or '%r is not %r' % (expr1, expr2))
+                self.fail(msg or f'{expr1!r} is not {expr2!r}')
 
     if not hasattr(unittest.TestCase, 'assertIsInstance'):
 
         def assertIsInstance(self, obj, cls, msg=None):
             """Same as self.assertTrue(isinstance(obj, cls))."""
             if not isinstance(obj, cls):
-                self.fail(msg or '%r is not an instance of %r' % (obj, cls))
+                self.fail(msg or f'{obj!r} is not an instance of {cls!r}')
 
     if not hasattr(unittest.TestCase, 'assertNotIsInstance'):
 
         def assertNotIsInstance(self, obj, cls, msg=None):
             """Same as self.assertFalse(isinstance(obj, cls))."""
             if isinstance(obj, cls):
-                self.fail(msg or '%r is an instance of %r' % (obj, cls))
+                self.fail(msg or f'{obj!r} is an instance of {cls!r}')
 
     if not hasattr(unittest.TestCase, 'assertIn'):
 
         def assertIn(self, member, container, msg=None):
             """Just like self.assertTrue(a in b)."""
             if member not in container:
-                self.fail(msg or '%r not found in %r' % (member, container))
+                self.fail(msg or f'{member!r} not found in {container!r}')
 
     if not hasattr(unittest.TestCase, 'assertNotIn'):
 
@@ -69,4 +69,4 @@ but got:
             """Just like self.assertTrue(a not in b)."""
             if member in container:
                 self.fail(msg or
-                          '%r unexpectedly found in %r' % (member, container))
+                          f'{member!r} unexpectedly found in {container!r}')
