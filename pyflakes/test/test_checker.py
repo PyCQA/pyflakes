@@ -1,8 +1,7 @@
 import ast
-import sys
 
 from pyflakes import checker
-from pyflakes.test.harness import TestCase, skipIf
+from pyflakes.test.harness import TestCase
 
 
 class TypeableVisitorTests(TestCase):
@@ -53,7 +52,6 @@ def f():
         self.assertIsInstance(visitor.typeable_nodes[1], ast.FunctionDef)
         self.assertIsInstance(visitor.typeable_nodes[2], ast.Assign)
 
-    @skipIf(sys.version_info < (3, 5), 'async syntax introduced in py35')
     def test_py35_node_types(self):
         """
         Test that the PEP 492 node types are collected

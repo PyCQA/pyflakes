@@ -49,7 +49,7 @@ def check(codeString, filename, reporter=None):
                 lines = codeString.splitlines()
                 if len(lines) >= lineno:
                     text = lines[lineno - 1]
-                    if sys.version_info >= (3, ) and isinstance(text, bytes):
+                    if isinstance(text, bytes):
                         try:
                             text = text.decode('ascii')
                         except UnicodeDecodeError:

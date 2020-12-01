@@ -19,9 +19,6 @@ import tokenize
 
 from pyflakes import messages
 
-PY2 = sys.version_info < (3, 0)
-PY35_PLUS = sys.version_info >= (3, 5)    # Python 3.5 and above
-PY36_PLUS = sys.version_info >= (3, 6)    # Python 3.6 and above
 PY38_PLUS = sys.version_info >= (3, 8)
 try:
     sys.pypy_version_info
@@ -29,60 +26,29 @@ try:
 except AttributeError:
     PYPY = False
 
-builtin_vars = dir(__import__('__builtin__' if PY2 else 'builtins'))
+builtin_vars = dir(__import__('builtins'))
 
-parse_format_string = string.Formatter().parse
 
-if PY2:
-    tokenize_tokenize = tokenize.generate_tokens
-else:
-    tokenize_tokenize = tokenize.tokenize
+def getNodeType(node_class):
+    return node_class.__name__.upper()
 
-if PY2:
-    def getNodeType(node_class):
-        # workaround str.upper() which is locale-dependent
-        return str(unicode(node_class.__name__).upper())
 
-    def get_raise_argument(node):
-        return node.type
+def get_raise_argument(node):
+    return node.exc
 
-else:
-    def getNodeType(node_class):
-        return node_class.__name__.upper()
 
-    def get_raise_argument(node):
-        return node.exc
+def getAlternatives(n):
+    if isinstance(n, ast.If):
+        return [n.body]
+    if isinstance(n, ast.Try):
+        return [n.body + n.orelse] + [[hdl] for hdl in n.handlers]
 
-    # Silence `pyflakes` from reporting `undefined name 'unicode'` in Python 3.
-    unicode = str
 
-# Python >= 3.3 uses ast.Try instead of (ast.TryExcept + ast.TryFinally)
-if PY2:
-    def getAlternatives(n):
-        if isinstance(n, (ast.If, ast.TryFinally)):
-            return [n.body]
-        if isinstance(n, ast.TryExcept):
-            return [n.body + n.orelse] + [[hdl] for hdl in n.handlers]
-else:
-    def getAlternatives(n):
-        if isinstance(n, ast.If):
-            return [n.body]
-        if isinstance(n, ast.Try):
-            return [n.body + n.orelse] + [[hdl] for hdl in n.handlers]
+FOR_TYPES = (ast.For, ast.AsyncFor)
+LOOP_TYPES = (ast.While, ast.For, ast.AsyncFor)
+FUNCTION_TYPES = (ast.FunctionDef, ast.AsyncFunctionDef)
+ANNASSIGN_TYPES = (ast.AnnAssign,)
 
-if PY35_PLUS:
-    FOR_TYPES = (ast.For, ast.AsyncFor)
-    LOOP_TYPES = (ast.While, ast.For, ast.AsyncFor)
-    FUNCTION_TYPES = (ast.FunctionDef, ast.AsyncFunctionDef)
-else:
-    FOR_TYPES = (ast.For,)
-    LOOP_TYPES = (ast.While, ast.For)
-    FUNCTION_TYPES = (ast.FunctionDef,)
-
-if PY36_PLUS:
-    ANNASSIGN_TYPES = (ast.AnnAssign,)
-else:
-    ANNASSIGN_TYPES = ()
 
 if PY38_PLUS:
     def _is_singleton(node):  # type: (ast.AST) -> bool
@@ -90,15 +56,9 @@ if PY38_PLUS:
             isinstance(node, ast.Constant) and
             isinstance(node.value, (bool, type(Ellipsis), type(None)))
         )
-elif not PY2:
-    def _is_singleton(node):  # type: (ast.AST) -> bool
-        return isinstance(node, (ast.NameConstant, ast.Ellipsis))
 else:
     def _is_singleton(node):  # type: (ast.AST) -> bool
-        return (
-            isinstance(node, ast.Name) and
-            node.id in {'True', 'False', 'Ellipsis', 'None'}
-        )
+        return isinstance(node, (ast.NameConstant, ast.Ellipsis))
 
 
 def _is_tuple_constant(node):  # type: (ast.AST) -> bool
@@ -112,9 +72,7 @@ if PY38_PLUS:
     def _is_constant(node):
         return isinstance(node, ast.Constant) or _is_tuple_constant(node)
 else:
-    _const_tps = (ast.Str, ast.Num)
-    if not PY2:
-        _const_tps += (ast.Bytes,)
+    _const_tps = (ast.Str, ast.Num, ast.Bytes)
 
     def _is_constant(node):
         return (
@@ -297,7 +255,7 @@ def convert_to_value(item):
             result.name,
             result,
         )
-    elif (not PY2) and isinstance(item, ast.NameConstant):
+    elif isinstance(item, ast.NameConstant):
         # None, True, False are nameconstants in python3, but names in 2
         return item.value
     else:
@@ -675,10 +633,8 @@ class DetectClassScopedMagic:
 
 # Globally defined names which are not attributes of the builtins module, or
 # are only present on some platforms.
-_MAGIC_GLOBALS = ['__file__', '__builtins__', 'WindowsError']
 # module scope annotation will store in `__annotations__`, see also PEP 526.
-if PY36_PLUS:
-    _MAGIC_GLOBALS.append('__annotations__')
+_MAGIC_GLOBALS = ['__file__', '__builtins__', 'WindowsError', '__annotations__']
 
 
 def getNodeName(node):
@@ -785,7 +741,7 @@ def make_tokens(code):
         code = code.encode('UTF-8')
     lines = iter(code.splitlines(True))
     # next(lines, b'') is to prevent an error in pypy3
-    return tuple(tokenize_tokenize(lambda: next(lines, b'')))
+    return tuple(tokenize.tokenize(lambda: next(lines, b'')))
 
 
 class _TypeableVisitor(ast.NodeVisitor):
@@ -859,8 +815,7 @@ class Checker:
         ast.GeneratorExp: GeneratorScope,
         ast.DictComp: GeneratorScope,
     }
-    if PY35_PLUS:
-        _ast_node_scope[ast.AsyncFunctionDef] = FunctionScope
+    _ast_node_scope[ast.AsyncFunctionDef] = FunctionScope
 
     nodeDepth = 0
     offset = None
@@ -1176,7 +1131,7 @@ class Checker:
         # try enclosing function scopes and global scope
         for scope in self.scopeStack[-1::-1]:
             if isinstance(scope, ClassScope):
-                if not PY2 and name == '__class__':
+                if name == '__class__':
                     return
                 elif in_generators is False:
                     # only generators used in a class scope can access the
@@ -1271,8 +1226,6 @@ class Checker:
             binding = Binding(name, node)
         elif name == '__all__' and isinstance(self.scope, ModuleScope):
             binding = ExportBinding(name, node._pyflakes_parent, self.scope)
-        elif PY2 and isinstance(getattr(node, 'ctx', None), ast.Param):
-            binding = Argument(name, self.getScopeNode(node))
         else:
             binding = Assignment(name, node)
         self.addBinding(node, binding)
@@ -1335,8 +1288,6 @@ class Checker:
                 parts = (comment,)
 
             for part in parts:
-                if PY2:
-                    part = part.replace('...', 'Ellipsis')
                 self.deferFunction(functools.partial(
                     self.handleStringAnnotation,
                     part, DummyNode(lineno, col_offset), lineno, col_offset,
@@ -1546,7 +1497,7 @@ class Checker:
 
     def _handle_string_dot_format(self, node):
         try:
-            placeholders = tuple(parse_format_string(node.func.value.s))
+            placeholders = tuple(string.Formatter().parse(node.func.value.s))
         except ValueError as e:
             self.report(messages.StringDotFormatInvalidFormat, node, e)
             return
@@ -1602,7 +1553,7 @@ class Checker:
             # spec can also contain format specifiers
             if spec is not None:
                 try:
-                    spec_placeholders = tuple(parse_format_string(spec))
+                    spec_placeholders = tuple(string.Formatter().parse(spec))
                 except ValueError as e:
                     self.report(messages.StringDotFormatInvalidFormat, node, e)
                     return
@@ -1945,7 +1896,7 @@ class Checker:
         self.handleChildren(node)
         self.popScope()
 
-    LISTCOMP = handleChildren if PY2 else GENERATOREXP
+    LISTCOMP = GENERATOREXP
 
     DICTCOMP = SETCOMP = GENERATOREXP
 
@@ -1961,8 +1912,6 @@ class Checker:
                 # we are doing locals() call in current scope
                 self.scope.usesLocals = True
         elif isinstance(node.ctx, ast.Store):
-            self.handleNodeStore(node)
-        elif PY2 and isinstance(node.ctx, ast.Param):
             self.handleNodeStore(node)
         elif isinstance(node.ctx, ast.Del):
             self.handleNodeDelete(node)
@@ -2036,24 +1985,14 @@ class Checker:
         args = []
         annotations = []
 
-        if PY2:
-            def addArgs(arglist):
-                for arg in arglist:
-                    if isinstance(arg, ast.Tuple):
-                        addArgs(arg.elts)
-                    else:
-                        args.append(arg.id)
-            addArgs(node.args.args)
-            defaults = node.args.defaults
-        else:
-            if PY38_PLUS:
-                for arg in node.args.posonlyargs:
-                    args.append(arg.arg)
-                    annotations.append(arg.annotation)
-            for arg in node.args.args + node.args.kwonlyargs:
+        if PY38_PLUS:
+            for arg in node.args.posonlyargs:
                 args.append(arg.arg)
                 annotations.append(arg.annotation)
-            defaults = node.args.defaults + node.args.kw_defaults
+        for arg in node.args.args + node.args.kwonlyargs:
+            args.append(arg.arg)
+            annotations.append(arg.annotation)
+        defaults = node.args.defaults + node.args.kw_defaults
 
         # Only for Python3 FunctionDefs
         is_py3_func = hasattr(node, 'returns')
@@ -2062,13 +2001,9 @@ class Checker:
             wildcard = getattr(node.args, arg_name)
             if not wildcard:
                 continue
-            args.append(wildcard if PY2 else wildcard.arg)
+            args.append(wildcard.arg)
             if is_py3_func:
-                if PY2:  # Python 2.7
-                    argannotation = arg_name + 'annotation'
-                    annotations.append(getattr(node.args, argannotation))
-                else:     # Python >= 3.4
-                    annotations.append(wildcard.annotation)
+                annotations.append(wildcard.annotation)
 
         if is_py3_func:
             annotations.append(node.returns)
@@ -2098,28 +2033,12 @@ class Checker:
                     self.report(messages.UnusedVariable, binding.source, name)
             self.deferAssignment(checkUnusedAssignments)
 
-            if PY2:
-                def checkReturnWithArgumentInsideGenerator():
-                    """
-                    Check to see if there is any return statement with
-                    arguments but the function is a generator.
-                    """
-                    if self.scope.isGenerator and self.scope.returnValue:
-                        self.report(messages.ReturnWithArgsInsideGenerator,
-                                    self.scope.returnValue)
-                self.deferAssignment(checkReturnWithArgumentInsideGenerator)
             self.popScope()
 
         self.deferFunction(runFunction)
 
     def ARGUMENTS(self, node):
         self.handleChildren(node, omit=('defaults', 'kw_defaults'))
-        if PY2:
-            scope_node = self.getScopeNode(node)
-            if node.vararg:
-                self.addBinding(node, Argument(node.vararg, scope_node))
-            if node.kwarg:
-                self.addBinding(node, Argument(node.kwarg, scope_node))
 
     def ARG(self, node):
         self.addBinding(node, Argument(node.arg, self.getScopeNode(node)))
@@ -2134,9 +2053,8 @@ class Checker:
             self.handleNode(deco, node)
         for baseNode in node.bases:
             self.handleNode(baseNode, node)
-        if not PY2:
-            for keywordNode in node.keywords:
-                self.handleNode(keywordNode, node)
+        for keywordNode in node.keywords:
+            self.handleNode(keywordNode, node)
         self.pushScope(ClassScope)
         # doctest does not process doctest within a doctest
         # classes within classes are processed.
@@ -2155,8 +2073,8 @@ class Checker:
         self.handleNode(node.target, node)
 
     def TUPLE(self, node):
-        if not PY2 and isinstance(node.ctx, ast.Store):
-            # Python 3 advanced tuple unpacking: a, *b, c = d.
+        if isinstance(node.ctx, ast.Store):
+            # Advanced tuple unpacking: a, *b, c = d.
             # Only one starred expression is allowed, and no more than 1<<8
             # assignments are allowed before a stared expression. There is
             # also a limit of 1<<24 expressions after the starred expression,
@@ -2209,7 +2127,7 @@ class Checker:
                     self.annotationsFutureEnabled = True
             elif alias.name == '*':
                 # Only Python 2, local import * is a SyntaxWarning
-                if not PY2 and not isinstance(self.scope, ModuleScope):
+                if not isinstance(self.scope, ModuleScope):
                     self.report(messages.ImportStarNotPermitted,
                                 node, module)
                     continue
@@ -2245,7 +2163,7 @@ class Checker:
     TRYEXCEPT = TRY
 
     def EXCEPTHANDLER(self, node):
-        if PY2 or node.name is None:
+        if node.name is None:
             self.handleChildren(node)
             return
 
