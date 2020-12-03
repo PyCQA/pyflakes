@@ -72,10 +72,6 @@ rebase your commits for you.
 
 All changes should include tests and pass flake8_.
 
-.. image:: https://api.travis-ci.org/PyCQA/pyflakes.svg?branch=master
-   :target: https://travis-ci.org/PyCQA/pyflakes
-   :alt: Travis CI build status
-
 .. image:: https://github.com/PyCQA/pyflakes/workflows/Test/badge.svg
    :target: https://github.com/PyCQA/pyflakes/actions
    :alt: GitHub Actions build status
