@@ -72,13 +72,13 @@ rebase your commits for you.
 
 All changes should include tests and pass flake8_.
 
-.. image:: https://api.travis-ci.org/PyCQA/pyflakes.svg?branch=master
-   :target: https://travis-ci.org/PyCQA/pyflakes
-   :alt: Build status
+.. image:: https://github.com/PyCQA/pyflakes/workflows/Test/badge.svg
+   :target: https://github.com/PyCQA/pyflakes/actions
+   :alt: GitHub Actions build status
 
-.. _Pylint: http://www.pylint.org/
+.. _Pylint: https://www.pylint.org/
 .. _flake8: https://pypi.org/project/flake8/
-.. _`PEP 8`: http://legacy.python.org/dev/peps/pep-0008/
+.. _`PEP 8`: https://www.python.org/dev/peps/pep-0008/
 .. _Pychecker: http://pychecker.sourceforge.net/
 .. _`rebase your changes`: https://git-scm.com/book/en/v2/Git-Branching-Rebasing
 .. _`GitHub pull request`: https://github.com/PyCQA/pyflakes/pulls
