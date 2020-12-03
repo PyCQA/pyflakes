@@ -50,8 +50,7 @@ jobs:
 
       - name: Tox tests
         shell: bash
-        run: |
-          tox -e py
+        run: tox -e py
 
       - name: Upload coverage
         uses: codecov/codecov-action@v1
