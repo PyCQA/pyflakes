@@ -20,7 +20,6 @@ from pyflakes.api import (
 from pyflakes.test.harness import TestCase, skipIf
 
 from io import StringIO
-unichr = chr
 
 try:
     sys.pypy_version_info
@@ -611,7 +610,7 @@ foo = '\\xyz'
         """
         If source file declares the correct encoding, no error is reported.
         """
-        SNOWMAN = unichr(0x2603)
+        SNOWMAN = chr(0x2603)
         source = f"""# coding: utf-8
 x = "{SNOWMAN}\"
 """.encode('utf-8')
@@ -630,7 +629,7 @@ x = "{SNOWMAN}\"
         If a source file contains bytes which cannot be decoded, this is
         reported on stderr.
         """
-        SNOWMAN = unichr(0x2603)
+        SNOWMAN = chr(0x2603)
         source = f"""# coding: ascii
 x = "{SNOWMAN}\"
 """.encode('utf-8')
@@ -645,7 +644,7 @@ x = "{SNOWMAN}\"
         If a source file contains bytes which cannot be decoded, this is
         reported on stderr.
         """
-        SNOWMAN = unichr(0x2603)
+        SNOWMAN = chr(0x2603)
         source = f"""# coding: ascii
 x = "{SNOWMAN}\"
 """.encode('utf-16')
