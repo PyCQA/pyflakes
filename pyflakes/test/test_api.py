@@ -610,10 +610,9 @@ foo = '\\xyz'
         """
         If source file declares the correct encoding, no error is reported.
         """
-        SNOWMAN = chr(0x2603)
-        source = f"""# coding: utf-8
-x = "{SNOWMAN}\"
-""".encode('utf-8')
+        source = """# coding: utf-8
+x = "☃\"
+""".encode()
         with self.makeTempFile(source) as sourcePath:
             self.assertHasErrors(sourcePath, [])
 
@@ -629,10 +628,9 @@ x = "{SNOWMAN}\"
         If a source file contains bytes which cannot be decoded, this is
         reported on stderr.
         """
-        SNOWMAN = chr(0x2603)
-        source = f"""# coding: ascii
-x = "{SNOWMAN}\"
-""".encode('utf-8')
+        source = """# coding: ascii
+x = "☃\"
+""".encode()
         with self.makeTempFile(source) as sourcePath:
             result = f"{sourcePath}: problem decoding source\n"
 
@@ -644,9 +642,8 @@ x = "{SNOWMAN}\"
         If a source file contains bytes which cannot be decoded, this is
         reported on stderr.
         """
-        SNOWMAN = chr(0x2603)
-        source = f"""# coding: ascii
-x = "{SNOWMAN}\"
+        source = """# coding: ascii
+x = "☃\"
 """.encode('utf-16')
         with self.makeTempFile(source) as sourcePath:
             self.assertHasErrors(

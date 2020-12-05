@@ -7,6 +7,7 @@ Also, it models the Bindings and Scopes.
 import __future__
 import ast
 import bisect
+import builtins
 import collections
 import contextlib
 import doctest
@@ -26,15 +27,13 @@ try:
 except AttributeError:
     PYPY = False
 
-builtin_vars = dir(__import__('builtins'))
+builtin_vars = dir(builtins)
+
+parse_format_string = string.Formatter().parse
 
 
 def getNodeType(node_class):
     return node_class.__name__.upper()
-
-
-def get_raise_argument(node):
-    return node.exc
 
 
 def getAlternatives(n):
@@ -42,12 +41,6 @@ def getAlternatives(n):
         return [n.body]
     if isinstance(n, ast.Try):
         return [n.body + n.orelse] + [[hdl] for hdl in n.handlers]
-
-
-FOR_TYPES = (ast.For, ast.AsyncFor)
-LOOP_TYPES = (ast.While, ast.For, ast.AsyncFor)
-FUNCTION_TYPES = (ast.FunctionDef, ast.AsyncFunctionDef)
-ANNASSIGN_TYPES = (ast.AnnAssign,)
 
 
 if PY38_PLUS:
@@ -72,11 +65,9 @@ if PY38_PLUS:
     def _is_constant(node):
         return isinstance(node, ast.Constant) or _is_tuple_constant(node)
 else:
-    _const_tps = (ast.Str, ast.Num, ast.Bytes)
-
     def _is_constant(node):
         return (
-            isinstance(node, _const_tps) or
+            isinstance(node, (ast.Str, ast.Num, ast.Bytes)) or
             _is_singleton(node) or
             _is_tuple_constant(node)
         )
@@ -630,7 +621,7 @@ class DetectClassScopedMagic:
 # Globally defined names which are not attributes of the builtins module, or
 # are only present on some platforms.
 # module scope annotation will store in `__annotations__`, see also PEP 526.
-_MAGIC_GLOBALS = ['__file__', '__builtins__', 'WindowsError', '__annotations__']
+_MAGIC_GLOBALS = ('__file__', '__builtins__', 'WindowsError', '__annotations__')
 
 
 def getNodeName(node):
@@ -701,7 +692,7 @@ def _is_any_typing_member(node, scope_stack):
 
 def is_typing_overload(value, scope_stack):
     return (
-        isinstance(value.source, FUNCTION_TYPES) and
+        isinstance(value.source, (ast.FunctionDef, ast.AsyncFunctionDef)) and
         any(
             _is_typing(dec, 'overload', scope_stack)
             for dec in value.source.decorator_list
@@ -804,6 +795,7 @@ class Checker:
     _ast_node_scope = {
         ast.Module: ModuleScope,
         ast.ClassDef: ClassScope,
+        ast.AsyncFunctionDef: FunctionScope,
         ast.FunctionDef: FunctionScope,
         ast.Lambda: FunctionScope,
         ast.ListComp: GeneratorScope,
@@ -811,7 +803,6 @@ class Checker:
         ast.GeneratorExp: GeneratorScope,
         ast.DictComp: GeneratorScope,
     }
-    _ast_node_scope[ast.AsyncFunctionDef] = FunctionScope
 
     nodeDepth = 0
     offset = None
@@ -976,7 +967,7 @@ class Checker:
                         messg = messages.UnusedImport
                         self.report(messg, value.source, str(value))
                     for node in value.redefined:
-                        if isinstance(self.getParent(node), FOR_TYPES):
+                        if isinstance(self.getParent(node), (ast.For, ast.AsyncFor)):
                             messg = messages.ImportShadowedByLoopVar
                         elif used:
                             continue
@@ -1065,14 +1056,15 @@ class Checker:
                 not self.differentForks(node, existing.source)):
 
             parent_stmt = self.getParent(value.source)
-            if isinstance(existing, Importation) and isinstance(parent_stmt, FOR_TYPES):
+            if (isinstance(existing, Importation) and
+                    isinstance(parent_stmt, (ast.For, ast.AsyncFor))):
                 self.report(messages.ImportShadowedByLoopVar,
                             node, value.name, existing.source)
 
             elif scope is self.scope:
                 if (isinstance(parent_stmt, ast.comprehension) and
                         not isinstance(self.getParent(existing.source),
-                                       (FOR_TYPES, ast.comprehension))):
+                                       (ast.For, ast.AsyncFor, ast.comprehension))):
                     self.report(messages.RedefinedInListComp,
                                 node, value.name, existing.source)
                 elif not existing.used and value.redefines(existing):
@@ -1214,9 +1206,9 @@ class Checker:
                     break
 
         parent_stmt = self.getParent(node)
-        if isinstance(parent_stmt, ANNASSIGN_TYPES) and parent_stmt.value is None:
+        if isinstance(parent_stmt, ast.AnnAssign) and parent_stmt.value is None:
             binding = Annotation(name, node)
-        elif isinstance(parent_stmt, (FOR_TYPES, ast.comprehension)) or (
+        elif isinstance(parent_stmt, (ast.For, ast.AsyncFor, ast.comprehension)) or (
                 parent_stmt != node._pyflakes_parent and
                 not self.isLiteralTupleUnpacking(parent_stmt)):
             binding = Binding(name, node)
@@ -1493,7 +1485,7 @@ class Checker:
 
     def _handle_string_dot_format(self, node):
         try:
-            placeholders = tuple(string.Formatter().parse(node.func.value.s))
+            placeholders = tuple(parse_format_string(node.func.value.s))
         except ValueError as e:
             self.report(messages.StringDotFormatInvalidFormat, node, e)
             return
@@ -1549,7 +1541,7 @@ class Checker:
             # spec can also contain format specifiers
             if spec is not None:
                 try:
-                    spec_placeholders = tuple(string.Formatter().parse(spec))
+                    spec_placeholders = tuple(parse_format_string(spec))
                 except ValueError as e:
                     self.report(messages.StringDotFormatInvalidFormat, node, e)
                     return
@@ -1777,13 +1769,11 @@ class Checker:
     def RAISE(self, node):
         self.handleChildren(node)
 
-        arg = get_raise_argument(node)
-
-        if isinstance(arg, ast.Call):
-            if is_notimplemented_name_node(arg.func):
+        if isinstance(node.exc, ast.Call):
+            if is_notimplemented_name_node(node.exc.func):
                 # Handle "raise NotImplemented(...)"
                 self.report(messages.RaiseNotImplemented, node)
-        elif is_notimplemented_name_node(arg):
+        elif is_notimplemented_name_node(node.exc):
             # Handle "raise NotImplemented"
             self.report(messages.RaiseNotImplemented, node)
 
@@ -1892,9 +1882,7 @@ class Checker:
         self.handleChildren(node)
         self.popScope()
 
-    LISTCOMP = GENERATOREXP
-
-    DICTCOMP = SETCOMP = GENERATOREXP
+    LISTCOMP = DICTCOMP = SETCOMP = GENERATOREXP
 
     def NAME(self, node):
         """
@@ -1922,7 +1910,7 @@ class Checker:
         n = node
         while hasattr(n, '_pyflakes_parent'):
             n, n_child = n._pyflakes_parent, n
-            if isinstance(n, LOOP_TYPES):
+            if isinstance(n, (ast.While, ast.For, ast.AsyncFor)):
                 # Doesn't apply unless it's in the loop itself
                 if n_child not in n.orelse:
                     return

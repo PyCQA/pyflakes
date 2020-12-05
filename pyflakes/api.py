@@ -49,11 +49,10 @@ def check(codeString, filename, reporter=None):
                 lines = codeString.splitlines()
                 if len(lines) >= lineno:
                     text = lines[lineno - 1]
-                    if isinstance(text, bytes):
-                        try:
-                            text = text.decode('ascii')
-                        except UnicodeDecodeError:
-                            text = None
+                    try:
+                        text = text.decode('ascii')
+                    except UnicodeDecodeError:
+                        text = None
             offset -= 1
 
         # If there's an encoding problem with the file, the text is None.
@@ -186,7 +185,7 @@ def _get_version():
     """
     Retrieve and format package version along with python version & OS used
     """
-    return (f'{__version__} Python {platform.python_version()} on {platform.system()}')
+    return f'{__version__} Python {platform.python_version()} on {platform.system()}'
 
 
 def main(prog=None, args=None):
