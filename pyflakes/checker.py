@@ -1981,8 +1981,7 @@ class Checker:
         # Only for Python3 FunctionDefs
         is_py3_func = hasattr(node, 'returns')
 
-        for arg_name in ('vararg', 'kwarg'):
-            wildcard = getattr(node.args, arg_name)
+        for wildcard in (node.args.vararg, node.args.kwarg):
             if not wildcard:
                 continue
             args.append(wildcard.arg)
