@@ -15,9 +15,6 @@ jobs:
           - { os: "windows-latest" , python-version: "2.7" }
           - { os: "windows-latest" , python-version: "3.5" }
           - { os: "windows-latest" , python-version: "3.9" }
-        exclude:
-          # Currently fails with PyPy 7.3.2, pending 7.3.3+ on GHA:
-          # https://github.com/actions/setup-python/issues/163
           - { os: "windows-latest" , python-version: "pypy2" }
           - { os: "windows-latest" , python-version: "pypy3" }
 
