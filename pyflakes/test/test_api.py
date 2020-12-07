@@ -462,12 +462,14 @@ def baz():
         """
         with self.makeTempFile("def foo(") as sourcePath:
             if PYPY:
-                result = f"""{sourcePath}:1:7: parenthesis is never closed
+                result = f"""\
+{sourcePath}:1:7: parenthesis is never closed
 def foo(
       ^
 """
             else:
-                result = f"""{sourcePath}:1:9: unexpected EOF while parsing
+                result = f"""\
+{sourcePath}:1:9: unexpected EOF while parsing
 def foo(
         ^
 """
@@ -487,7 +489,8 @@ def foo(
 
             self.assertHasErrors(
                 sourcePath,
-                [f"""{sourcePath}:2:{column}: invalid syntax
+                [f"""\
+{sourcePath}:2:{column}: invalid syntax
 \tfoo =
 {last_line}
 """])
@@ -545,7 +548,8 @@ foo(bar=baz, bax)
 
             self.assertHasErrors(
                 sourcePath,
-                [f"""{sourcePath}:1:{columnstr} {message}
+                [f"""\
+{sourcePath}:1:{columnstr} {message}
 foo(bar=baz, bax)
 {last_line}"""])
 
@@ -610,8 +614,9 @@ foo = '\\xyz'
         """
         If source file declares the correct encoding, no error is reported.
         """
-        source = """# coding: utf-8
-x = "☃\"
+        source = """\
+# coding: utf-8
+x = "☃"
 """.encode()
         with self.makeTempFile(source) as sourcePath:
             self.assertHasErrors(sourcePath, [])
@@ -628,8 +633,9 @@ x = "☃\"
         If a source file contains bytes which cannot be decoded, this is
         reported on stderr.
         """
-        source = """# coding: ascii
-x = "☃\"
+        source = """\
+# coding: ascii
+x = "☃"
 """.encode()
         with self.makeTempFile(source) as sourcePath:
             result = f"{sourcePath}: problem decoding source\n"
@@ -642,8 +648,9 @@ x = "☃\"
         If a source file contains bytes which cannot be decoded, this is
         reported on stderr.
         """
-        source = """# coding: ascii
-x = "☃\"
+        source = """\
+# coding: ascii
+x = "☃"
 """.encode('utf-16')
         with self.makeTempFile(source) as sourcePath:
             self.assertHasErrors(

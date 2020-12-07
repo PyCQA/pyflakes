@@ -1769,8 +1769,10 @@ class Checker:
     def RAISE(self, node):
         self.handleChildren(node)
 
-        if isinstance(node.exc, ast.Call):
-            if is_notimplemented_name_node(node.exc.func):
+        if (
+                isinstance(node.exc, ast.Call) and
+                is_notimplemented_name_node(node.exc.func)
+        ):
                 # Handle "raise NotImplemented(...)"
                 self.report(messages.RaiseNotImplemented, node)
         elif is_notimplemented_name_node(node.exc):
@@ -1978,17 +1980,17 @@ class Checker:
             annotations.append(arg.annotation)
         defaults = node.args.defaults + node.args.kw_defaults
 
-        # Only for Python3 FunctionDefs
-        is_py3_func = hasattr(node, 'returns')
+        # Only for FunctionDefs
+        is_non_lamda = hasattr(node, 'returns')
 
         for wildcard in (node.args.vararg, node.args.kwarg):
             if not wildcard:
                 continue
             args.append(wildcard.arg)
-            if is_py3_func:
+            if is_non_lamda:
                 annotations.append(wildcard.annotation)
 
-        if is_py3_func:
+        if is_non_lamda:
             annotations.append(node.returns)
 
         if len(set(args)) < len(args):
