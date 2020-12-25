@@ -866,7 +866,6 @@ class Checker(object):
     offset = None
     traceTree = False
     _in_annotation = AnnotationState.NONE
-    _in_deferred = False
 
     builtIns = set(builtin_vars).union(_MAGIC_GLOBALS)
     _customBuiltIns = os.environ.get('PYFLAKES_BUILTINS')
@@ -898,7 +897,6 @@ class Checker(object):
         for builtin in self.builtIns:
             self.addBinding(None, Builtin(builtin))
         self.handleChildren(tree)
-        self._in_deferred = True
         self.runDeferred(self._deferredFunctions)
         # Set _deferredFunctions to None so that deferFunction will fail
         # noisily if called after we've run through the deferred functions.
@@ -1803,10 +1801,7 @@ class Checker(object):
                 node.col_offset,
                 messages.ForwardAnnotationSyntaxError,
             )
-            if self._in_deferred:
-                fn()
-            else:
-                self.deferFunction(fn)
+            self.deferFunction(fn)
 
     if PY38_PLUS:
         def CONSTANT(self, node):

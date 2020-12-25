@@ -667,3 +667,22 @@ class TestTypeAnnotations(TestCase):
                 def f():  # type: () -> int
                     pass
         """)
+
+    @skipIf(version_info < (3, 6), 'new in Python 3.6')
+    def test_recursive_global_scope(self):
+        self.flakes("""
+            from typing import Optional, Tuple
+
+            class NestedTuple:
+                x: Tuple[int, Optional['NestedTuple']]
+        """)
+
+    @skipIf(version_info < (3, 6), 'new in Python 3.6')
+    def test_recursive_local_scope(self):
+        self.flakes("""
+            from typing import Optional, Tuple
+
+            def test():
+                class NestedTuple:
+                    x: Tuple[int, Optional['NestedTuple']]
+        """)
