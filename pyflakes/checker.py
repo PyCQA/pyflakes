@@ -22,7 +22,7 @@ from pyflakes import messages
 PY2 = sys.version_info < (3, 0)
 PY35_PLUS = sys.version_info >= (3, 5)    # Python 3.5 and above
 PY36_PLUS = sys.version_info >= (3, 6)    # Python 3.6 and above
-PY38_PLUS = sys.version_info >= (3, 8)
+PY38_PLUS = sys.version_info >= (3, 8)    # Python 3.8 and above
 try:
     sys.pypy_version_info
     PYPY = True
