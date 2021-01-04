@@ -335,6 +335,19 @@ class TestTypeAnnotations(TestCase):
         def g(t: 'T'): pass
         ''')
 
+    @skipIf(version_info < (3, 6), 'new in Python 3.6')
+    def test_type_annotation_clobbers_all(self):
+        self.flakes('''\
+        from typing import TYPE_CHECKING, List
+
+        from y import z
+
+        if not TYPE_CHECKING:
+            __all__ = ("z",)
+        else:
+            __all__: List[str]
+        ''')
+
     def test_typeCommentsMarkImportsAsUsed(self):
         self.flakes("""
         from mod import A, B, C, D, E, F, G

@@ -1140,7 +1140,10 @@ class Checker(object):
             # then assume the rebound name is used as a global or within a loop
             value.used = self.scope[value.name].used
 
-        self.scope[value.name] = value
+        # don't treat annotations as assignments if there is an existing value
+        # in scope
+        if value.name not in self.scope or not isinstance(value, Annotation):
+            self.scope[value.name] = value
 
     def _unknown_handler(self, node):
         # this environment variable configures whether to error on unknown
