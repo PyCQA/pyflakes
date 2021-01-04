@@ -524,6 +524,21 @@ class TestTypeAnnotations(TestCase):
         maybe_int = tsac('Maybe[int]', 42)
         """)
 
+    def test_quoted_TypeVar_constraints(self):
+        self.flakes("""
+        from typing import TypeVar, Optional
+
+        T = TypeVar('T', 'str', 'Optional[int]', bytes)
+        """)
+
+    def test_quoted_TypeVar_bound(self):
+        self.flakes("""
+        from typing import TypeVar, Optional, List
+
+        T = TypeVar('T', bound='Optional[int]')
+        S = TypeVar('S', int, bound='List[int]')
+        """)
+
     @skipIf(version_info < (3,), 'new in Python 3')
     def test_literal_type_typing(self):
         self.flakes("""

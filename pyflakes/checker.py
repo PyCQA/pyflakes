@@ -1680,6 +1680,19 @@ class Checker(object):
             with self._enter_annotation(AnnotationState.STRING):
                 self.handleNode(node.args[0], node)
 
+        elif _is_typing(node.func, 'TypeVar', self.scopeStack):
+            # TypeVar("T", "int", "str")
+            for arg in node.args[1:]:
+                if isinstance(arg, ast.Str):
+                    with self._enter_annotation():
+                        self.handleNode(arg, node)
+
+            # TypeVar("T", bound="str")
+            for keyword in node.keywords:
+                if keyword.arg == 'bound' and isinstance(keyword.value, ast.Str):
+                    with self._enter_annotation():
+                        self.handleNode(keyword.value, node)
+
         self.handleChildren(node)
 
     def _handle_percent_format(self, node):
