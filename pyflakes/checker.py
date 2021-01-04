@@ -992,7 +992,10 @@ class Checker(object):
 
             if all_binding:
                 all_names = set(all_binding.names)
-                undefined = all_names.difference(scope)
+                undefined = [
+                    name for name in all_binding.names
+                    if name not in scope
+                ]
             else:
                 all_names = undefined = []
 
