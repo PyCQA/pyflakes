@@ -695,3 +695,44 @@ class TestTypeAnnotations(TestCase):
                 def f():  # type: () -> int
                     pass
         """)
+
+    def test_typednames_correct_forward_ref(self):
+        self.flakes("""
+            from typing import TypedDict, List, NamedTuple
+
+            List[TypedDict("x", {})]
+            List[TypedDict("x", x=int)]
+            List[NamedTuple("a", a=int)]
+            List[NamedTuple("a", [("a", int)])]
+        """)
+        self.flakes("""
+            from typing import TypedDict, List, NamedTuple, TypeVar
+
+            List[TypedDict("x", {"x": "Y"})]
+            List[TypedDict("x", x="Y")]
+            List[NamedTuple("a", [("a", "Y")])]
+            List[NamedTuple("a", a="Y")]
+            List[TypedDict("x", {"x": List["a"]})]
+            List[TypeVar("A", bound="C")]
+            List[TypeVar("A", List["C"])]
+        """, *[m.UndefinedName]*7)
+        self.flakes("""
+            from typing import NamedTuple, TypeVar, cast
+            from t import A, B, C, D, E
+
+            NamedTuple("A", [("a", A["C"])])
+            TypeVar("A", bound=A["B"])
+            TypeVar("A", A["D"])
+            cast(A["E"], [])
+        """)
+
+    @skipIf(version_info < (3, 6), 'new in Python 3.6')
+    def test_namedtypes_classes(self):
+        self.flakes("""
+            from typing import TypedDict, NamedTuple
+            class X(TypedDict):
+                y: TypedDict("z", {"zz":int})
+
+            class Y(NamedTuple):
+                y: NamedTuple("v", [("vv", int)])
+        """)
