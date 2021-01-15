@@ -1689,13 +1689,12 @@ class Checker(object):
         elif _is_typing(node.func, 'TypeVar', self.scopeStack):
             # TypeVar("T", "int", "str")
             for arg in node.args[1:]:
-                if isinstance(arg, ast.Str):
-                    with self._enter_annotation():
-                        self.handleNode(arg, node)
+                with self._enter_annotation():
+                    self.handleNode(arg, node)
 
             # TypeVar("T", bound="str")
             for keyword in node.keywords:
-                if keyword.arg == 'bound' and isinstance(keyword.value, ast.Str):
+                if keyword.arg == 'bound':
                     with self._enter_annotation():
                         self.handleNode(keyword.value, node)
 

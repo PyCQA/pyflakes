@@ -543,6 +543,11 @@ class TestTypeAnnotations(TestCase):
 
         T = TypeVar('T', 'str', 'Optional[int]', bytes)
         """)
+        self.flakes("""
+        from typing import TypeVar
+        from t import A, C
+        TypeVar("D", A["C"])
+        """)
 
     def test_quoted_TypeVar_bound(self):
         self.flakes("""
@@ -550,6 +555,11 @@ class TestTypeAnnotations(TestCase):
 
         T = TypeVar('T', bound='Optional[int]')
         S = TypeVar('S', int, bound='List[int]')
+        """)
+        self.flakes("""
+        from typing import TypeVar
+        from t import A, C
+        TypeVar("D", bound=A["C"])
         """)
 
     @skipIf(version_info < (3,), 'new in Python 3')
