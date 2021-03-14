@@ -1678,28 +1678,79 @@ class Checker(object):
         ):
             self._handle_string_dot_format(node)
 
+        omit = []
+        annotated = []
+        not_annotated = []
+
         if (
             _is_typing(node.func, 'cast', self.scopeStack) and
-            len(node.args) >= 1 and
-            isinstance(node.args[0], ast.Str)
+            len(node.args) >= 1
         ):
-            with self._enter_annotation(AnnotationState.STRING):
+            with self._enter_annotation():
                 self.handleNode(node.args[0], node)
 
         elif _is_typing(node.func, 'TypeVar', self.scopeStack):
+
             # TypeVar("T", "int", "str")
-            for arg in node.args[1:]:
-                if isinstance(arg, ast.Str):
-                    with self._enter_annotation():
-                        self.handleNode(arg, node)
+            omit += ["args"]
+            annotated += [arg for arg in node.args[1:]]
 
             # TypeVar("T", bound="str")
-            for keyword in node.keywords:
-                if keyword.arg == 'bound' and isinstance(keyword.value, ast.Str):
-                    with self._enter_annotation():
-                        self.handleNode(keyword.value, node)
+            omit += ["keywords"]
+            annotated += [k.value for k in node.keywords if k.arg == "bound"]
+            not_annotated += [
+                (k, ["value"] if k.arg == "bound" else None)
+                for k in node.keywords
+            ]
 
-        self.handleChildren(node)
+        elif _is_typing(node.func, "TypedDict", self.scopeStack):
+            # TypedDict("a", {"a": int})
+            if len(node.args) > 1 and isinstance(node.args[1], ast.Dict):
+                omit += ["args"]
+                annotated += node.args[1].values
+                not_annotated += [
+                    (arg, ["values"] if i == 1 else None)
+                    for i, arg in enumerate(node.args)
+                ]
+
+            # TypedDict("a", a=int)
+            omit += ["keywords"]
+            annotated += [k.value for k in node.keywords]
+            not_annotated += [(k, ["value"]) for k in node.keywords]
+
+        elif _is_typing(node.func, "NamedTuple", self.scopeStack):
+            # NamedTuple("a", [("a", int)])
+            if (
+                len(node.args) > 1 and
+                isinstance(node.args[1], (ast.Tuple, ast.List)) and
+                all(isinstance(x, (ast.Tuple, ast.List)) and
+                    len(x.elts) == 2 for x in node.args[1].elts)
+            ):
+                omit += ["args"]
+                annotated += [elt.elts[1] for elt in node.args[1].elts]
+                not_annotated += [(elt.elts[0], None) for elt in node.args[1].elts]
+                not_annotated += [
+                    (arg, ["elts"] if i == 1 else None)
+                    for i, arg in enumerate(node.args)
+                ]
+                not_annotated += [(elt, "elts") for elt in node.args[1].elts]
+
+            # NamedTuple("a", a=int)
+            omit += ["keywords"]
+            annotated += [k.value for k in node.keywords]
+            not_annotated += [(k, ["value"]) for k in node.keywords]
+
+        if omit:
+            with self._enter_annotation(AnnotationState.NONE):
+                for na_node, na_omit in not_annotated:
+                    self.handleChildren(na_node, omit=na_omit)
+                self.handleChildren(node, omit=omit)
+
+            with self._enter_annotation():
+                for annotated_node in annotated:
+                    self.handleNode(annotated_node, node)
+        else:
+            self.handleChildren(node)
 
     def _handle_percent_format(self, node):
         try:
