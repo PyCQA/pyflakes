@@ -284,6 +284,14 @@ class TestTypeAnnotations(TestCase):
         ''', m.ForwardAnnotationSyntaxError)
 
     @skipIf(version_info < (3, 6), 'new in Python 3.6')
+    def test_annotating_an_import(self):
+        self.flakes('''
+            from a import b, c
+            b: c
+            print(b)
+        ''')
+
+    @skipIf(version_info < (3, 6), 'new in Python 3.6')
     def test_unused_annotation(self):
         # Unused annotations are fine in module and class scope
         self.flakes('''
