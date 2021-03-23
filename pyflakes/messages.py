@@ -65,6 +65,14 @@ class ImportStarUsage(Message):
         self.message_args = (name, from_list)
 
 
+class TypeCheckingOnly(Message):
+    message = 'name only defined for TYPE_CHECKIN: %r'
+
+    def __init__(self, filename, loc, name):
+        Message.__init__(self, filename, loc)
+        self.message_args = (name,)
+
+
 class UndefinedName(Message):
     message = 'undefined name %r'
 
