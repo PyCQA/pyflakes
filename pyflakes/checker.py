@@ -878,7 +878,8 @@ class Checker(object):
     #       eventually make this a required positional argument.  For now it
     #       is defaulted to `()` for api compatibility.
     def __init__(self, tree, filename='(none)', builtins=None,
-                 withDoctest='PYFLAKES_DOCTEST' in os.environ, file_tokens=()):
+                 withDoctest='PYFLAKES_DOCTEST' in os.environ, file_tokens=(),
+                 trace=False):
         self._nodeHandlers = {}
         self._deferredFunctions = []
         self._deferredAssignments = []
@@ -888,6 +889,7 @@ class Checker(object):
         if builtins:
             self.builtIns = self.builtIns.union(builtins)
         self.withDoctest = withDoctest
+        self.traceTree = trace
         try:
             self.scopeStack = [Checker._ast_node_scope[type(tree)]()]
         except KeyError:

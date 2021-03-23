@@ -17,7 +17,7 @@ __all__ = ['check', 'checkPath', 'checkRecursive', 'iterSourceCode', 'main']
 PYTHON_SHEBANG_REGEX = re.compile(br'^#!.*\bpython([23](\.\d+)?|w)?[dmu]?\s')
 
 
-def check(codeString, filename, reporter=None):
+def check(codeString, filename, reporter=None, trace=False):
     """
     Check the Python source given by C{codeString} for flakes.
 
@@ -71,14 +71,15 @@ def check(codeString, filename, reporter=None):
         return 1
     # Okay, it's syntactically valid.  Now check it.
     file_tokens = checker.make_tokens(codeString)
-    w = checker.Checker(tree, file_tokens=file_tokens, filename=filename)
+    w = checker.Checker(
+        tree, file_tokens=file_tokens, filename=filename, trace=trace)
     w.messages.sort(key=lambda m: m.lineno)
     for warning in w.messages:
         reporter.flake(warning)
     return len(w.messages)
 
 
-def checkPath(filename, reporter=None):
+def checkPath(filename, reporter=None, trace=False):
     """
     Check the given path, printing out any warnings detected.
 
@@ -96,7 +97,7 @@ def checkPath(filename, reporter=None):
         msg = sys.exc_info()[1]
         reporter.unexpectedError(filename, msg.args[1])
         return 1
-    return check(codestr, filename, reporter)
+    return check(codestr, filename, reporter, trace=trace)
 
 
 def isPythonFile(filename):
@@ -140,7 +141,7 @@ def iterSourceCode(paths):
             yield path
 
 
-def checkRecursive(paths, reporter):
+def checkRecursive(paths, reporter, trace=False):
     """
     Recursively check all source files in C{paths}.
 
@@ -152,7 +153,7 @@ def checkRecursive(paths, reporter):
     """
     warnings = 0
     for sourcePath in iterSourceCode(paths):
-        warnings += checkPath(sourcePath, reporter)
+        warnings += checkPath(sourcePath, reporter, trace=trace)
     return warnings
 
 
@@ -202,12 +203,15 @@ def main(prog=None, args=None):
     parser = argparse.ArgumentParser(prog=prog,
                                      description='Check Python source files for errors')
     parser.add_argument('-V', '--version', action='version', version=_get_version())
+    parser.add_argument('--trace', action='store_true',
+                        help='Print a trace of the check run')
     parser.add_argument('path', nargs='*',
                         help='Path(s) of Python file(s) to check. STDIN if not given.')
-    args = parser.parse_args(args=args).path
+    args = parser.parse_args(args=args)
     reporter = modReporter._makeDefaultReporter()
-    if args:
-        warnings = checkRecursive(args, reporter)
+    if args.path:
+        warnings = checkRecursive(args.path, reporter, trace=args.trace)
     else:
-        warnings = check(sys.stdin.read(), '<stdin>', reporter)
+        warnings = check(
+            sys.stdin.read(), '<stdin>', reporter, trace=args.trace)
     raise SystemExit(warnings > 0)
