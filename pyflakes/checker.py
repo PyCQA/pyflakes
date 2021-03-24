@@ -548,6 +548,10 @@ class Annotation(Binding):
     annotation.
     """
 
+    def redefines(self, other):
+        """An Annotation doesn't define any name, so it cannot redefine one."""
+        return False
+
 
 class FunctionDefinition(Definition):
     pass
