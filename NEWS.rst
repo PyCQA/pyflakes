@@ -1,3 +1,7 @@
+2.3.1 (2021-03-24)
+
+- Fix regression in 2.3.0: type annotations no longer redefine imports
+
 2.3.0 (2021-03-14)
 
 - Recognize tuple concatenation in ``__all__`` export definitions
