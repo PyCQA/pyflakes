@@ -1,3 +1,19 @@
+2.3.1 (2021-03-24)
+
+- Fix regression in 2.3.0: type annotations no longer redefine imports
+
+2.3.0 (2021-03-14)
+
+- Recognize tuple concatenation in ``__all__`` export definitions
+- Better support use of annotation-only assignments when using
+  ``from __future__ import annotations``
+- Recognize special-case typing for ``Annotated``
+- Fix undefined name ``__qualname__`` in class scope
+- Recognize special-cased typing for ``TypeVar``
+- Errors for undefined exports in ``__all__`` are shown in a deterministic order
+- Fix false positives in certain typing constructs (``TypeVar``,
+  ``NamedTuple``, ``TypedDict``, ``cast``)
+
 2.2.0 (2020-04-08)
 
 - Include column information in error messages

@@ -263,6 +263,14 @@ class TestTypeAnnotations(TestCase):
         class A: pass
         ''')
         self.flakes('''
+        T: object
+        def f(t: T): pass
+        ''', m.UndefinedName)
+        self.flakes('''
+        T: object
+        def g(t: 'T'): pass
+        ''')
+        self.flakes('''
         a: 'A B'
         ''', m.ForwardAnnotationSyntaxError)
         self.flakes('''
@@ -274,6 +282,34 @@ class TestTypeAnnotations(TestCase):
         self.flakes('''
         a: 'a: "A"'
         ''', m.ForwardAnnotationSyntaxError)
+
+    @skipIf(version_info < (3, 6), 'new in Python 3.6')
+    def test_annotating_an_import(self):
+        self.flakes('''
+            from a import b, c
+            b: c
+            print(b)
+        ''')
+
+    @skipIf(version_info < (3, 6), 'new in Python 3.6')
+    def test_unused_annotation(self):
+        # Unused annotations are fine in module and class scope
+        self.flakes('''
+        x: int
+        class Cls:
+            y: int
+        ''')
+        # TODO: this should print a UnusedVariable message
+        self.flakes('''
+        def f():
+            x: int
+        ''')
+        # This should only print one UnusedVariable message
+        self.flakes('''
+        def f():
+            x: int
+            x = 3
+        ''', m.UnusedVariable)
 
     @skipIf(version_info < (3, 5), 'new in Python 3.5')
     def test_annotated_async_def(self):
@@ -299,6 +335,26 @@ class TestTypeAnnotations(TestCase):
             b: Undefined
         class B: pass
         ''', m.UndefinedName)
+
+        self.flakes('''
+        from __future__ import annotations
+        T: object
+        def f(t: T): pass
+        def g(t: 'T'): pass
+        ''')
+
+    @skipIf(version_info < (3, 6), 'new in Python 3.6')
+    def test_type_annotation_clobbers_all(self):
+        self.flakes('''\
+        from typing import TYPE_CHECKING, List
+
+        from y import z
+
+        if not TYPE_CHECKING:
+            __all__ = ("z",)
+        else:
+            __all__: List[str]
+        ''')
 
     def test_typeCommentsMarkImportsAsUsed(self):
         self.flakes("""
@@ -489,6 +545,21 @@ class TestTypeAnnotations(TestCase):
         maybe_int = tsac('Maybe[int]', 42)
         """)
 
+    def test_quoted_TypeVar_constraints(self):
+        self.flakes("""
+        from typing import TypeVar, Optional
+
+        T = TypeVar('T', 'str', 'Optional[int]', bytes)
+        """)
+
+    def test_quoted_TypeVar_bound(self):
+        self.flakes("""
+        from typing import TypeVar, Optional, List
+
+        T = TypeVar('T', bound='Optional[int]')
+        S = TypeVar('S', int, bound='List[int]')
+        """)
+
     @skipIf(version_info < (3,), 'new in Python 3')
     def test_literal_type_typing(self):
         self.flakes("""
@@ -506,6 +577,42 @@ class TestTypeAnnotations(TestCase):
         def f(x: Literal['some string']) -> None:
             return None
         """)
+
+    @skipIf(version_info < (3,), 'new in Python 3')
+    def test_annotated_type_typing_missing_forward_type(self):
+        self.flakes("""
+        from typing import Annotated
+
+        def f(x: Annotated['integer']) -> None:
+            return None
+        """, m.UndefinedName)
+
+    @skipIf(version_info < (3,), 'new in Python 3')
+    def test_annotated_type_typing_missing_forward_type_multiple_args(self):
+        self.flakes("""
+        from typing import Annotated
+
+        def f(x: Annotated['integer', 1]) -> None:
+            return None
+        """, m.UndefinedName)
+
+    @skipIf(version_info < (3,), 'new in Python 3')
+    def test_annotated_type_typing_with_string_args(self):
+        self.flakes("""
+        from typing import Annotated
+
+        def f(x: Annotated[int, '> 0']) -> None:
+            return None
+        """)
+
+    @skipIf(version_info < (3,), 'new in Python 3')
+    def test_annotated_type_typing_with_string_args_in_union(self):
+        self.flakes("""
+        from typing import Annotated, Union
+
+        def f(x: Union[Annotated['int', '>0'], 'integer']) -> None:
+            return None
+        """, m.UndefinedName)
 
     @skipIf(version_info < (3,), 'new in Python 3')
     def test_literal_type_some_other_module(self):
@@ -615,4 +722,46 @@ class TestTypeAnnotations(TestCase):
             class C(Protocol):
                 def f():  # type: () -> int
                     pass
+
+            """)
+
+    def test_typednames_correct_forward_ref(self):
+        self.flakes("""
+            from typing import TypedDict, List, NamedTuple
+
+            List[TypedDict("x", {})]
+            List[TypedDict("x", x=int)]
+            List[NamedTuple("a", a=int)]
+            List[NamedTuple("a", [("a", int)])]
+        """)
+        self.flakes("""
+            from typing import TypedDict, List, NamedTuple, TypeVar
+
+            List[TypedDict("x", {"x": "Y"})]
+            List[TypedDict("x", x="Y")]
+            List[NamedTuple("a", [("a", "Y")])]
+            List[NamedTuple("a", a="Y")]
+            List[TypedDict("x", {"x": List["a"]})]
+            List[TypeVar("A", bound="C")]
+            List[TypeVar("A", List["C"])]
+        """, *[m.UndefinedName]*7)
+        self.flakes("""
+            from typing import NamedTuple, TypeVar, cast
+            from t import A, B, C, D, E
+
+            NamedTuple("A", [("a", A["C"])])
+            TypeVar("A", bound=A["B"])
+            TypeVar("A", A["D"])
+            cast(A["E"], [])
+        """)
+
+    @skipIf(version_info < (3, 6), 'new in Python 3.6')
+    def test_namedtypes_classes(self):
+        self.flakes("""
+            from typing import TypedDict, NamedTuple
+            class X(TypedDict):
+                y: TypedDict("z", {"zz":int})
+
+            class Y(NamedTuple):
+                y: NamedTuple("v", [("vv", int)])
         """)
