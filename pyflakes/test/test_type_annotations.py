@@ -773,7 +773,7 @@ class TestTypeAnnotations(TestCase):
         if TYPE_CHECKING:
             from a import b
         b()
-        ''', m.UndefinedName)
+        ''', m.UndefinedName, m.UnusedImport)
 
     def test_ignores_typing_class_definition(self):
         """Ignores definitions within 'if TYPE_CHECKING' checking normal code."""

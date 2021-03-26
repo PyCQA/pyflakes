@@ -1215,21 +1215,21 @@ class Checker(object):
                     self.report(messages.InvalidPrintSyntax, node)
 
             try:
-                scope[name].used = (self.scope, node)
+                n = scope[name]
+                if n.for_annotations and not self._in_annotation:
+                    # Only defined during type-checking; this does not count. Real code
+                    # (not an annotation) using this binding will not work.
+                    continue
+                n.used = (self.scope, node)
 
                 # if the name of SubImportation is same as
                 # alias of other Importation and the alias
                 # is used, SubImportation also should be marked as used.
-                n = scope[name]
                 if isinstance(n, Importation) and n._has_alias():
                     try:
                         scope[n.fullName].used = (self.scope, node)
                     except KeyError:
                         pass
-                if n.for_annotations and not self._in_annotation:
-                    # Only defined during type-checking; this does not count. Real code
-                    # (not an annotation) using this binding will not work.
-                    continue
             except KeyError:
                 pass
             else:
