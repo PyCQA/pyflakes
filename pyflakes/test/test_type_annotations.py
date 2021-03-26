@@ -281,6 +281,13 @@ class TestTypeAnnotations(TestCase):
         a: 'a: "A"'
         ''', m.ForwardAnnotationSyntaxError)
 
+    def test_annotating_an_import(self):
+        self.flakes('''
+            from a import b, c
+            b: c
+            print(b)
+        ''')
+
     def test_unused_annotation(self):
         # Unused annotations are fine in module and class scope
         self.flakes('''
@@ -329,6 +336,18 @@ class TestTypeAnnotations(TestCase):
         T: object
         def f(t: T): pass
         def g(t: 'T'): pass
+        ''')
+
+    def test_type_annotation_clobbers_all(self):
+        self.flakes('''\
+        from typing import TYPE_CHECKING, List
+
+        from y import z
+
+        if not TYPE_CHECKING:
+            __all__ = ("z",)
+        else:
+            __all__: List[str]
         ''')
 
     def test_typeCommentsMarkImportsAsUsed(self):
@@ -516,6 +535,21 @@ class TestTypeAnnotations(TestCase):
         maybe_int = tsac('Maybe[int]', 42)
         """)
 
+    def test_quoted_TypeVar_constraints(self):
+        self.flakes("""
+        from typing import TypeVar, Optional
+
+        T = TypeVar('T', 'str', 'Optional[int]', bytes)
+        """)
+
+    def test_quoted_TypeVar_bound(self):
+        self.flakes("""
+        from typing import TypeVar, Optional, List
+
+        T = TypeVar('T', bound='Optional[int]')
+        S = TypeVar('S', int, bound='List[int]')
+        """)
+
     def test_literal_type_typing(self):
         self.flakes("""
         from typing import Literal
@@ -649,4 +683,44 @@ class TestTypeAnnotations(TestCase):
             class C(Protocol):
                 def f():  # type: () -> int
                     pass
+        """)
+
+    def test_typednames_correct_forward_ref(self):
+        self.flakes("""
+            from typing import TypedDict, List, NamedTuple
+
+            List[TypedDict("x", {})]
+            List[TypedDict("x", x=int)]
+            List[NamedTuple("a", a=int)]
+            List[NamedTuple("a", [("a", int)])]
+        """)
+        self.flakes("""
+            from typing import TypedDict, List, NamedTuple, TypeVar
+
+            List[TypedDict("x", {"x": "Y"})]
+            List[TypedDict("x", x="Y")]
+            List[NamedTuple("a", [("a", "Y")])]
+            List[NamedTuple("a", a="Y")]
+            List[TypedDict("x", {"x": List["a"]})]
+            List[TypeVar("A", bound="C")]
+            List[TypeVar("A", List["C"])]
+        """, *[m.UndefinedName]*7)
+        self.flakes("""
+            from typing import NamedTuple, TypeVar, cast
+            from t import A, B, C, D, E
+
+            NamedTuple("A", [("a", A["C"])])
+            TypeVar("A", bound=A["B"])
+            TypeVar("A", A["D"])
+            cast(A["E"], [])
+        """)
+
+    def test_namedtypes_classes(self):
+        self.flakes("""
+            from typing import TypedDict, NamedTuple
+            class X(TypedDict):
+                y: TypedDict("z", {"zz":int})
+
+            class Y(NamedTuple):
+                y: NamedTuple("v", [("vv", int)])
         """)

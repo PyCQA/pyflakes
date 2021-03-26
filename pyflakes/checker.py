@@ -493,6 +493,10 @@ class Annotation(Binding):
     annotation.
     """
 
+    def redefines(self, other):
+        """An Annotation doesn't define any name, so it cannot redefine one."""
+        return False
+
 
 class FunctionDefinition(Definition):
     pass
@@ -934,7 +938,10 @@ class Checker:
 
             if all_binding:
                 all_names = set(all_binding.names)
-                undefined = all_names.difference(scope)
+                undefined = [
+                    name for name in all_binding.names
+                    if name not in scope
+                ]
             else:
                 all_names = undefined = []
 
@@ -1080,7 +1087,10 @@ class Checker:
             # then assume the rebound name is used as a global or within a loop
             value.used = self.scope[value.name].used
 
-        self.scope[value.name] = value
+        # don't treat annotations as assignments if there is an existing value
+        # in scope
+        if value.name not in self.scope or not isinstance(value, Annotation):
+            self.scope[value.name] = value
 
     def _unknown_handler(self, node):
         # this environment variable configures whether to error on unknown
@@ -1611,15 +1621,79 @@ class Checker:
         ):
             self._handle_string_dot_format(node)
 
+        omit = []
+        annotated = []
+        not_annotated = []
+
         if (
             _is_typing(node.func, 'cast', self.scopeStack) and
-            len(node.args) >= 1 and
-            isinstance(node.args[0], ast.Str)
+            len(node.args) >= 1
         ):
-            with self._enter_annotation(AnnotationState.STRING):
+            with self._enter_annotation():
                 self.handleNode(node.args[0], node)
 
-        self.handleChildren(node)
+        elif _is_typing(node.func, 'TypeVar', self.scopeStack):
+
+            # TypeVar("T", "int", "str")
+            omit += ["args"]
+            annotated += [arg for arg in node.args[1:]]
+
+            # TypeVar("T", bound="str")
+            omit += ["keywords"]
+            annotated += [k.value for k in node.keywords if k.arg == "bound"]
+            not_annotated += [
+                (k, ["value"] if k.arg == "bound" else None)
+                for k in node.keywords
+            ]
+
+        elif _is_typing(node.func, "TypedDict", self.scopeStack):
+            # TypedDict("a", {"a": int})
+            if len(node.args) > 1 and isinstance(node.args[1], ast.Dict):
+                omit += ["args"]
+                annotated += node.args[1].values
+                not_annotated += [
+                    (arg, ["values"] if i == 1 else None)
+                    for i, arg in enumerate(node.args)
+                ]
+
+            # TypedDict("a", a=int)
+            omit += ["keywords"]
+            annotated += [k.value for k in node.keywords]
+            not_annotated += [(k, ["value"]) for k in node.keywords]
+
+        elif _is_typing(node.func, "NamedTuple", self.scopeStack):
+            # NamedTuple("a", [("a", int)])
+            if (
+                len(node.args) > 1 and
+                isinstance(node.args[1], (ast.Tuple, ast.List)) and
+                all(isinstance(x, (ast.Tuple, ast.List)) and
+                    len(x.elts) == 2 for x in node.args[1].elts)
+            ):
+                omit += ["args"]
+                annotated += [elt.elts[1] for elt in node.args[1].elts]
+                not_annotated += [(elt.elts[0], None) for elt in node.args[1].elts]
+                not_annotated += [
+                    (arg, ["elts"] if i == 1 else None)
+                    for i, arg in enumerate(node.args)
+                ]
+                not_annotated += [(elt, "elts") for elt in node.args[1].elts]
+
+            # NamedTuple("a", a=int)
+            omit += ["keywords"]
+            annotated += [k.value for k in node.keywords]
+            not_annotated += [(k, ["value"]) for k in node.keywords]
+
+        if omit:
+            with self._enter_annotation(AnnotationState.NONE):
+                for na_node, na_omit in not_annotated:
+                    self.handleChildren(na_node, omit=na_omit)
+                self.handleChildren(node, omit=omit)
+
+            with self._enter_annotation():
+                for annotated_node in annotated:
+                    self.handleNode(annotated_node, node)
+        else:
+            self.handleChildren(node)
 
     def _handle_percent_format(self, node):
         try:
