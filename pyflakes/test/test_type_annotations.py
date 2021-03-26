@@ -707,7 +707,7 @@ class TestTypeAnnotations(TestCase):
     def test_typing_guard_with_elif_branch(self):
         # This test will actually not raise an error, even though it by analysis can
         # be shown to have an error (Protocol is not defined outside TYPE_CHECKING).
-        # Pyflakes currently does not to case analysis.
+        # Pyflakes currently does not do case analysis.
 
         self.flakes("""
             from typing import TYPE_CHECKING
@@ -765,3 +765,45 @@ class TestTypeAnnotations(TestCase):
             class Y(NamedTuple):
                 y: NamedTuple("v", [("vv", int)])
         """)
+
+    def test_ignores_typing_imports(self):
+        """Ignores imports within 'if TYPE_CHECKING' checking normal code."""
+        self.flakes('''
+        from typing import TYPE_CHECKING
+        if TYPE_CHECKING:
+            from a import b
+        b()
+        ''', m.UndefinedName)
+
+    def test_ignores_typing_class_definition(self):
+        """Ignores definitions within 'if TYPE_CHECKING' checking normal code."""
+        self.flakes('''
+        from typing import TYPE_CHECKING
+        if TYPE_CHECKING:
+            class T:
+                pass
+        t = T()
+        ''', m.UndefinedName)
+
+    @skipIf(version_info < (3,), 'has type annotations')
+    def test_uses_typing_imports_for_annotations(self):
+        """Uses imports within 'if TYPE_CHECKING' checking annotations."""
+        self.flakes('''
+        from typing import TYPE_CHECKING
+        if TYPE_CHECKING:
+            from a import b
+        def f() -> "b":
+            pass
+        ''')
+
+    def test_uses_typing_imports_for_annotations_in_comments(self):
+        """Uses imports within 'if TYPE_CHECKING' checking annotations."""
+        if self.withDoctest:
+            return
+        self.flakes('''
+        from typing import TYPE_CHECKING
+        if TYPE_CHECKING:
+            from a import b
+        def f():  # type: () -> b
+            pass
+        ''')

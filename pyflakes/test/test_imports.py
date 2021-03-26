@@ -1039,48 +1039,6 @@ class Test(TestCase):
         from __future__ import *
         ''', m.FutureFeatureNotDefined)
 
-    def test_ignores_typing_imports(self):
-        """Ignores imports within 'if TYPE_CHECKING' checking normal code."""
-        self.flakes('''
-        from typing import TYPE_CHECKING
-        if TYPE_CHECKING:
-            from a import b
-        b()
-        ''', m.UndefinedName)
-
-    def test_ignores_typing_class_definition(self):
-        """Ignores definitions within 'if TYPE_CHECKING' checking normal code."""
-        self.flakes('''
-        from typing import TYPE_CHECKING
-        if TYPE_CHECKING:
-            class T:
-                pass
-        t = T()
-        ''', m.UndefinedName)
-
-    @skipIf(version_info < (3,), 'has type annotations')
-    def test_uses_typing_imports_for_annotations(self):
-        """Uses imports within 'if TYPE_CHECKING' checking annotations."""
-        self.flakes('''
-        from typing import TYPE_CHECKING
-        if TYPE_CHECKING:
-            from a import b
-        def f() -> "b":
-            pass
-        ''')
-
-    def test_uses_typing_imports_for_annotations_in_comments(self):
-        """Uses imports within 'if TYPE_CHECKING' checking annotations."""
-        if self.withDoctest:
-            return
-        self.flakes('''
-        from typing import TYPE_CHECKING
-        if TYPE_CHECKING:
-            from a import b
-        def f():  # type: () -> b
-            pass
-        ''')
-
 
 class TestSpecialAll(TestCase):
     """
