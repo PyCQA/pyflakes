@@ -275,7 +275,8 @@ def iter_child_nodes(node, omit=None, _fields_order=_FieldsOrder()):
             yield field
         elif isinstance(field, list):
             for item in field:
-                yield item
+                if isinstance(item, ast.AST):
+                    yield item
 
 
 def convert_to_value(item):
@@ -691,6 +692,8 @@ def getNodeName(node):
         return node.id
     if hasattr(node, 'name'):   # an ExceptHandler node
         return node.name
+    if hasattr(node, 'rest'):   # a MatchMapping node
+        return node.rest
 
 
 TYPING_MODULES = frozenset(('typing', 'typing_extensions'))
@@ -2378,3 +2381,12 @@ class Checker(object):
             left = right
 
         self.handleChildren(node)
+
+    MATCH = MATCH_CASE = MATCHCLASS = MATCHOR = MATCHSEQUENCE = handleChildren
+    MATCHSINGLETON = MATCHVALUE = handleChildren
+
+    def _match_target(self, node):
+        self.handleNodeStore(node)
+        self.handleChildren(node)
+
+    MATCHAS = MATCHMAPPING = MATCHSTAR = _match_target
