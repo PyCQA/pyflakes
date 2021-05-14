@@ -717,6 +717,16 @@ def _is_typing_helper(node, is_name_match_fn, scope_stack):
 
         return False
 
+    def _module_scope_is_typing(name):
+        for scope in reversed(scope_stack):
+            if name in scope:
+                return (
+                    isinstance(scope[name], Importation) and
+                    scope[name].fullName in TYPING_MODULES
+                )
+
+        return False
+
     return (
         (
             isinstance(node, ast.Name) and
@@ -724,7 +734,7 @@ def _is_typing_helper(node, is_name_match_fn, scope_stack):
         ) or (
             isinstance(node, ast.Attribute) and
             isinstance(node.value, ast.Name) and
-            node.value.id in TYPING_MODULES and
+            _module_scope_is_typing(node.value.id) and
             is_name_match_fn(node.attr)
         )
     )
