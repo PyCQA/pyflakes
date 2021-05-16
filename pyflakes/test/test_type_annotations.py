@@ -127,14 +127,14 @@ class TestTypeAnnotations(TestCase):
         import typing as t
 
         @t.overload
-        async def f(s):  # type: (None) -> None
+        def f(s):  # type: (None) -> None
             pass
 
         @t.overload
-        async def f(s):  # type: (int) -> int
+        def f(s):  # type: (int) -> int
             pass
 
-        async def f(s):
+        def f(s):
             return s
         """)
 
