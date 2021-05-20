@@ -868,7 +868,6 @@ class Checker(object):
 
     nodeDepth = 0
     offset = None
-    traceTree = False
     _in_annotation = AnnotationState.NONE
     _in_deferred = False
 
@@ -1393,8 +1392,6 @@ class Checker(object):
         if self.offset and getattr(node, 'lineno', None) is not None:
             node.lineno += self.offset[0]
             node.col_offset += self.offset[1]
-        if self.traceTree:
-            print('  ' * self.nodeDepth + node.__class__.__name__)
         if self.futuresAllowed and not (isinstance(node, ast.ImportFrom) or
                                         self.isDocstring(node)):
             self.futuresAllowed = False
@@ -1406,8 +1403,6 @@ class Checker(object):
             handler(node)
         finally:
             self.nodeDepth -= 1
-        if self.traceTree:
-            print('  ' * self.nodeDepth + 'end ' + node.__class__.__name__)
 
     _getDoctestExamples = doctest.DocTestParser().get_examples
 
