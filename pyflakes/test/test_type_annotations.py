@@ -531,7 +531,7 @@ class TestTypeAnnotations(TestCase):
     def test_type_cast_literal_str_to_str(self):
         # Checks that our handling of quoted type annotations in the first
         # argument to `cast` doesn't cause issues when (only) the _second_
-        # argument is a literal str which looks a bit like a type annoation.
+        # argument is a literal str which looks a bit like a type annotation.
         self.flakes("""
         from typing import cast
 
