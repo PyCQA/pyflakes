@@ -39,8 +39,7 @@ Design Principles
 Pyflakes makes a simple promise: it will never complain about style,
 and it will try very, very hard to never emit false positives.
 
-Pyflakes is also faster than Pylint_
-or Pychecker_. This is
+Pyflakes is also faster than Pylint_. This is
 largely because Pyflakes only examines the syntax tree of each file
 individually. As a consequence, Pyflakes is more limited in the
 types of things it can check.
@@ -79,7 +78,6 @@ All changes should include tests and pass flake8_.
 .. _Pylint: https://www.pylint.org/
 .. _flake8: https://pypi.org/project/flake8/
 .. _`PEP 8`: https://www.python.org/dev/peps/pep-0008/
-.. _Pychecker: http://pychecker.sourceforge.net/
 .. _`rebase your changes`: https://git-scm.com/book/en/v2/Git-Branching-Rebasing
 .. _`GitHub pull request`: https://github.com/PyCQA/pyflakes/pulls
 
