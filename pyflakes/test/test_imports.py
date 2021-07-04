@@ -154,6 +154,12 @@ class Test(TestCase):
         self.flakes('from .. import fu; assert fu')
         self.flakes('from ..bar import fu as baz; assert baz')
 
+    def test_implicitlyUsedDunderImport(self):
+        self.flakes('from foo import __author__')
+        self.flakes('from foo import version as __version__')
+        self.flakes('from .foo import __author__')
+        self.flakes('from .foo import version as __version__')
+
     def test_redefinedWhileUnused(self):
         self.flakes('import fu; fu = 3', m.RedefinedWhileUnused)
         self.flakes('import fu; fu, bar = 3', m.RedefinedWhileUnused)

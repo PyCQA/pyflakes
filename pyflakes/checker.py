@@ -693,6 +693,10 @@ def getNodeName(node):
         return node.name
 
 
+def _is_dunder(name):
+    return name.startswith("__") and name.endswith("__") and len(name) > 4
+
+
 TYPING_MODULES = frozenset(('typing', 'typing_extensions'))
 
 
@@ -1026,7 +1030,9 @@ class Checker(object):
             # Look for imported names that aren't used.
             for value in scope.values():
                 if isinstance(value, Importation):
-                    used = value.used or value.name in all_names
+                    used = (value.used or value.name in all_names
+                            or isinstance(scope, ModuleScope)
+                            and _is_dunder(value.name))
                     if not used:
                         messg = messages.UnusedImport
                         self.report(messg, value.source, str(value))
