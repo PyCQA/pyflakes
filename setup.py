@@ -43,6 +43,12 @@ setup(
     author="A lot of people",
     author_email="code-quality@python.org",
     url="https://github.com/PyCQA/pyflakes",
+    project_urls={
+        "Source": "https://github.com/PyCQA/pyflakes",
+        "Changelog": "https://github.com/PyCQA/pyflakes/blob/master/NEWS.rst",
+        "Bug Tracker": "https://github.com/PyCQA/pyflakes/issues",
+        "Mailing List": "https://mail.python.org/mailman/listinfo/code-quality",
+    },
     packages=["pyflakes", "pyflakes.scripts", "pyflakes.test"],
     python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*',
     classifiers=[
