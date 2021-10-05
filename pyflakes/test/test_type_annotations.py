@@ -121,6 +121,23 @@ class TestTypeAnnotations(TestCase):
             def f(self, x): return x
         """)
 
+    def test_aliased_import(self):
+        """Detect when typing is imported as another name"""
+        self.flakes("""
+        import typing as t
+
+        @t.overload
+        def f(s):  # type: (None) -> None
+            pass
+
+        @t.overload
+        def f(s):  # type: (int) -> int
+            pass
+
+        def f(s):
+            return s
+        """)
+
     def test_not_a_typing_overload(self):
         """regression test for @typing.overload detection bug in 2.1.0"""
         self.flakes("""
