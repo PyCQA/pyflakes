@@ -1,3 +1,9 @@
+2.4.0 (2021-10-06)
+
+- Remove unused tracing code (``traceTree``)
+- Add support for ``match`` statement
+- Detect ``typing`` module attributes when imported with ``import ... as ...``
+
 2.3.1 (2021-03-24)
 
 - Fix regression in 2.3.0: type annotations no longer redefine imports
