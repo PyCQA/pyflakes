@@ -1,8 +1,6 @@
 """
 API for the command-line I{pyflakes} tool.
 """
-from __future__ import with_statement
-
 import ast
 import os
 import platform
