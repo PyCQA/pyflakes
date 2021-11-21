@@ -1462,7 +1462,6 @@ class TestUnusedAssignment(TestCase):
         statement a name defined beforehand.
         """
         self.flakes('''
-        from __future__ import with_statement
         bar = None
         with open("foo"):
             bar
@@ -1475,7 +1474,6 @@ class TestUnusedAssignment(TestCase):
         within the suite or afterwards.
         """
         self.flakes('''
-        from __future__ import with_statement
         with open('foo') as bar:
             bar
         bar
@@ -1487,7 +1485,6 @@ class TestUnusedAssignment(TestCase):
         C{with} statement.
         """
         self.flakes('''
-        from __future__ import with_statement
         import foo
         with open('foo') as foo.bar:
             pass
@@ -1499,7 +1496,6 @@ class TestUnusedAssignment(TestCase):
         C{with} statement.
         """
         self.flakes('''
-        from __future__ import with_statement
         import foo
         with open('foo') as foo[0]:
             pass
@@ -1511,7 +1507,6 @@ class TestUnusedAssignment(TestCase):
         target of a C{with} statement is not defined.
         """
         self.flakes('''
-        from __future__ import with_statement
         import foo
         with open('foo') as foo[bar]:
             pass
@@ -1523,7 +1518,6 @@ class TestUnusedAssignment(TestCase):
         a C{with} statement within the suite or afterwards.
         """
         self.flakes('''
-        from __future__ import with_statement
         with open('foo') as (bar, baz):
             bar, baz
         bar, baz
@@ -1535,7 +1529,6 @@ class TestUnusedAssignment(TestCase):
         C{with} statement within the suite or afterwards.
         """
         self.flakes('''
-        from __future__ import with_statement
         with open('foo') as [bar, baz]:
             bar, baz
         bar, baz
@@ -1550,7 +1543,6 @@ class TestUnusedAssignment(TestCase):
         created are respected in the suite of the statement and afterwards.
         """
         self.flakes('''
-        from __future__ import with_statement
         c = d = e = g = h = i = None
         with open('foo') as [(a, b), c[d], e.f, g[h:i]]:
             a, b, c, d, e, g, h, i
@@ -1563,7 +1555,6 @@ class TestUnusedAssignment(TestCase):
         C{with} statement is used before the C{with} statement.
         """
         self.flakes('''
-        from __future__ import with_statement
         bar
         with open('foo') as bar:
             pass
@@ -1576,7 +1567,6 @@ class TestUnusedAssignment(TestCase):
         C{with} statement.
         """
         self.flakes('''
-        from __future__ import with_statement
         baz
         with open('foo') as (bar, baz):
             pass
@@ -1588,7 +1578,6 @@ class TestUnusedAssignment(TestCase):
         rebound by the name defined by a C{with} statement.
         """
         self.flakes('''
-        from __future__ import with_statement
         import bar
         with open('foo') as bar:
             pass
@@ -1601,7 +1590,6 @@ class TestUnusedAssignment(TestCase):
         C{with} statement.
         """
         self.flakes('''
-        from __future__ import with_statement
         import bar
         with open('foo') as (bar, baz):
             pass
@@ -1613,7 +1601,6 @@ class TestUnusedAssignment(TestCase):
         body of a C{with} statement without first being bound.
         """
         self.flakes('''
-        from __future__ import with_statement
         with open('foo') as bar:
             baz
         ''', m.UndefinedName)
@@ -1624,7 +1611,6 @@ class TestUnusedAssignment(TestCase):
         the body ends without warning.
         """
         self.flakes('''
-        from __future__ import with_statement
         with open('foo') as bar:
             baz = 10
         baz
@@ -1636,13 +1622,11 @@ class TestUnusedAssignment(TestCase):
         expression of a C{with} statement is undefined.
         """
         self.flakes('''
-        from __future__ import with_statement
         with bar as baz:
             pass
         ''', m.UndefinedName)
 
         self.flakes('''
-        from __future__ import with_statement
         with bar as bar:
             pass
         ''', m.UndefinedName)
