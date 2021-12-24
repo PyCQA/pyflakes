@@ -600,6 +600,17 @@ class FunctionScope(Scope):
                     isinstance(binding, Assignment)):
                 yield name, binding
 
+    def unusedAnnotations(self):
+        """
+        Return a generator for the annotations which have not been used.
+        """
+        for name, binding in self.items():
+            if (not binding.used and
+                    name not in self.globals and
+                    not self.usesLocals and
+                    isinstance(binding, Annotation)):
+                yield name, binding
+
 
 class GeneratorScope(Scope):
     pass
@@ -1156,6 +1167,7 @@ class Checker:
 
             binding = scope.get(name, None)
             if isinstance(binding, Annotation) and not self._in_postponed_annotation:
+                scope[name].used = True
                 continue
 
             if name == 'print' and isinstance(binding, Builtin):
@@ -2090,7 +2102,16 @@ class Checker:
                 """
                 for name, binding in self.scope.unusedAssignments():
                     self.report(messages.UnusedVariable, binding.source, name)
+
+            def checkUnusedAnnotations():
+                """
+                Check to see if any annotations have not been used.
+                """
+                for name, binding in self.scope.unusedAnnotations():
+                    self.report(messages.UnusedAnnotation, binding.source, name)
+
             self.deferAssignment(checkUnusedAssignments)
+            self.deferAssignment(checkUnusedAnnotations)
 
             self.popScope()
 
