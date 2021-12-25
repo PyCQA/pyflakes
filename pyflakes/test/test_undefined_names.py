@@ -123,9 +123,9 @@ class Test(TestCase):
     def test_undefinedExceptionNameObscuringGlobalVariable(self):
         """Exception names obscure globals, can't be used after.
 
-        Last line will raise UnboundLocalError on both Python 2 and
-        Python 3 because the existence of that exception name creates
-        a local scope placeholder for it, obscuring any globals, etc."""
+        Last line will raise UnboundLocalErrorbecause the existence
+        of that exception name creates a local scope placeholder for
+        it, obscuring any globals, etc."""
         self.flakes('''
         exc = 'Original value'
         def func():

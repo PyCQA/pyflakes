@@ -562,9 +562,6 @@ foo(bar=baz, bax)
 %s""" % (sourcePath, columnstr, message, last_line)])
 
     def test_invalidEscape(self):
-        """
-        The invalid escape syntax raises ValueError in Python 2
-        """
         ver = sys.version_info
         # ValueError: invalid \x escape
         with self.makeTempFile(r"foo = '\xyz'") as sourcePath:
