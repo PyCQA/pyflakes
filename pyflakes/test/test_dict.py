@@ -3,7 +3,7 @@ Tests for dict duplicate keys Pyflakes behavior.
 """
 
 from pyflakes import messages as m
-from pyflakes.test.harness import TestCase, skipIf
+from pyflakes.test.harness import TestCase
 
 
 class Test(TestCase):

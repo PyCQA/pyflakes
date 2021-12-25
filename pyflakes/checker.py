@@ -32,14 +32,18 @@ builtin_vars = dir(__import__('builtins'))
 parse_format_string = string.Formatter().parse
 tokenize_tokenize = tokenize.tokenize
 
+
 def getNodeType(node_class):
     return node_class.__name__.upper()
+
 
 def get_raise_argument(node):
     return node.exc
 
+
 # Silence `pyflakes` from reporting `undefined name 'unicode'` in Python 3.
 unicode = str
+
 
 # Python >= 3.3 uses ast.Try instead of (ast.TryExcept + ast.TryFinally)
 def getAlternatives(n):
@@ -47,6 +51,7 @@ def getAlternatives(n):
         return [n.body]
     if isinstance(n, ast.Try):
         return [n.body + n.orelse] + [[hdl] for hdl in n.handlers]
+
 
 if PY35_PLUS:
     FOR_TYPES = (ast.For, ast.AsyncFor)

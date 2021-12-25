@@ -6,7 +6,7 @@ from pyflakes.checker import (
     StarImportation,
     SubmoduleImportation,
 )
-from pyflakes.test.harness import TestCase, skip, skipIf
+from pyflakes.test.harness import TestCase, skip
 
 
 class TestImportationObject(TestCase):

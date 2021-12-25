@@ -2,7 +2,7 @@
 Tests for detecting redefinition of builtins.
 """
 from pyflakes import messages as m
-from pyflakes.test.harness import TestCase, skipIf
+from pyflakes.test.harness import TestCase
 
 
 class TestBuiltins(TestCase):
