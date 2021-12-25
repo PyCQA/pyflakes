@@ -478,13 +478,10 @@ class TestTypeAnnotations(TestCase):
         """, m.UndefinedName)
 
     def test_typeIgnoreBogusUnicode(self):
-        error = (m.CommentAnnotationSyntaxError if version_info < (3,)
-                 else m.UndefinedName)
         self.flakes("""
         x = 2  # type: ignore\xc3
-        """, error)
+        """, m.UndefinedName)
 
-    @skipIf(version_info < (3,), 'new in Python 3')
     def test_return_annotation_is_class_scope_variable(self):
         self.flakes("""
         from typing import TypeVar
@@ -495,7 +492,6 @@ class TestTypeAnnotations(TestCase):
                 return x
         """)
 
-    @skipIf(version_info < (3,), 'new in Python 3')
     def test_return_annotation_is_function_body_variable(self):
         self.flakes("""
         class Test:
@@ -512,7 +508,6 @@ class TestTypeAnnotations(TestCase):
         def f(c: C, /): ...
         """)
 
-    @skipIf(version_info < (3,), 'new in Python 3')
     def test_partially_quoted_type_annotation(self):
         self.flakes("""
         from queue import Queue
@@ -577,7 +572,6 @@ class TestTypeAnnotations(TestCase):
         S = TypeVar('S', int, bound='List[int]')
         """)
 
-    @skipIf(version_info < (3,), 'new in Python 3')
     def test_literal_type_typing(self):
         self.flakes("""
         from typing import Literal
@@ -586,7 +580,6 @@ class TestTypeAnnotations(TestCase):
             return None
         """)
 
-    @skipIf(version_info < (3,), 'new in Python 3')
     def test_literal_type_typing_extensions(self):
         self.flakes("""
         from typing_extensions import Literal
@@ -595,7 +588,6 @@ class TestTypeAnnotations(TestCase):
             return None
         """)
 
-    @skipIf(version_info < (3,), 'new in Python 3')
     def test_annotated_type_typing_missing_forward_type(self):
         self.flakes("""
         from typing import Annotated
@@ -604,7 +596,6 @@ class TestTypeAnnotations(TestCase):
             return None
         """, m.UndefinedName)
 
-    @skipIf(version_info < (3,), 'new in Python 3')
     def test_annotated_type_typing_missing_forward_type_multiple_args(self):
         self.flakes("""
         from typing import Annotated
@@ -613,7 +604,6 @@ class TestTypeAnnotations(TestCase):
             return None
         """, m.UndefinedName)
 
-    @skipIf(version_info < (3,), 'new in Python 3')
     def test_annotated_type_typing_with_string_args(self):
         self.flakes("""
         from typing import Annotated
@@ -622,7 +612,6 @@ class TestTypeAnnotations(TestCase):
             return None
         """)
 
-    @skipIf(version_info < (3,), 'new in Python 3')
     def test_annotated_type_typing_with_string_args_in_union(self):
         self.flakes("""
         from typing import Annotated, Union
@@ -631,7 +620,6 @@ class TestTypeAnnotations(TestCase):
             return None
         """, m.UndefinedName)
 
-    @skipIf(version_info < (3,), 'new in Python 3')
     def test_literal_type_some_other_module(self):
         """err on the side of false-negatives for types named Literal"""
         self.flakes("""
@@ -644,7 +632,6 @@ class TestTypeAnnotations(TestCase):
             return None
         """)
 
-    @skipIf(version_info < (3,), 'new in Python 3')
     def test_literal_union_type_typing(self):
         self.flakes("""
         from typing import Literal
@@ -653,7 +640,6 @@ class TestTypeAnnotations(TestCase):
             return None
         """)
 
-    @skipIf(version_info < (3,), 'new in Python 3')
     def test_deferred_twice_annotation(self):
         self.flakes("""
             from queue import Queue

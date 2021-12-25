@@ -21,37 +21,6 @@ class Test(TestCase):
         f()
         ''', m.UndefinedLocal, m.UnusedVariable)
 
-    @skipIf(version_info >= (3,),
-            'in Python 3 list comprehensions execute in a separate scope')
-    def test_redefinedInListComp(self):
-        """
-        Test that shadowing a variable in a list comprehension raises
-        a warning.
-        """
-        self.flakes('''
-        a = 1
-        [1 for a, b in [(1, 2)]]
-        ''', m.RedefinedInListComp)
-        self.flakes('''
-        class A:
-            a = 1
-            [1 for a, b in [(1, 2)]]
-        ''', m.RedefinedInListComp)
-        self.flakes('''
-        def f():
-            a = 1
-            [1 for a, b in [(1, 2)]]
-        ''', m.RedefinedInListComp)
-        self.flakes('''
-        [1 for a, b in [(1, 2)]]
-        [1 for a, b in [(1, 2)]]
-        ''')
-        self.flakes('''
-        for a, b in [(1, 2)]:
-            pass
-        [1 for a, b in [(1, 2)]]
-        ''')
-
     def test_redefinedInGenerator(self):
         """
         Test that reusing a variable in a generator does not raise
@@ -238,21 +207,6 @@ class Test(TestCase):
         else:
             [a for a in '12']
         ''')
-
-    @skipIf(version_info >= (3,),
-            'in Python 3 list comprehensions execute in a separate scope')
-    def test_redefinedElseInListComp(self):
-        """
-        Test that shadowing a variable in a list comprehension in
-        an else (or if) block raises a warning.
-        """
-        self.flakes('''
-        if False:
-            pass
-        else:
-            a = 1
-            [a for a in '12']
-        ''', m.RedefinedInListComp)
 
     def test_functionDecorator(self):
         """
@@ -903,10 +857,9 @@ class Test(TestCase):
             pass
         ''', m.DefaultExceptNotLast, m.DefaultExceptNotLast)
 
-    @skipIf(version_info < (3,), "Python 3 only")
     def test_starredAssignmentNoError(self):
         """
-        Python 3 extended iterable unpacking
+        Extended iterable unpacking
         """
         self.flakes('''
         a, *b = range(10)
@@ -957,10 +910,9 @@ class Test(TestCase):
             ", *rest] = range(1<<8)"
         self.flakes(s)
 
-    @skipIf(version_info < (3, ), "Python 3 only")
     def test_starredAssignmentErrors(self):
         """
-        SyntaxErrors (not encoded in the ast) surrounding Python 3 extended
+        SyntaxErrors (not encoded in the ast) surrounding extended
         iterable unpacking
         """
         # Taken from test_unpack_ex.py in the cPython source
@@ -1276,7 +1228,6 @@ class TestUnusedAssignment(TestCase):
             b = 1
         ''')
 
-    @skipIf(version_info < (3,), 'new in Python 3')
     def test_assignToNonlocal(self):
         """
         Assigning to a nonlocal and then not using that binding is perfectly
@@ -1660,8 +1611,6 @@ class TestUnusedAssignment(TestCase):
             except Exception as e: e
         ''')
 
-    @skipIf(version_info < (3,),
-            "In Python 2 exception names stay bound after the exception handler")
     def test_exceptionUnusedInExcept(self):
         self.flakes('''
         try: pass

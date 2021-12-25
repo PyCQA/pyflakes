@@ -19,11 +19,8 @@ from pyflakes.api import (
 )
 from pyflakes.test.harness import TestCase, skipIf
 
-if sys.version_info < (3,):
-    from cStringIO import StringIO
-else:
-    from io import StringIO
-    unichr = chr
+from io import StringIO
+unichr = chr
 
 try:
     sys.pypy_version_info
@@ -36,8 +33,6 @@ try:
     WIN = True
 except NameError:
     WIN = False
-
-ERROR_HAS_COL_NUM = ERROR_HAS_LAST_LINE = sys.version_info >= (3, 2) or PYPY
 
 
 def withStderrTo(stderr, f, *args, **kwargs):
@@ -72,16 +67,7 @@ class SysStreamCapturing(object):
     """
 
     def _create_StringIO(self, buffer=None):
-        # Python 3 has a newline argument
-        try:
-            return StringIO(buffer, newline=os.linesep)
-        except TypeError:
-            self._newline = True
-            # Python 2 creates an input only stream when buffer is not None
-            if buffer is None:
-                return StringIO()
-            else:
-                return StringIO(buffer)
+        return StringIO(buffer, newline=os.linesep)
 
     def __init__(self, stdin):
         self._newline = False
@@ -523,21 +509,18 @@ def foo(bar=baz, bax):
     pass
 """
         with self.makeTempFile(source) as sourcePath:
-            if ERROR_HAS_LAST_LINE:
-                if PYPY:
-                    column = 7
-                elif sys.version_info >= (3, 10):
-                    column = 18
-                elif sys.version_info >= (3, 9):
-                    column = 21
-                elif sys.version_info >= (3, 8):
-                    column = 9
-                else:
-                    column = 8
-                last_line = ' ' * (column - 1) + '^\n'
-                columnstr = '%d:' % column
+            if PYPY:
+                column = 7
+            elif sys.version_info >= (3, 10):
+                column = 18
+            elif sys.version_info >= (3, 9):
+                column = 21
+            elif sys.version_info >= (3, 8):
+                column = 9
             else:
-                last_line = columnstr = ''
+                column = 8
+            last_line = ' ' * (column - 1) + '^\n'
+            columnstr = '%d:' % column
             self.assertHasErrors(
                 sourcePath,
                 ["""\
@@ -555,19 +538,16 @@ def foo(bar=baz, bax):
 foo(bar=baz, bax)
 """
         with self.makeTempFile(source) as sourcePath:
-            if ERROR_HAS_LAST_LINE:
-                if PYPY:
-                    column = 12
-                elif sys.version_info >= (3, 9):
-                    column = 17
-                elif sys.version_info >= (3, 8):
-                    column = 14
-                else:
-                    column = 13
-                last_line = ' ' * (column - 1) + '^\n'
-                columnstr = '%d:' % column
+            if PYPY:
+                column = 12
+            elif sys.version_info >= (3, 9):
+                column = 17
+            elif sys.version_info >= (3, 8):
+                column = 14
             else:
-                last_line = columnstr = ''
+                column = 13
+            last_line = ' ' * (column - 1) + '^\n'
+            columnstr = '%d:' % column
 
             if sys.version_info >= (3, 5):
                 message = 'positional argument follows keyword argument'
@@ -588,26 +568,20 @@ foo(bar=baz, bax)
         ver = sys.version_info
         # ValueError: invalid \x escape
         with self.makeTempFile(r"foo = '\xyz'") as sourcePath:
-            if ver < (3,):
-                decoding_error = "%s: problem decoding source\n" % (sourcePath,)
+            position_end = 1
+            if PYPY:
+                column = 5
+            elif ver >= (3, 9):
+                column = 13
             else:
-                position_end = 1
-                if PYPY:
-                    column = 5
-                elif ver >= (3, 9):
-                    column = 13
-                else:
-                    column = 7
-                    # Column has been "fixed" since 3.2.4 and 3.3.1
-                    if ver < (3, 2, 4) or ver[:3] == (3, 3, 0):
-                        position_end = 2
+                column = 7
+                # Column has been "fixed" since 3.2.4 and 3.3.1
+                if ver < (3, 2, 4) or ver[:3] == (3, 3, 0):
+                    position_end = 2
 
-                if ERROR_HAS_LAST_LINE:
-                    last_line = '%s^\n' % (' ' * (column - 1))
-                else:
-                    last_line = ''
+            last_line = '%s^\n' % (' ' * (column - 1))
 
-                decoding_error = """\
+            decoding_error = """\
 %s:1:%d: (unicode error) 'unicodeescape' codec can't decode bytes \
 in position 0-%d: truncated \\xXX escape
 foo = '\\xyz'
@@ -674,20 +648,9 @@ x = "%s"
 x = "%s"
 """ % SNOWMAN).encode('utf-8')
         with self.makeTempFile(source) as sourcePath:
-            if PYPY and sys.version_info < (3, ):
-                message = ('\'ascii\' codec can\'t decode byte 0xe2 '
-                           'in position 21: ordinal not in range(128)')
-                result = """\
-%s:0:0: %s
-x = "\xe2\x98\x83"
-        ^\n""" % (sourcePath, message)
+            result = "%s: problem decoding source\n" % (sourcePath,)
 
-            else:
-                message = 'problem decoding source'
-                result = "%s: problem decoding source\n" % (sourcePath,)
-
-            self.assertHasErrors(
-                sourcePath, [result])
+            self.assertHasErrors(sourcePath, [result])
 
     def test_misencodedFileUTF16(self):
         """
@@ -771,9 +734,8 @@ class IntegrationTests(TestCase):
                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             (stdout, stderr) = p.communicate()
         rv = p.wait()
-        if sys.version_info >= (3,):
-            stdout = stdout.decode('utf-8')
-            stderr = stderr.decode('utf-8')
+        stdout = stdout.decode('utf-8')
+        stderr = stderr.decode('utf-8')
         return (stdout, stderr, rv)
 
     def test_goodFile(self):
