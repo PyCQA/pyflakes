@@ -202,10 +202,10 @@ def main(prog=None, args=None):
     parser.add_argument('-V', '--version', action='version', version=_get_version())
     parser.add_argument('path', nargs='*',
                         help='Path(s) of Python file(s) to check. STDIN if not given.')
-    args = parser.parse_args(args=args).path
+    path = parser.parse_args(args=args).path
     reporter = modReporter._makeDefaultReporter()
-    if args:
-        warnings = checkRecursive(args, reporter)
+    if path:
+        warnings = checkRecursive(path, reporter)
     else:
         warnings = check(sys.stdin.read(), '<stdin>', reporter)
     raise SystemExit(warnings > 0)
