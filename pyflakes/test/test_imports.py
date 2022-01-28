@@ -1057,6 +1057,12 @@ class TestSpecialAll(TestCase):
             __all__ = ["bar"]
         ''', m.UnusedImport)
 
+    def test_ignored_when_not_directly_assigned(self):
+        self.flakes('''
+        import bar
+        (__all__,) = ("foo",)
+        ''', m.UnusedImport)
+
     def test_warningSuppressed(self):
         """
         If a name is imported and unused but is named in C{__all__}, no warning

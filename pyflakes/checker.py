@@ -1291,7 +1291,14 @@ class Checker(object):
                 parent_stmt != node._pyflakes_parent and
                 not self.isLiteralTupleUnpacking(parent_stmt)):
             binding = Binding(name, node)
-        elif name == '__all__' and isinstance(self.scope, ModuleScope):
+        elif (
+                name == '__all__' and
+                isinstance(self.scope, ModuleScope) and
+                isinstance(
+                    node._pyflakes_parent,
+                    (ast.Assign, ast.AugAssign, ast.AnnAssign)
+                )
+        ):
             binding = ExportBinding(name, node._pyflakes_parent, self.scope)
         elif PY2 and isinstance(getattr(node, 'ctx', None), ast.Param):
             binding = Argument(name, self.getScopeNode(node))
