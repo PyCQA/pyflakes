@@ -299,12 +299,21 @@ def convert_to_value(item):
             result.name,
             result,
         )
+    elif isinstance(item, ast.Attribute):
+        return AttributeKey(item=item)
     elif (not PY2) and isinstance(item, ast.NameConstant):
         # None, True, False are nameconstants in python3, but names in 2
         return item.value
     else:
         return UnhandledKeyType()
 
+def readable_key_name(key):
+    if isinstance(key, VariableKey):
+        return key.name
+    elif isinstance(key, AttributeKey):
+        return readable_key_name(key.parent) + "." + key.path
+    else:
+        return str(key)
 
 def is_notimplemented_name_node(node):
     return isinstance(node, ast.Name) and getNodeName(node) == 'NotImplemented'
@@ -381,6 +390,34 @@ class VariableKey(object):
 
     def __hash__(self):
         return hash(self.name)
+
+
+class AttributeKey(object):
+    """
+    A dictionary key which is an attribute of a variable
+
+    @ivar item: The attribute AST object.
+    """
+    def __init__(self, item):
+        attr_path = []
+        while(isinstance(item, ast.Attribute)):
+            attr_path.append(item.attr)
+            item = item.value
+
+        self.path = ".".join(reversed(attr_path))
+        self.parent = convert_to_value(item)
+
+
+    def __eq__(self, compare):
+        return (
+            compare.__class__ == self.__class__ and
+            compare.parent == self.parent and
+            compare.path == self.path
+        )
+
+
+    def __hash__(self):
+        return hash((self.parent, self.path))
 
 
 class Importation(Definition):
@@ -1969,13 +2006,16 @@ class Checker(object):
                     if isinstance(key, VariableKey):
                         self.report(messages.MultiValueRepeatedKeyVariable,
                                     key_node,
-                                    key.name)
+                                    readable_key_name(key)),
+                    elif isinstance(key, AttributeKey):
+                        self.report(messages.MultiValueRepeatedKeyAttribute,
+                                    key_node,
+                                    readable_key_name(key)),
                     else:
                         self.report(
                             messages.MultiValueRepeatedKeyLiteral,
                             key_node,
-                            key,
-                        )
+                            readable_key_name(key)),
         self.handleChildren(node)
 
     def IF(self, node):

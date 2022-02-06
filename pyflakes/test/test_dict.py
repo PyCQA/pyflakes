@@ -136,6 +136,19 @@ class Test(TestCase):
             m.MultiValueRepeatedKeyLiteral,
         )
 
+    def test_duplicate_attribute_keys(self):
+        self.flakes(
+            '''
+            class Something:
+              FOO: 1
+              BAR: 2
+
+            {Something.FOO: a, Something.FOO: b}
+            ''',
+            m.MultiValueRepeatedKeyAttribute,
+            m.MultiValueRepeatedKeyAttribute,
+        )
+
     def test_duplicate_variable_values_same_value(self):
         # Current behaviour is not to look up variable values. This is to
         # confirm that.
@@ -147,6 +160,19 @@ class Test(TestCase):
             ''',
             m.MultiValueRepeatedKeyLiteral,
             m.MultiValueRepeatedKeyLiteral,
+        )
+
+    def test_duplicate_attribute_values_same_value(self):
+        # Current behaviour is not to look up attribute values. This is to
+        # confirm that.
+        self.flakes(
+            '''
+            class Something:
+              FOO: 1
+              BAR: 1
+
+            {Something.FOO: a, Something.BAR: b}
+            '''
         )
 
     def test_duplicate_key_float_and_int(self):

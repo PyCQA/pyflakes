@@ -138,6 +138,13 @@ class MultiValueRepeatedKeyVariable(Message):
         Message.__init__(self, filename, loc)
         self.message_args = (key,)
 
+class MultiValueRepeatedKeyAttribute(Message):
+    message = 'dictionary key attribute %s repeated with different values'
+
+    def __init__(self, filename, loc, key):
+        Message.__init__(self, filename, loc)
+        self.message_args = (key,)
+
 
 class LateFutureImport(Message):
     message = 'from __future__ imports must occur at the beginning of the file'
