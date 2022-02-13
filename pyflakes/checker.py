@@ -128,7 +128,7 @@ def _is_const_non_singleton(node):  # type: (ast.AST) -> bool
     return _is_constant(node) and not _is_singleton(node)
 
 
-def _is_name_or_attr(node, name):  # type: (ast.Ast, str) -> bool
+def _is_name_or_attr(node, name):  # type: (ast.AST, str) -> bool
     return (
         (isinstance(node, ast.Name) and node.id == name) or
         (isinstance(node, ast.Attribute) and node.attr == name)
@@ -2381,9 +2381,13 @@ class Checker(object):
     def ANNASSIGN(self, node):
         self.handleNode(node.target, node)
         self.handleAnnotation(node.annotation, node)
+        # If the assignment has value, handle the *value* now.
         if node.value:
-            # If the assignment has value, handle the *value* now.
-            self.handleNode(node.value, node)
+            # If the annotation is `TypeAlias`, handle the *value* as an annotation.
+            if _is_typing(node.annotation, 'TypeAlias', self.scopeStack):
+                self.handleAnnotation(node.value, node)
+            else:
+                self.handleNode(node.value, node)
 
     def COMPARE(self, node):
         left = node.left
