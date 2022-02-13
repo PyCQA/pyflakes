@@ -301,6 +301,46 @@ class TestTypeAnnotations(TestCase):
         ''', m.ForwardAnnotationSyntaxError)
 
     @skipIf(version_info < (3, 6), 'new in Python 3.6')
+    def test_TypeAlias_annotations(self):
+        self.flakes("""
+        from typing_extensions import TypeAlias
+        from foo import Bar
+
+        bar: TypeAlias = Bar
+        """)
+        self.flakes("""
+        from typing_extensions import TypeAlias
+        from foo import Bar
+
+        bar: TypeAlias = 'Bar'
+        """)
+        self.flakes("""
+        from typing_extensions import TypeAlias
+        from foo import Bar
+
+        class A:
+            bar: TypeAlias = Bar
+        """)
+        self.flakes("""
+        from typing_extensions import TypeAlias
+        from foo import Bar
+
+        class A:
+            bar: TypeAlias = 'Bar'
+        """)
+        self.flakes("""
+        from typing_extensions import TypeAlias
+
+        bar: TypeAlias
+        """)
+        self.flakes("""
+        from typing_extensions import TypeAlias
+        from foo import Bar
+
+        bar: TypeAlias
+        """, m.UnusedImport)
+
+    @skipIf(version_info < (3, 6), 'new in Python 3.6')
     def test_annotating_an_import(self):
         self.flakes('''
             from a import b, c
