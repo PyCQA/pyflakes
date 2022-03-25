@@ -16,13 +16,10 @@ class TestCase(unittest.TestCase):
 
     def flakes(self, input, *expectedOutputs, **kw):
         tree = ast.parse(textwrap.dedent(input))
-        file_tokens = checker.make_tokens(textwrap.dedent(input))
         if kw.get('is_segment'):
             tree = tree.body[0]
             kw.pop('is_segment')
-        w = checker.Checker(
-            tree, file_tokens=file_tokens, withDoctest=self.withDoctest, **kw
-        )
+        w = checker.Checker(tree, withDoctest=self.withDoctest, **kw)
         outputs = [type(o) for o in w.messages]
         expectedOutputs = list(expectedOutputs)
         outputs.sort(key=lambda t: t.__name__)

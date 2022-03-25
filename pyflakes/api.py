@@ -44,8 +44,7 @@ def check(codeString, filename, reporter=None):
         reporter.unexpectedError(filename, 'problem decoding source')
         return 1
     # Okay, it's syntactically valid.  Now check it.
-    file_tokens = checker.make_tokens(codeString)
-    w = checker.Checker(tree, file_tokens=file_tokens, filename=filename)
+    w = checker.Checker(tree, filename=filename)
     w.messages.sort(key=lambda m: m.lineno)
     for warning in w.messages:
         reporter.flake(warning)
