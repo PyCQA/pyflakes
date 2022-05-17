@@ -2331,7 +2331,7 @@ class Checker(object):
         # Process the other nodes: "except:", "else:", "finally:"
         self.handleChildren(node, omit='body')
 
-    TRYEXCEPT = TRY
+    TRYEXCEPT = TRYSTAR = TRY
 
     def EXCEPTHANDLER(self, node):
         if PY2 or node.name is None:

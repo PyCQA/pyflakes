@@ -1668,6 +1668,15 @@ class TestUnusedAssignment(TestCase):
         except Exception as e: pass
         ''', m.UnusedVariable)
 
+    @skipIf(version_info < (3, 11), 'new in Python 3.11')
+    def test_exception_unused_in_except_star(self):
+        self.flakes('''
+            try:
+                pass
+            except* OSError as e:
+                pass
+        ''', m.UnusedVariable)
+
     def test_exceptionUnusedInExceptInFunction(self):
         self.flakes('''
         def download_review():
