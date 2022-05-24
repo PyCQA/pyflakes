@@ -1165,7 +1165,6 @@ class Checker(object):
         # don't treat annotations as assignments if there is an existing value
         # in scope
         if value.name not in self.scope or not isinstance(value, Annotation):
-            self.scope[value.name] = value
             scope = self.scope
             # As per PEP 572, use scope in which Generator is defined
             if (
@@ -1316,11 +1315,10 @@ class Checker(object):
             binding = ExportBinding(name, node._pyflakes_parent, self.scope)
         elif PY2 and isinstance(getattr(node, 'ctx', None), ast.Param):
             binding = Argument(name, self.getScopeNode(node))
+        elif isinstance(parent_stmt, ast.NamedExpr):
+            binding = NamedExprAssignment(name, node)
         else:
-            binding = (
-                Assignment(name, node) if not isinstance(parent_stmt, ast.NamedExpr)
-                else NamedExprAssignment(name, node)
-            )
+            binding = Assignment(name, node)
         self.addBinding(node, binding)
 
     def handleNodeDelete(self, node):
