@@ -1772,6 +1772,14 @@ class TestUnusedAssignment(TestCase):
         print(x)
         ''')
 
+    @skipIf(version_info < (3, 8), 'new in Python 3.8')
+    def test_assign_expr_proper_scope(self):
+        """Test assignment expressions in generator expressions."""
+        self.flakes('''
+        if (any(y := x[0] for x in [[True]])):
+            print(y)
+        ''')
+
 
 class TestStringFormatting(TestCase):
 
