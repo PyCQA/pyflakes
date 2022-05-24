@@ -540,6 +540,12 @@ class Assignment(Binding):
     """
 
 
+class NamedExprAssignment(Assignment):
+    """
+    Represents binding a name with an assignment expression.
+    """
+
+
 class Annotation(Binding):
     """
     Represents binding a name to a type without an associated value.
@@ -1160,6 +1166,14 @@ class Checker(object):
         # in scope
         if value.name not in self.scope or not isinstance(value, Annotation):
             self.scope[value.name] = value
+            scope = self.scope
+            # As per PEP 572, use scope in which Generator is defined
+            if (
+                isinstance(value, NamedExprAssignment) and
+                isinstance(self.scope, GeneratorScope)
+            ):
+                scope = self.scopeStack[-2]
+            scope[value.name] = value
 
     def _unknown_handler(self, node):
         # this environment variable configures whether to error on unknown
@@ -1303,7 +1317,10 @@ class Checker(object):
         elif PY2 and isinstance(getattr(node, 'ctx', None), ast.Param):
             binding = Argument(name, self.getScopeNode(node))
         else:
-            binding = Assignment(name, node)
+            binding = (
+                Assignment(name, node) if not isinstance(parent_stmt, ast.NamedExpr)
+                else NamedExprAssignment(name, node)
+            )
         self.addBinding(node, binding)
 
     def handleNodeDelete(self, node):
