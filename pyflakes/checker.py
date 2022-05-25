@@ -1315,7 +1315,7 @@ class Checker(object):
             binding = ExportBinding(name, node._pyflakes_parent, self.scope)
         elif PY2 and isinstance(getattr(node, 'ctx', None), ast.Param):
             binding = Argument(name, self.getScopeNode(node))
-        elif isinstance(parent_stmt, ast.NamedExpr):
+        elif PY38_PLUS and isinstance(parent_stmt, ast.NamedExpr):
             binding = NamedExprAssignment(name, node)
         else:
             binding = Assignment(name, node)
