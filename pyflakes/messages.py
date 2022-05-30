@@ -10,7 +10,7 @@ class Message:
     def __init__(self, filename, loc):
         self.filename = filename
         self.lineno = loc.lineno
-        self.col = getattr(loc, 'col_offset', 0)
+        self.col = loc.col_offset
 
     def __str__(self):
         return '{}:{}:{}: {}'.format(self.filename, self.lineno, self.col+1,

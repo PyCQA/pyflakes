@@ -1584,15 +1584,9 @@ class Checker:
 
         # bail early if there is *args or **kwargs
         if (
-                # python 2.x *args / **kwargs
-                getattr(node, 'starargs', None) or
-                getattr(node, 'kwargs', None) or
-                # python 3.x *args
-                any(
-                    isinstance(arg, getattr(ast, 'Starred', ()))
-                    for arg in node.args
-                ) or
-                # python 3.x **kwargs
+                # *args
+                any(isinstance(arg, ast.Starred) for arg in node.args) or
+                # **kwargs
                 any(kwd.arg is None for kwd in node.keywords)
         ):
             return
@@ -1773,7 +1767,7 @@ class Checker:
                 isinstance(node.right, (ast.List, ast.Tuple)) and
                 # does not have any *splats (py35+ feature)
                 not any(
-                    isinstance(elt, getattr(ast, 'Starred', ()))
+                    isinstance(elt, ast.Starred)
                     for elt in node.right.elts
                 )
         ):
