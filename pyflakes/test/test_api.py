@@ -31,12 +31,6 @@ try:
 except AttributeError:
     PYPY = False
 
-try:
-    WindowsError
-    WIN = True
-except NameError:
-    WIN = False
-
 ERROR_HAS_COL_NUM = ERROR_HAS_LAST_LINE = sys.version_info >= (3, 2) or PYPY
 
 
