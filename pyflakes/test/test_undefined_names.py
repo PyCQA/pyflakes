@@ -849,10 +849,7 @@ class Test(TestCase):
 
         t = Test()
         '''
-        if version_info < (3,):
-            self.flakes(code, m.UndefinedName)
-        else:
-            self.flakes(code)
+        self.flakes(code)
 
 
 class NameTests(TestCase):

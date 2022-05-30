@@ -29,9 +29,9 @@ class TestCase(unittest.TestCase):
         expectedOutputs.sort(key=lambda t: t.__name__)
         self.assertEqual(outputs, expectedOutputs, '''\
 for input:
-%s
+{}
 expected outputs:
-%r
+{!r}
 but got:
-%s''' % (input, expectedOutputs, '\n'.join([str(o) for o in w.messages])))
+{}'''.format(input, expectedOutputs, '\n'.join([str(o) for o in w.messages])))
         return w

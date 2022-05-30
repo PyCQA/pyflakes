@@ -6,7 +6,7 @@ import re
 import sys
 
 
-class Reporter(object):
+class Reporter:
     """
     Formats the results of pyflakes checks to users.
     """
@@ -34,7 +34,7 @@ class Reporter(object):
         @param msg: A message explaining the problem.
         @ptype msg: C{unicode}
         """
-        self._stderr.write("%s: %s\n" % (filename, msg))
+        self._stderr.write(f"{filename}: {msg}\n")
 
     def syntaxError(self, filename, msg, lineno, offset, text):
         """

@@ -136,7 +136,7 @@ TYPE_COMMENT_RE = re.compile(r'^#\s*type:\s*')
 # https://github.com/python/typed_ast/blob/1.4.0/ast27/Parser/tokenizer.c#L1408-L1413
 ASCII_NON_ALNUM = ''.join([chr(i) for i in range(128) if not chr(i).isalnum()])
 TYPE_IGNORE_RE = re.compile(
-    TYPE_COMMENT_RE.pattern + r'ignore([{}]|$)'.format(ASCII_NON_ALNUM))
+    TYPE_COMMENT_RE.pattern + fr'ignore([{ASCII_NON_ALNUM}]|$)')
 # https://github.com/python/typed_ast/blob/1.4.0/ast27/Grammar/Grammar#L147
 TYPE_FUNC_RE = re.compile(r'^(\(.*?\))\s*->\s*(.*)$')
 
@@ -304,7 +304,7 @@ def is_notimplemented_name_node(node):
     return isinstance(node, ast.Name) and getNodeName(node) == 'NotImplemented'
 
 
-class Binding(object):
+class Binding:
     """
     Represents the binding of a value to a name.
 
@@ -325,10 +325,12 @@ class Binding(object):
         return self.name
 
     def __repr__(self):
-        return '<%s object %r from line %r at 0x%x>' % (self.__class__.__name__,
-                                                        self.name,
-                                                        self.source.lineno,
-                                                        id(self))
+        return '<{} object {!r} from line {!r} at 0x{:x}>'.format(
+            self.__class__.__name__,
+            self.name,
+            self.source.lineno,
+            id(self),
+        )
 
     def redefines(self, other):
         return isinstance(other, Definition) and self.name == other.name
@@ -344,21 +346,23 @@ class Builtin(Definition):
     """A definition created for all Python builtins."""
 
     def __init__(self, name):
-        super(Builtin, self).__init__(name, None)
+        super().__init__(name, None)
 
     def __repr__(self):
-        return '<%s object %r at 0x%x>' % (self.__class__.__name__,
-                                           self.name,
-                                           id(self))
+        return '<{} object {!r} at 0x{:x}>'.format(
+            self.__class__.__name__,
+            self.name,
+            id(self)
+        )
 
 
-class UnhandledKeyType(object):
+class UnhandledKeyType:
     """
     A dictionary key of a type that we cannot or do not check for duplicates.
     """
 
 
-class VariableKey(object):
+class VariableKey:
     """
     A dictionary key which is a variable.
 
@@ -389,7 +393,7 @@ class Importation(Definition):
     def __init__(self, name, source, full_name=None):
         self.fullName = full_name or name
         self.redefined = []
-        super(Importation, self).__init__(name, source)
+        super().__init__(name, source)
 
     def redefines(self, other):
         if isinstance(other, SubmoduleImportation):
@@ -405,7 +409,7 @@ class Importation(Definition):
     def source_statement(self):
         """Generate a source statement equivalent to the import."""
         if self._has_alias():
-            return 'import %s as %s' % (self.fullName, self.name)
+            return f'import {self.fullName} as {self.name}'
         else:
             return 'import %s' % self.fullName
 
@@ -438,13 +442,13 @@ class SubmoduleImportation(Importation):
         # A dot should only appear in the name when it is a submodule import
         assert '.' in name and (not source or isinstance(source, ast.Import))
         package_name = name.split('.')[0]
-        super(SubmoduleImportation, self).__init__(package_name, source)
+        super().__init__(package_name, source)
         self.fullName = name
 
     def redefines(self, other):
         if isinstance(other, Importation):
             return self.fullName == other.fullName
-        return super(SubmoduleImportation, self).redefines(other)
+        return super().redefines(other)
 
     def __str__(self):
         return self.fullName
@@ -465,7 +469,7 @@ class ImportationFrom(Importation):
         else:
             full_name = module + '.' + self.real_name
 
-        super(ImportationFrom, self).__init__(name, source, full_name)
+        super().__init__(name, source, full_name)
 
     def __str__(self):
         """Return import full name with alias."""
@@ -477,18 +481,16 @@ class ImportationFrom(Importation):
     @property
     def source_statement(self):
         if self.real_name != self.name:
-            return 'from %s import %s as %s' % (self.module,
-                                                self.real_name,
-                                                self.name)
+            return f'from {self.module} import {self.real_name} as {self.name}'
         else:
-            return 'from %s import %s' % (self.module, self.name)
+            return f'from {self.module} import {self.name}'
 
 
 class StarImportation(Importation):
     """A binding created by a 'from x import *' statement."""
 
     def __init__(self, name, source):
-        super(StarImportation, self).__init__('*', source)
+        super().__init__('*', source)
         # Each star importation needs a unique name, and
         # may not be the module name otherwise it will be deemed imported
         self.name = name + '.*'
@@ -514,7 +516,7 @@ class FutureImportation(ImportationFrom):
     """
 
     def __init__(self, name, source, scope):
-        super(FutureImportation, self).__init__(name, source, '__future__')
+        super().__init__(name, source, '__future__')
         self.used = (scope, source)
 
 
@@ -608,7 +610,7 @@ class ExportBinding(Binding):
                 # If not list concatenation
                 else:
                     break
-        super(ExportBinding, self).__init__(name, source)
+        super().__init__(name, source)
 
 
 class Scope(dict):
@@ -616,7 +618,7 @@ class Scope(dict):
 
     def __repr__(self):
         scope_cls = self.__class__.__name__
-        return '<%s at 0x%x %s>' % (scope_cls, id(self), dict.__repr__(self))
+        return f'<{scope_cls} at 0x{id(self):x} {dict.__repr__(self)}>'
 
 
 class ClassScope(Scope):
@@ -634,7 +636,7 @@ class FunctionScope(Scope):
                   '__traceback_supplement__'}
 
     def __init__(self):
-        super(FunctionScope, self).__init__()
+        super().__init__()
         # Simplify: manage the special locals as globals
         self.globals = self.alwaysUsed.copy()
         self.returnValue = None     # First non-empty return
@@ -667,7 +669,7 @@ class DoctestScope(ModuleScope):
     """Scope for a doctest."""
 
 
-class DummyNode(object):
+class DummyNode:
     """Used in place of an `ast.AST` to set error message positions"""
     def __init__(self, lineno, col_offset):
         self.lineno = lineno
@@ -853,7 +855,7 @@ def _collect_type_comments(tree, tokens):
     return type_comments
 
 
-class Checker(object):
+class Checker:
     """
     I check the cleanliness and sanity of Python code.
 
@@ -1180,7 +1182,7 @@ class Checker(object):
         # in the pyflakes testsuite (so more specific handling can be added if
         # needed).
         if os.environ.get('PYFLAKES_ERROR_UNKNOWN'):
-            raise NotImplementedError('Unexpected type: {}'.format(type(node)))
+            raise NotImplementedError(f'Unexpected type: {type(node)}')
         else:
             self.handleChildren(node)
 
@@ -2054,7 +2056,7 @@ class Checker(object):
             self.handleNodeDelete(node)
         else:
             # Unknown context
-            raise RuntimeError("Got impossible expression context: %r" % (node.ctx,))
+            raise RuntimeError(f"Got impossible expression context: {node.ctx!r}")
 
     def CONTINUE(self, node):
         # Walk the tree up until we see a loop (OK), a function or class

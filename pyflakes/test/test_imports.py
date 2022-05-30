@@ -577,9 +577,8 @@ class Test(TestCase):
 
     def test_redefinedByExcept(self):
         expected = [m.RedefinedWhileUnused]
-        if version_info >= (3,):
-            # The exc variable is unused inside the exception handler.
-            expected.append(m.UnusedVariable)
+        # The exc variable is unused inside the exception handler.
+        expected.append(m.UnusedVariable)
         self.flakes('''
         import fu
         try: pass
@@ -691,10 +690,7 @@ class Test(TestCase):
         self.flakes('import fu; `fu`')
 
     def test_usedInExec(self):
-        if version_info < (3,):
-            exec_stmt = 'exec "print 1" in fu.bar'
-        else:
-            exec_stmt = 'exec("print(1)", fu.bar)'
+        exec_stmt = 'exec("print(1)", fu.bar)'
         self.flakes('import fu; %s' % exec_stmt)
 
     def test_usedInLambda(self):

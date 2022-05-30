@@ -90,7 +90,7 @@ def checkPath(filename, reporter=None):
     try:
         with open(filename, 'rb') as f:
             codestr = f.read()
-    except IOError:
+    except OSError:
         msg = sys.exc_info()[1]
         reporter.unexpectedError(filename, msg.args[1])
         return 1
@@ -113,7 +113,7 @@ def isPythonFile(filename):
             text = f.read(max_bytes)
             if not text:
                 return False
-    except IOError:
+    except OSError:
         return False
 
     return PYTHON_SHEBANG_REGEX.match(text)
