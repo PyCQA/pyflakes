@@ -20,7 +20,6 @@ import tokenize
 
 from pyflakes import messages
 
-PY35_PLUS = sys.version_info >= (3, 5)    # Python 3.5 and above
 PY36_PLUS = sys.version_info >= (3, 6)    # Python 3.6 and above
 PY38_PLUS = sys.version_info >= (3, 8)
 PYPY = hasattr(sys, 'pypy_version_info')
@@ -37,14 +36,7 @@ def getAlternatives(n):
         return [n.body + n.orelse] + [[hdl] for hdl in n.handlers]
 
 
-if PY35_PLUS:
-    FOR_TYPES = (ast.For, ast.AsyncFor)
-    LOOP_TYPES = (ast.While, ast.For, ast.AsyncFor)
-    FUNCTION_TYPES = (ast.FunctionDef, ast.AsyncFunctionDef)
-else:
-    FOR_TYPES = (ast.For,)
-    LOOP_TYPES = (ast.While, ast.For)
-    FUNCTION_TYPES = (ast.FunctionDef,)
+FOR_TYPES = (ast.For, ast.AsyncFor)
 
 if PY36_PLUS:
     ANNASSIGN_TYPES = (ast.AnnAssign,)
@@ -729,7 +721,7 @@ def _is_any_typing_member(node, scope_stack):
 
 def is_typing_overload(value, scope_stack):
     return (
-        isinstance(value.source, FUNCTION_TYPES) and
+        isinstance(value.source, (ast.FunctionDef, ast.AsyncFunctionDef)) and
         any(
             _is_typing(dec, 'overload', scope_stack)
             for dec in value.source.decorator_list
@@ -833,14 +825,13 @@ class Checker:
         ast.Module: ModuleScope,
         ast.ClassDef: ClassScope,
         ast.FunctionDef: FunctionScope,
+        ast.AsyncFunctionDef: FunctionScope,
         ast.Lambda: FunctionScope,
         ast.ListComp: GeneratorScope,
         ast.SetComp: GeneratorScope,
         ast.GeneratorExp: GeneratorScope,
         ast.DictComp: GeneratorScope,
     }
-    if PY35_PLUS:
-        _ast_node_scope[ast.AsyncFunctionDef] = FunctionScope
 
     nodeDepth = 0
     offset = None
@@ -2018,7 +2009,7 @@ class Checker:
         n = node
         while hasattr(n, '_pyflakes_parent'):
             n, n_child = n._pyflakes_parent, n
-            if isinstance(n, LOOP_TYPES):
+            if isinstance(n, (ast.While, ast.For, ast.AsyncFor)):
                 # Doesn't apply unless it's in the loop itself
                 if n_child not in n.orelse:
                     return
