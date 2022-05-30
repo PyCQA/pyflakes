@@ -1082,16 +1082,13 @@ class Checker:
                             node, value.name, existing.source)
 
             elif scope is self.scope:
-                if (isinstance(parent_stmt, ast.comprehension) and
-                        not isinstance(self.getParent(existing.source),
-                                       (FOR_TYPES, ast.comprehension))):
-                    self.report(messages.RedefinedInListComp,
+                if (
+                        (not existing.used and value.redefines(existing)) and
+                        (value.name != '_' or isinstance(existing, Importation)) and
+                        not is_typing_overload(existing, self.scopeStack)
+                ):
+                    self.report(messages.RedefinedWhileUnused,
                                 node, value.name, existing.source)
-                elif not existing.used and value.redefines(existing):
-                    if value.name != '_' or isinstance(existing, Importation):
-                        if not is_typing_overload(existing, self.scopeStack):
-                            self.report(messages.RedefinedWhileUnused,
-                                        node, value.name, existing.source)
 
             elif isinstance(existing, Importation) and value.redefines(existing):
                 existing.redefined.append(node)
