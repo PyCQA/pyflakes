@@ -1457,16 +1457,14 @@ class Checker:
         pass
 
     # "stmt" type nodes
-    DELETE = PRINT = FOR = ASYNCFOR = WHILE = WITH = WITHITEM = \
-        ASYNCWITH = ASYNCWITHITEM = TRYFINALLY = EXEC = \
+    DELETE = FOR = ASYNCFOR = WHILE = WITH = WITHITEM = ASYNCWITH = \
         EXPR = ASSIGN = handleChildren
 
     PASS = ignore
 
     # "expr" type nodes
-    BOOLOP = UNARYOP = SET = \
-        REPR = ATTRIBUTE = \
-        STARRED = NAMECONSTANT = NAMEDEXPR = handleChildren
+    BOOLOP = UNARYOP = SET = ATTRIBUTE = STARRED = NAMECONSTANT = \
+        NAMEDEXPR = handleChildren
 
     def SUBSCRIPT(self, node):
         if _is_name_or_attr(node.value, 'Literal'):
@@ -2225,7 +2223,7 @@ class Checker:
         # Process the other nodes: "except:", "else:", "finally:"
         self.handleChildren(node, omit='body')
 
-    TRYEXCEPT = TRYSTAR = TRY
+    TRYSTAR = TRY
 
     def EXCEPTHANDLER(self, node):
         if node.name is None:
