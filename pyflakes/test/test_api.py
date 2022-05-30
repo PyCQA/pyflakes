@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import tempfile
 
+from pyflakes.checker import PYPY
 from pyflakes.messages import UnusedImport
 from pyflakes.reporter import Reporter
 from pyflakes.api import (
@@ -24,12 +25,6 @@ if sys.version_info < (3,):
 else:
     from io import StringIO
     unichr = chr
-
-try:
-    sys.pypy_version_info
-    PYPY = True
-except AttributeError:
-    PYPY = False
 
 ERROR_HAS_COL_NUM = ERROR_HAS_LAST_LINE = sys.version_info >= (3, 2) or PYPY
 
