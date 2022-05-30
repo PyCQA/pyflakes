@@ -2295,8 +2295,7 @@ class Checker(object):
     def IMPORTFROM(self, node):
         if node.module == '__future__':
             if not self.futuresAllowed:
-                self.report(messages.LateFutureImport,
-                            node, [n.name for n in node.names])
+                self.report(messages.LateFutureImport, node)
         else:
             self.futuresAllowed = False
 
