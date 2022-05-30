@@ -151,20 +151,18 @@ VALID_CONVERSIONS = frozenset('diouxXeEfFgGcrsa%')
 
 
 def _must_match(regex, string, pos):
-    # type: (Pattern[str], str, int) -> Match[str]
     match = regex.match(string, pos)
     assert match is not None
     return match
 
 
-def parse_percent_format(s):  # type: (str) -> Tuple[PercentFormat, ...]
+def parse_percent_format(s):
     """Parses the string component of a `'...' % ...` format call
 
     Copied from https://github.com/asottile/pyupgrade at v1.20.1
     """
 
     def _parse_inner():
-        # type: () -> Generator[PercentFormat, None, None]
         string_start = 0
         string_end = 0
         in_fmt = False
@@ -184,7 +182,7 @@ def parse_percent_format(s):  # type: (str) -> Tuple[PercentFormat, ...]
             else:
                 key_match = MAPPING_KEY_RE.match(s, i)
                 if key_match:
-                    key = key_match.group(1)  # type: Optional[str]
+                    key = key_match.group(1)
                     i = key_match.end()
                 else:
                     key = None
@@ -814,8 +812,8 @@ class _TypeableVisitor(ast.NodeVisitor):
     https://www.python.org/dev/peps/pep-0484/#type-comments
     """
     def __init__(self):
-        self.typeable_lines = []  # type: List[int]
-        self.typeable_nodes = {}  # type: Dict[int, ast.AST]
+        self.typeable_lines = []
+        self.typeable_nodes = {}
 
     def _typeable(self, node):
         # if there is more than one typeable thing on a line last one wins
