@@ -20,7 +20,6 @@ import tokenize
 
 from pyflakes import messages
 
-PY36_PLUS = sys.version_info >= (3, 6)    # Python 3.6 and above
 PY38_PLUS = sys.version_info >= (3, 8)
 PYPY = hasattr(sys, 'pypy_version_info')
 
@@ -37,11 +36,6 @@ def getAlternatives(n):
 
 
 FOR_TYPES = (ast.For, ast.AsyncFor)
-
-if PY36_PLUS:
-    ANNASSIGN_TYPES = (ast.AnnAssign,)
-else:
-    ANNASSIGN_TYPES = ()
 
 if PY38_PLUS:
     def _is_singleton(node):  # type: (ast.AST) -> bool
@@ -635,10 +629,7 @@ class DetectClassScopedMagic:
 
 # Globally defined names which are not attributes of the builtins module, or
 # are only present on some platforms.
-_MAGIC_GLOBALS = ['__file__', '__builtins__', 'WindowsError']
-# module scope annotation will store in `__annotations__`, see also PEP 526.
-if PY36_PLUS:
-    _MAGIC_GLOBALS.append('__annotations__')
+_MAGIC_GLOBALS = ['__file__', '__builtins__', '__annotations__', 'WindowsError']
 
 
 def getNodeName(node):
@@ -1246,7 +1237,7 @@ class Checker:
                     break
 
         parent_stmt = self.getParent(node)
-        if isinstance(parent_stmt, ANNASSIGN_TYPES) and parent_stmt.value is None:
+        if isinstance(parent_stmt, ast.AnnAssign) and parent_stmt.value is None:
             binding = Annotation(name, node)
         elif isinstance(parent_stmt, (FOR_TYPES, ast.comprehension)) or (
                 parent_stmt != node._pyflakes_parent and
