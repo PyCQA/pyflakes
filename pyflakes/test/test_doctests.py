@@ -3,6 +3,7 @@ import textwrap
 
 from pyflakes import messages as m
 from pyflakes.checker import (
+    PYPY,
     DoctestScope,
     FunctionScope,
     ModuleScope,
@@ -11,12 +12,6 @@ from pyflakes.test.test_other import Test as TestOther
 from pyflakes.test.test_imports import Test as TestImports
 from pyflakes.test.test_undefined_names import Test as TestUndefinedNames
 from pyflakes.test.harness import TestCase, skip
-
-try:
-    sys.pypy_version_info
-    PYPY = True
-except AttributeError:
-    PYPY = False
 
 
 class _DoctestMixin(object):

@@ -23,11 +23,7 @@ PY2 = sys.version_info < (3, 0)
 PY35_PLUS = sys.version_info >= (3, 5)    # Python 3.5 and above
 PY36_PLUS = sys.version_info >= (3, 6)    # Python 3.6 and above
 PY38_PLUS = sys.version_info >= (3, 8)
-try:
-    sys.pypy_version_info
-    PYPY = True
-except AttributeError:
-    PYPY = False
+PYPY = hasattr(sys, 'pypy_version_info')
 
 builtin_vars = dir(__import__('__builtin__' if PY2 else 'builtins'))
 
