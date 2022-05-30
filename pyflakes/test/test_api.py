@@ -21,8 +21,6 @@ from pyflakes.api import (
 )
 from pyflakes.test.harness import TestCase, skipIf
 
-unichr = chr
-
 
 def withStderrTo(stderr, f, *args, **kwargs):
     """
@@ -581,7 +579,7 @@ foo = '\\xyz'
         """
         If source file declares the correct encoding, no error is reported.
         """
-        SNOWMAN = unichr(0x2603)
+        SNOWMAN = chr(0x2603)
         source = ("""\
 # coding: utf-8
 x = "%s"
@@ -601,7 +599,7 @@ x = "%s"
         If a source file contains bytes which cannot be decoded, this is
         reported on stderr.
         """
-        SNOWMAN = unichr(0x2603)
+        SNOWMAN = chr(0x2603)
         source = ("""\
 # coding: ascii
 x = "%s"
@@ -615,7 +613,7 @@ x = "%s"
         If a source file contains bytes which cannot be decoded, this is
         reported on stderr.
         """
-        SNOWMAN = unichr(0x2603)
+        SNOWMAN = chr(0x2603)
         source = ("""\
 # coding: ascii
 x = "%s"
