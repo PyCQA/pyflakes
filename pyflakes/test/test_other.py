@@ -1772,6 +1772,23 @@ class TestUnusedAssignment(TestCase):
         print(x)
         ''')
 
+    @skipIf(version_info < (3, 8), 'new in Python 3.8')
+    def test_assign_expr_generator_scope(self):
+        """Test assignment expressions in generator expressions."""
+        self.flakes('''
+        if (any((y := x[0]) for x in [[True]])):
+            print(y)
+        ''')
+
+    @skipIf(version_info < (3, 8), 'new in Python 3.8')
+    def test_assign_expr_nested(self):
+        """Test assignment expressions in nested expressions."""
+        self.flakes('''
+        if ([(y:=x) for x in range(4) if [(z:=q) for q in range(4)]]):
+            print(y)
+            print(z)
+        ''')
+
 
 class TestStringFormatting(TestCase):
 

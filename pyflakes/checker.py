@@ -540,6 +540,12 @@ class Assignment(Binding):
     """
 
 
+class NamedExprAssignment(Assignment):
+    """
+    Represents binding a name with an assignment expression.
+    """
+
+
 class Annotation(Binding):
     """
     Represents binding a name to a type without an associated value.
@@ -1159,7 +1165,14 @@ class Checker(object):
         # don't treat annotations as assignments if there is an existing value
         # in scope
         if value.name not in self.scope or not isinstance(value, Annotation):
-            self.scope[value.name] = value
+            cur_scope_pos = -1
+            # As per PEP 572, use scope in which outermost generator is defined
+            while (
+                isinstance(value, NamedExprAssignment) and
+                isinstance(self.scopeStack[cur_scope_pos], GeneratorScope)
+            ):
+                cur_scope_pos -= 1
+            self.scopeStack[cur_scope_pos][value.name] = value
 
     def _unknown_handler(self, node):
         # this environment variable configures whether to error on unknown
@@ -1302,6 +1315,8 @@ class Checker(object):
             binding = ExportBinding(name, node._pyflakes_parent, self.scope)
         elif PY2 and isinstance(getattr(node, 'ctx', None), ast.Param):
             binding = Argument(name, self.getScopeNode(node))
+        elif PY38_PLUS and isinstance(parent_stmt, ast.NamedExpr):
+            binding = NamedExprAssignment(name, node)
         else:
             binding = Assignment(name, node)
         self.addBinding(node, binding)
