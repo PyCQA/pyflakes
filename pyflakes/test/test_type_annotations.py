@@ -801,3 +801,18 @@ class TestTypeAnnotations(TestCase):
             class Y(NamedTuple):
                 y: NamedTuple("v", [("vv", int)])
         """)
+
+    @skipIf(version_info < (3, 11), 'new in Python 3.11')
+    def test_variadic_generics(self):
+        self.flakes("""
+            from typing import Generic
+            from typing import TypeVarTuple
+
+            Ts = TypeVarTuple('Ts')
+
+            class Shape(Generic[*Ts]): pass
+
+            def f(*args: *Ts) -> None: ...
+
+            def g(x: Shape[*Ts]) -> Shape[*Ts]: ...
+        """)
