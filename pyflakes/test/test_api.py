@@ -3,6 +3,7 @@ Tests for L{pyflakes.scripts.pyflakes}.
 """
 
 import contextlib
+import io
 import os
 import sys
 import shutil
@@ -20,7 +21,6 @@ from pyflakes.api import (
 )
 from pyflakes.test.harness import TestCase, skipIf
 
-from io import StringIO
 unichr = chr
 
 
@@ -45,31 +45,13 @@ class Node:
 
 
 class SysStreamCapturing:
-
-    """
-    Context manager capturing sys.stdin, sys.stdout and sys.stderr.
+    """Context manager capturing sys.stdin, sys.stdout and sys.stderr.
 
     The file handles are replaced with a StringIO object.
-    On environments that support it, the StringIO object uses newlines
-    set to os.linesep.  Otherwise newlines are converted from \\n to
-    os.linesep during __exit__.
     """
 
-    def _create_StringIO(self, buffer=None):
-        # Python 3 has a newline argument
-        try:
-            return StringIO(buffer, newline=os.linesep)
-        except TypeError:
-            self._newline = True
-            # Python 2 creates an input only stream when buffer is not None
-            if buffer is None:
-                return StringIO()
-            else:
-                return StringIO(buffer)
-
     def __init__(self, stdin):
-        self._newline = False
-        self._stdin = self._create_StringIO(stdin or '')
+        self._stdin = io.StringIO(stdin or '', newline=os.linesep)
 
     def __enter__(self):
         self._orig_stdin = sys.stdin
@@ -77,18 +59,14 @@ class SysStreamCapturing:
         self._orig_stderr = sys.stderr
 
         sys.stdin = self._stdin
-        sys.stdout = self._stdout_stringio = self._create_StringIO()
-        sys.stderr = self._stderr_stringio = self._create_StringIO()
+        sys.stdout = self._stdout_stringio = io.StringIO(newline=os.linesep)
+        sys.stderr = self._stderr_stringio = io.StringIO(newline=os.linesep)
 
         return self
 
     def __exit__(self, *args):
         self.output = self._stdout_stringio.getvalue()
         self.error = self._stderr_stringio.getvalue()
-
-        if self._newline and os.linesep != '\n':
-            self.output = self.output.replace('\n', os.linesep)
-            self.error = self.error.replace('\n', os.linesep)
 
         sys.stdin = self._orig_stdin
         sys.stdout = self._orig_stdout
@@ -185,10 +163,6 @@ class TestIterSourceCode(TestCase):
         with open(os.path.join(self.tempdir, 'c'), 'w') as fd:
             fd.write('hello\nworld\n')
 
-        python2 = os.path.join(self.tempdir, 'd')
-        with open(python2, 'w') as fd:
-            fd.write('#!/usr/bin/env python2\n')
-
         python3 = os.path.join(self.tempdir, 'e')
         with open(python3, 'w') as fd:
             fd.write('#!/usr/bin/env python3\n')
@@ -201,10 +175,6 @@ class TestIterSourceCode(TestCase):
         with open(python3args, 'w') as fd:
             fd.write('#!/usr/bin/python3 -u\n')
 
-        python2u = os.path.join(self.tempdir, 'h')
-        with open(python2u, 'w') as fd:
-            fd.write('#!/usr/bin/python2u\n')
-
         python3d = os.path.join(self.tempdir, 'i')
         with open(python3d, 'w') as fd:
             fd.write('#!/usr/local/bin/python3d\n')
@@ -213,10 +183,6 @@ class TestIterSourceCode(TestCase):
         with open(python38m, 'w') as fd:
             fd.write('#! /usr/bin/env python3.8m\n')
 
-        python27 = os.path.join(self.tempdir, 'k')
-        with open(python27, 'w') as fd:
-            fd.write('#!/usr/bin/python2.7   \n')
-
         # Should NOT be treated as Python source
         notfirst = os.path.join(self.tempdir, 'l')
         with open(notfirst, 'w') as fd:
@@ -224,8 +190,10 @@ class TestIterSourceCode(TestCase):
 
         self.assertEqual(
             sorted(iterSourceCode([self.tempdir])),
-            sorted([python, python2, python3, pythonw, python3args, python2u,
-                    python3d, python38m, python27]))
+            sorted([
+                python, python3, pythonw, python3args, python3d,
+                python38m,
+            ]))
 
     def test_multipleDirectories(self):
         """
@@ -264,7 +232,7 @@ class TestReporter(TestCase):
         number, error message, actual line of source and a caret pointing to
         where the error is.
         """
-        err = StringIO()
+        err = io.StringIO()
         reporter = Reporter(None, err)
         reporter.syntaxError('foo.py', 'a problem', 3,
                              8 if sys.version_info >= (3, 8) else 7,
@@ -280,7 +248,7 @@ class TestReporter(TestCase):
         C{syntaxError} doesn't include a caret pointing to the error if
         C{offset} is passed as C{None}.
         """
-        err = StringIO()
+        err = io.StringIO()
         reporter = Reporter(None, err)
         reporter.syntaxError('foo.py', 'a problem', 3, None,
                              'bad line of source')
@@ -295,7 +263,7 @@ class TestReporter(TestCase):
         line.  The offset is adjusted so that it is relative to the start of
         the last line.
         """
-        err = StringIO()
+        err = io.StringIO()
         lines = [
             'bad line of source',
             'more bad lines of source',
@@ -314,7 +282,7 @@ class TestReporter(TestCase):
         """
         C{unexpectedError} reports an error processing a source file.
         """
-        err = StringIO()
+        err = io.StringIO()
         reporter = Reporter(None, err)
         reporter.unexpectedError('source.py', 'error message')
         self.assertEqual('source.py: error message\n', err.getvalue())
@@ -324,7 +292,7 @@ class TestReporter(TestCase):
         C{flake} reports a code warning from Pyflakes.  It is exactly the
         str() of a L{pyflakes.messages.Message}.
         """
-        out = StringIO()
+        out = io.StringIO()
         reporter = Reporter(out, None)
         message = UnusedImport('foo.py', Node(42), 'bar')
         reporter.flake(message)
@@ -358,7 +326,7 @@ class CheckTests(TestCase):
         @param path: A path to a file to check.
         @param errorList: A list of errors expected to be printed to stderr.
         """
-        err = StringIO()
+        err = io.StringIO()
         count = withStderrTo(err, checkPath, path)
         self.assertEqual(
             (count, err.getvalue()), (len(errorList), ''.join(errorList)))

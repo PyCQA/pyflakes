@@ -12,7 +12,7 @@ from pyflakes import reporter as modReporter
 
 __all__ = ['check', 'checkPath', 'checkRecursive', 'iterSourceCode', 'main']
 
-PYTHON_SHEBANG_REGEX = re.compile(br'^#!.*\bpython([23](\.\d+)?|w)?[dmu]?\s')
+PYTHON_SHEBANG_REGEX = re.compile(br'^#!.*\bpython(3(\.\d+)?|w)?[dmu]?\s')
 
 
 def check(codeString, filename, reporter=None):

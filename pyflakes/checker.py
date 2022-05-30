@@ -241,7 +241,6 @@ def convert_to_value(item):
             result,
         )
     elif isinstance(item, ast.NameConstant):
-        # None, True, False are nameconstants in python3, but names in 2
         return item.value
     else:
         return UnhandledKeyType()
@@ -1514,15 +1513,16 @@ class Checker:
             self.report(messages.StringDotFormatInvalidFormat, node, e)
             return
 
-        class state:  # py2-compatible `nonlocal`
-            auto = None
-            next_auto = 0
+        auto = None
+        next_auto = 0
 
         placeholder_positional = set()
         placeholder_named = set()
 
         def _add_key(fmtkey):
             """Returns True if there is an error which should early-exit"""
+            nonlocal auto, next_auto
+
             if fmtkey is None:  # end of string or `{` / `}` escapes
                 return False
 
@@ -1535,21 +1535,21 @@ class Checker:
             except ValueError:
                 pass
             else:  # fmtkey was an integer
-                if state.auto is True:
+                if auto is True:
                     self.report(messages.StringDotFormatMixingAutomatic, node)
                     return True
                 else:
-                    state.auto = False
+                    auto = False
 
             if fmtkey == '':
-                if state.auto is False:
+                if auto is False:
                     self.report(messages.StringDotFormatMixingAutomatic, node)
                     return True
                 else:
-                    state.auto = True
+                    auto = True
 
-                fmtkey = state.next_auto
-                state.next_auto += 1
+                fmtkey = next_auto
+                next_auto += 1
 
             if isinstance(fmtkey, int):
                 placeholder_positional.add(fmtkey)

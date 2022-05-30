@@ -63,9 +63,9 @@ class Test(TestCase):
     def test_undefinedExceptionNameObscuringLocalVariable2(self):
         """Exception names are unbound after the `except:` block.
 
-        Last line will raise UnboundLocalError on Python 3 but would print out
-        've' on Python 2. The exc variable is unused inside the exception
-        handler."""
+        Last line will raise UnboundLocalError.
+        The exc variable is unused inside the exception handler.
+        """
         self.flakes('''
         try:
             raise ValueError('ve')
@@ -121,9 +121,9 @@ class Test(TestCase):
     def test_undefinedExceptionNameObscuringGlobalVariable(self):
         """Exception names obscure globals, can't be used after.
 
-        Last line will raise UnboundLocalError on both Python 2 and
-        Python 3 because the existence of that exception name creates
-        a local scope placeholder for it, obscuring any globals, etc."""
+        Last line will raise UnboundLocalError because the existence of that
+        exception name creates a local scope placeholder for it, obscuring any
+        globals, etc."""
         self.flakes('''
         exc = 'Original value'
         def func():
@@ -793,10 +793,6 @@ class Test(TestCase):
         ''', m.UndefinedName)
 
     def test_dunderClass(self):
-        """
-        `__class__` is defined in class scope under Python 3, but is not
-        in Python 2.
-        """
         code = '''
         class Test(object):
             def __init__(self):
