@@ -2068,18 +2068,17 @@ class Checker:
             annotations.append(arg.annotation)
         defaults = node.args.defaults + node.args.kw_defaults
 
-        # Only for Python3 FunctionDefs
-        is_py3_func = hasattr(node, 'returns')
+        has_annotations = not isinstance(node, ast.Lambda)
 
         for arg_name in ('vararg', 'kwarg'):
             wildcard = getattr(node.args, arg_name)
             if not wildcard:
                 continue
             args.append(wildcard.arg)
-            if is_py3_func:
+            if has_annotations:
                 annotations.append(wildcard.annotation)
 
-        if is_py3_func:
+        if has_annotations:
             annotations.append(node.returns)
 
         if len(set(args)) < len(args):
