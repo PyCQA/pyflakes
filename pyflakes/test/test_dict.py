@@ -2,10 +2,8 @@
 Tests for dict duplicate keys Pyflakes behavior.
 """
 
-from sys import version_info
-
 from pyflakes import messages as m
-from pyflakes.test.harness import TestCase, skipIf
+from pyflakes.test.harness import TestCase
 
 
 class Test(TestCase):
@@ -17,33 +15,15 @@ class Test(TestCase):
             m.MultiValueRepeatedKeyLiteral,
         )
 
-    @skipIf(version_info < (3,),
-            "bytes and strings with same 'value' are not equal in python3")
     def test_duplicate_keys_bytes_vs_unicode_py3(self):
         self.flakes("{b'a': 1, u'a': 2}")
 
-    @skipIf(version_info < (3,),
-            "bytes and strings with same 'value' are not equal in python3")
     def test_duplicate_values_bytes_vs_unicode_py3(self):
         self.flakes(
             "{1: b'a', 1: u'a'}",
             m.MultiValueRepeatedKeyLiteral,
             m.MultiValueRepeatedKeyLiteral,
         )
-
-    @skipIf(version_info >= (3,),
-            "bytes and strings with same 'value' are equal in python2")
-    def test_duplicate_keys_bytes_vs_unicode_py2(self):
-        self.flakes(
-            "{b'a': 1, u'a': 2}",
-            m.MultiValueRepeatedKeyLiteral,
-            m.MultiValueRepeatedKeyLiteral,
-        )
-
-    @skipIf(version_info >= (3,),
-            "bytes and strings with same 'value' are equal in python2")
-    def test_duplicate_values_bytes_vs_unicode_py2(self):
-        self.flakes("{1: b'a', 1: u'a'}")
 
     def test_multiple_duplicate_keys(self):
         self.flakes(

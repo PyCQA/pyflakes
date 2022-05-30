@@ -1,5 +1,3 @@
-from sys import version_info
-
 from pyflakes import messages as m
 from pyflakes.checker import (
     FutureImportation,
@@ -8,7 +6,7 @@ from pyflakes.checker import (
     StarImportation,
     SubmoduleImportation,
 )
-from pyflakes.test.harness import TestCase, skip, skipIf
+from pyflakes.test.harness import TestCase, skip
 
 
 class TestImportationObject(TestCase):
@@ -623,12 +621,6 @@ class Test(TestCase):
         self.flakes('import fu; [fu for _ in range(1)]')
         self.flakes('import fu; [1 for _ in range(1) if fu]')
 
-    @skipIf(version_info >= (3,),
-            'in Python 3 list comprehensions execute in a separate scope')
-    def test_redefinedByListComp(self):
-        self.flakes('import fu; [1 for fu in range(1)]',
-                    m.RedefinedInListComp)
-
     def test_usedInTryFinally(self):
         self.flakes('''
         import fu
@@ -684,10 +676,6 @@ class Test(TestCase):
             def f(): global foo; import foo
             def g(): foo.is_used()
         ''')
-
-    @skipIf(version_info >= (3,), 'deprecated syntax')
-    def test_usedInBackquote(self):
-        self.flakes('import fu; `fu`')
 
     def test_usedInExec(self):
         exec_stmt = 'exec("print(1)", fu.bar)'
@@ -789,8 +777,6 @@ class Test(TestCase):
         assert error.message == '%r imported but unused'
         assert error.message_args == ('from .. import *', )
 
-    @skipIf(version_info < (3,),
-            'import * below module level is a warning on Python 2')
     def test_localImportStar(self):
         """import * is only allowed at module level."""
         self.flakes('''
@@ -809,17 +795,6 @@ class Test(TestCase):
         error = checker.messages[0]
         assert error.message == "'from %s import *' only allowed at module level"
         assert error.message_args == ('..', )
-
-    @skipIf(version_info > (3,),
-            'import * below module level is an error on Python 3')
-    def test_importStarNested(self):
-        """All star imports are marked as used by an undefined variable."""
-        self.flakes('''
-        from fu import *
-        def f():
-            from bar import *
-            x
-        ''', m.ImportStarUsed, m.ImportStarUsed, m.ImportStarUsage)
 
     def test_packageImport(self):
         """
