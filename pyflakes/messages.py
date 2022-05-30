@@ -168,13 +168,6 @@ class UnusedVariable(Message):
         self.message_args = (names,)
 
 
-class ReturnWithArgsInsideGenerator(Message):
-    """
-    Indicates a return statement with arguments inside a generator.
-    """
-    message = '\'return\' with argument inside generator'
-
-
 class ReturnOutsideFunction(Message):
     """
     Indicates a return statement outside of a function/method.
