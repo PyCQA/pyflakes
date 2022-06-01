@@ -17,6 +17,11 @@ import string
 import sys
 import tokenize
 
+try:
+    from collections import UserDict
+except ImportError:
+    from UserDict import IterableUserDict as UserDict
+
 from pyflakes import messages
 
 PY2 = sys.version_info < (3, 0)
@@ -611,8 +616,12 @@ class ExportBinding(Binding):
         super(ExportBinding, self).__init__(name, source)
 
 
-class Scope(dict):
+class Scope(UserDict, object):
     importStarred = False       # set to True when import * is found
+
+    def __init__(self, *args, **kwargs):
+        super(Scope, self).__init__(*args, **kwargs)
+        self.deleted_names = []
 
     def __repr__(self):
         scope_cls = self.__class__.__name__
@@ -633,8 +642,8 @@ class FunctionScope(Scope):
     alwaysUsed = {'__tracebackhide__', '__traceback_info__',
                   '__traceback_supplement__'}
 
-    def __init__(self):
-        super(FunctionScope, self).__init__()
+    def __init__(self, *args, **kwargs):
+        super(FunctionScope, self).__init__(*args, **kwargs)
         # Simplify: manage the special locals as globals
         self.globals = self.alwaysUsed.copy()
         self.returnValue = None     # First non-empty return
@@ -1202,6 +1211,10 @@ class Checker(object):
         in_generators = None
         importStarred = None
 
+        if name in self.scope.deleted_names:
+            self.report(messages.UndefinedName, node, name)
+            return
+
         # try enclosing function scopes and global scope
         for scope in self.scopeStack[-1::-1]:
             if isinstance(scope, ClassScope):
@@ -1275,6 +1288,8 @@ class Checker(object):
         name = getNodeName(node)
         if not name:
             return
+        if name in self.scope.deleted_names:
+            self.scope.deleted_names.remove(name)
         # if the name hasn't already been defined in the current scope
         if isinstance(self.scope, FunctionScope) and name not in self.scope:
             # for each function or module scope above us
@@ -1339,11 +1354,14 @@ class Checker(object):
 
         if isinstance(self.scope, FunctionScope) and name in self.scope.globals:
             self.scope.globals.remove(name)
+            self.scope.deleted_names.append(name)
         else:
             try:
                 del self.scope[name]
             except KeyError:
                 self.report(messages.UndefinedName, node, name)
+            else:
+                self.scope.deleted_names.append(name)
 
     @contextlib.contextmanager
     def _enter_annotation(self, ann_type=AnnotationState.BARE):

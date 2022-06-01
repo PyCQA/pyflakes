@@ -463,6 +463,43 @@ class Test(TestCase):
                 o = False
         ''')
 
+    def test_delFunctionScope(self):
+        """
+        Global names should not be seen if there are same names
+        defined in function.
+        """
+        self.flakes('''
+        a = 1
+        def func():
+            a = 2
+            del a
+            a
+        ''', m.UndefinedName)
+
+    def test_delMethodScope(self):
+        """
+        Global names should not be seen if there are same names
+        defined in method.
+        """
+        self.flakes('''
+        a = 1
+        class A(object):
+            def method(self):
+                a = 2
+                del a
+                a
+        ''', m.UndefinedName)
+
+    def test_RedefinedDeletedName(self):
+        self.flakes('''
+        a = 1
+        def func():
+            a = 2
+            del a
+            a = 3
+            a
+        ''')
+
     def test_globalFromNestedScope(self):
         """Global names are available from nested scopes."""
         self.flakes('''
