@@ -1149,8 +1149,14 @@ class Checker(object):
                             self.report(messages.RedefinedWhileUnused,
                                         node, value.name, existing.source)
 
-            elif isinstance(existing, Importation) and value.redefines(existing):
-                existing.redefined.append(node)
+            elif isinstance(existing, Importation):
+                if isinstance(node, (ast.Import, ast.ImportFrom)):
+                    if not isinstance(self.scope, DoctestScope):
+                        self.report(messages.ImportShadowedByImport,
+                                    node, value.name, existing.source)
+
+                elif value.redefines(existing):
+                    existing.redefined.append(node)
 
         if value.name in self.scope:
             # then assume the rebound name is used as a global or within a loop

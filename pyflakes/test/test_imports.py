@@ -316,9 +316,8 @@ class Test(TestCase):
             def baz():
                 def fu():
                     pass
-        ''',
-                    m.RedefinedWhileUnused, m.RedefinedWhileUnused,
-                    m.UnusedImport, m.UnusedImport)
+        ''', *(m.ImportShadowedByImport, m.RedefinedWhileUnused,
+               m.UnusedImport, m.UnusedImport))
 
     def test_redefinedButUsedLater(self):
         """
@@ -714,6 +713,15 @@ class Test(TestCase):
             import fu
         fu
         ''', m.UnusedImport, m.UndefinedName)
+
+    def test_shadowedInNestedScope(self):
+        self.flakes('''
+        import fu
+        def bar():
+            import fu
+            fu
+        fu
+        ''', m.ImportShadowedByImport)
 
     def test_methodsDontUseClassScope(self):
         self.flakes('''
