@@ -1412,6 +1412,7 @@ class TestUnusedAssignment(TestCase):
             def bar():
                 def baz():
                     return foo
+                return baz
             return bar
         ''')
 
@@ -1796,6 +1797,88 @@ class TestUnusedAssignment(TestCase):
         if ([(y:=x) for x in range(4) if [(z:=q) for q in range(4)]]):
             print(y)
             print(z)
+        ''')
+
+
+class TestUnusedFunction(TestCase):
+    """
+    Tests for warning about unused functions.
+    """
+
+    def test_unusedFunction(self):
+        """
+        Warn when a function inside a function is defined but never used.
+        """
+        self.flakes('''
+        def a():
+            def b():
+                pass
+        ''', m.UnusedFunction)
+
+    def test_unusedUnderscoreFunction(self):
+        """
+        Don't warn when the magic "_" (underscore) name is unused.
+        See issue #202.
+        """
+        self.flakes('''
+        def a():
+            def _():
+                pass
+        ''')
+
+    def test_usedDecoratedFunction(self):
+        """
+        Don't warn when the function is decorated because decorators can do
+        anything, like copy it into global state.
+        """
+        self.flakes('''
+        from somewhere import decorator
+
+        def a():
+            @decorator
+            def b():
+                pass
+        ''')
+
+
+class TestUnusedClass(TestCase):
+    """
+    Tests for warning about unused classes.
+    """
+
+    def test_unusedClass(self):
+        """
+        Warn when a class inside a function is defined but never used.
+        """
+        self.flakes('''
+        def a():
+            class B:
+                pass
+        ''', m.UnusedClass)
+
+    def test_unusedUnderscoreClass(self):
+        """
+        Don't warn when the magic "_" (underscore) name is unused.
+        See issue #202.
+        """
+        self.flakes('''
+        def a():
+            class _:
+                pass
+        ''')
+
+    def test_usedDecoratedClass(self):
+        """
+        Don't warn when the class is decorated because decorators can do
+        anything, like copy it into global state.
+        """
+        self.flakes('''
+        from somewhere import decorator
+
+        def a():
+            @decorator
+            class B:
+                pass
         ''')
 
 

@@ -168,6 +168,28 @@ class UnusedVariable(Message):
         self.message_args = (names,)
 
 
+class UnusedFunction(Message):
+    """
+    Indicates that a function has been defined but not actually used.
+    """
+    message = 'local function %r is defined but never used'
+
+    def __init__(self, filename, loc, names):
+        Message.__init__(self, filename, loc)
+        self.message_args = (names,)
+
+
+class UnusedClass(Message):
+    """
+    Indicates that a class has been defined but not actually used.
+    """
+    message = 'local class %r is defined but never used'
+
+    def __init__(self, filename, loc, names):
+        Message.__init__(self, filename, loc)
+        self.message_args = (names,)
+
+
 class ReturnWithArgsInsideGenerator(Message):
     """
     Indicates a return statement with arguments inside a generator.

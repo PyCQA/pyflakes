@@ -470,6 +470,7 @@ class Test(TestCase):
         def b():
             def c():
                 a
+            return c
         ''')
 
     def test_laterRedefinedGlobalFromNestedScope(self):
@@ -499,6 +500,7 @@ class Test(TestCase):
                     a
                     a = 2
                     return a
+                return fun2
         ''', m.UndefinedLocal)
 
     def test_intermediateClassScopeIgnored(self):
@@ -516,7 +518,7 @@ class Test(TestCase):
                     a = x
                     x = None
                     print(x, a)
-            print(x)
+            print(x, g)
         ''', m.UndefinedLocal)
 
     def test_doubleNestingReportsClosestName(self):
@@ -535,8 +537,8 @@ class Test(TestCase):
                         x
                         x = 3
                         return x
-                    return x
-                return x
+                    return x, c
+                return x, b
         ''', m.UndefinedLocal).messages[0]
 
         # _DoctestMixin.flakes adds two lines preceding the code above.
@@ -556,7 +558,7 @@ class Test(TestCase):
                     a
                     a = 1
                     return a
-                return a
+                return a, fun2
         ''', m.UndefinedLocal)
 
     def test_undefinedAugmentedAssignment(self):
@@ -597,7 +599,7 @@ class Test(TestCase):
             class C:
                 bar = foo
             foo = 456
-            return foo
+            return foo, C
         f()
         ''', m.UndefinedName)
 
@@ -695,6 +697,7 @@ class Test(TestCase):
         def func():
             d = e = 42
             def func(a: {1, d}) -> (lambda c: e): pass
+            return func
         ''')
 
     @skipIf(version_info < (3,), 'new in Python 3')

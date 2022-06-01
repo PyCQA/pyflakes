@@ -211,11 +211,13 @@ class TestTypeAnnotations(TestCase):
         def f():
             class C:
                 foo: not_a_real_type
+            return C
         ''', m.UndefinedName)
         self.flakes('''
         def f():
             class C:
                 foo: not_a_real_type = None
+            return C
         ''', m.UndefinedName)
         self.flakes('''
         from foo import Bar
