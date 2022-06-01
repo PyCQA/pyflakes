@@ -345,6 +345,13 @@ class Builtin(Definition):
 
     def __init__(self, name):
         super(Builtin, self).__init__(name, None)
+        self.can_delete = False
+        # __builtins__ and __file__ can always be deleted.
+        # __debug__ can be deleted sometimes and not deleted other times.
+        # Safest course of action is to assume it can be deleted, in
+        # order that no error is reported by pyflakes
+        elif name in ('__builtins__', '__file__', '__debug__'):
+            self.can_delete = True
 
     def __repr__(self):
         return '<%s object %r at 0x%x>' % (self.__class__.__name__,
@@ -1340,10 +1347,13 @@ class Checker(object):
         if isinstance(self.scope, FunctionScope) and name in self.scope.globals:
             self.scope.globals.remove(name)
         else:
-            try:
-                del self.scope[name]
-            except KeyError:
+            binding = self.scope.get(name, None)
+            if not binding or (
+                    isinstance(binding, Builtin) and not binding.can_delete):
                 self.report(messages.UndefinedName, node, name)
+                return
+
+        del self.scope[name]
 
     @contextlib.contextmanager
     def _enter_annotation(self, ann_type=AnnotationState.BARE):

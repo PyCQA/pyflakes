@@ -14,6 +14,16 @@ class TestCase(unittest.TestCase):
 
     withDoctest = False
 
+    def pythonException(self, input, *expectedOutputs, **kw):
+        try:
+            compile(textwrap.dedent(input), '<test>', 'exec', PyCF_ONLY_AST)
+        except BaseException as e:
+            return e
+        try:
+            exec(textwrap.dedent(input), {})
+        except BaseException as e:
+            return e
+
     def flakes(self, input, *expectedOutputs, **kw):
         tree = ast.parse(textwrap.dedent(input))
         file_tokens = checker.make_tokens(textwrap.dedent(input))
