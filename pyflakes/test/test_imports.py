@@ -686,6 +686,11 @@ class Test(TestCase):
             def g(): foo.is_used()
         ''')
 
+        self.flakes('''
+            def f(): global foo; import foo.bar
+            def g(): foo.is_used()
+        ''')
+
     @skipIf(version_info >= (3,), 'deprecated syntax')
     def test_usedInBackquote(self):
         self.flakes('import fu; `fu`')
