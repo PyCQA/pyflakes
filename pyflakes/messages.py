@@ -3,18 +3,18 @@ Provide the class Message and its subclasses.
 """
 
 
-class Message(object):
+class Message:
     message = ''
     message_args = ()
 
     def __init__(self, filename, loc):
         self.filename = filename
         self.lineno = loc.lineno
-        self.col = getattr(loc, 'col_offset', 0)
+        self.col = loc.col_offset
 
     def __str__(self):
-        return '%s:%s:%s: %s' % (self.filename, self.lineno, self.col+1,
-                                 self.message % self.message_args)
+        return '{}:{}:{}: {}'.format(self.filename, self.lineno, self.col+1,
+                                     self.message % self.message_args)
 
 
 class UnusedImport(Message):
@@ -27,14 +27,6 @@ class UnusedImport(Message):
 
 class RedefinedWhileUnused(Message):
     message = 'redefinition of unused %r from line %r'
-
-    def __init__(self, filename, loc, name, orig_loc):
-        Message.__init__(self, filename, loc)
-        self.message_args = (name, orig_loc.lineno)
-
-
-class RedefinedInListComp(Message):
-    message = 'list comprehension redefines %r from line %r'
 
     def __init__(self, filename, loc, name, orig_loc):
         Message.__init__(self, filename, loc)
@@ -166,13 +158,6 @@ class UnusedVariable(Message):
     def __init__(self, filename, loc, names):
         Message.__init__(self, filename, loc)
         self.message_args = (names,)
-
-
-class ReturnWithArgsInsideGenerator(Message):
-    """
-    Indicates a return statement with arguments inside a generator.
-    """
-    message = '\'return\' with argument inside generator'
 
 
 class ReturnOutsideFunction(Message):

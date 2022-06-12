@@ -14,7 +14,7 @@ from pyflakes.test.test_undefined_names import Test as TestUndefinedNames
 from pyflakes.test.harness import TestCase, skip
 
 
-class _DoctestMixin(object):
+class _DoctestMixin:
 
     withDoctest = True
 
@@ -43,7 +43,7 @@ class _DoctestMixin(object):
         return doctestificator % "\n       ".join(lines)
 
     def flakes(self, input, *args, **kw):
-        return super(_DoctestMixin, self).flakes(self.doctestify(input), *args, **kw)
+        return super().flakes(self.doctestify(input), *args, **kw)
 
 
 class Test(TestCase):

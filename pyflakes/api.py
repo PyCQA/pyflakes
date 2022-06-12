@@ -12,7 +12,7 @@ from pyflakes import reporter as modReporter
 
 __all__ = ['check', 'checkPath', 'checkRecursive', 'iterSourceCode', 'main']
 
-PYTHON_SHEBANG_REGEX = re.compile(br'^#!.*\bpython([23](\.\d+)?|w)?[dmu]?\s')
+PYTHON_SHEBANG_REGEX = re.compile(br'^#!.*\bpython(3(\.\d+)?|w)?[dmu]?\s')
 
 
 def check(codeString, filename, reporter=None):
@@ -48,7 +48,7 @@ def check(codeString, filename, reporter=None):
                 lines = codeString.splitlines()
                 if len(lines) >= lineno:
                     text = lines[lineno - 1]
-                    if sys.version_info >= (3, ) and isinstance(text, bytes):
+                    if isinstance(text, bytes):
                         try:
                             text = text.decode('ascii')
                         except UnicodeDecodeError:
@@ -90,7 +90,7 @@ def checkPath(filename, reporter=None):
     try:
         with open(filename, 'rb') as f:
             codestr = f.read()
-    except IOError:
+    except OSError:
         msg = sys.exc_info()[1]
         reporter.unexpectedError(filename, msg.args[1])
         return 1
@@ -113,7 +113,7 @@ def isPythonFile(filename):
             text = f.read(max_bytes)
             if not text:
                 return False
-    except IOError:
+    except OSError:
         return False
 
     return PYTHON_SHEBANG_REGEX.match(text)

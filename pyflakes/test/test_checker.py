@@ -1,8 +1,7 @@
 import ast
-import sys
 
 from pyflakes import checker
-from pyflakes.test.harness import TestCase, skipIf
+from pyflakes.test.harness import TestCase
 
 
 class TypeableVisitorTests(TestCase):
@@ -53,7 +52,6 @@ def f():
         self.assertIsInstance(visitor.typeable_nodes[1], ast.FunctionDef)
         self.assertIsInstance(visitor.typeable_nodes[2], ast.Assign)
 
-    @skipIf(sys.version_info < (3, 5), 'async syntax introduced in py35')
     def test_py35_node_types(self):
         """
         Test that the PEP 492 node types are collected
@@ -110,7 +108,7 @@ class CollectTypeCommentsTests(TestCase):
         """
         Test that the function works for text source
         """
-        ret = self._collect(u'x = 1  # type: int')
+        ret = self._collect('x = 1  # type: int')
         self.assertEqual(ret, {(ast.Assign, ('# type: int',))})
 
     def test_non_type_comment_ignored(self):
