@@ -1,0 +1,6 @@
+- id: pyflakes
+  name: pyflakes
+  entry: pyflakes
+  language: python
+  types: [python]
+  require_serial: true
