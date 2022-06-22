@@ -350,6 +350,10 @@ class Importation(Definition):
     def _has_alias(self):
         """Return whether importation needs an as clause."""
         return not self.fullName.split('.')[-1] == self.name
+    
+    @property
+    def explicitly_reexports(self):
+        return self.full_name.endswith(self.name)
 
     @property
     def source_statement(self):
