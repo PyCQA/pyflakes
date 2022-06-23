@@ -987,7 +987,7 @@ class Checker:
             # Look for imported names that aren't used.
             for value in scope.values():
                 if isinstance(value, Importation):
-                    used = value.used or value.name in all_names
+                    used = value.used or value.name in all_names or value.explicitly_reexports
                     if not used:
                         messg = messages.UnusedImport
                         self.report(messg, value.source, str(value))
