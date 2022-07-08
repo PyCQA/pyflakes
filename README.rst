@@ -75,7 +75,7 @@ All changes should include tests and pass flake8_.
    :target: https://github.com/PyCQA/pyflakes/actions
    :alt: GitHub Actions build status
 
-.. _Pylint: https://www.pylint.org/
+.. _Pylint: https://pylint.pycqa.org/
 .. _flake8: https://pypi.org/project/flake8/
 .. _`PEP 8`: https://www.python.org/dev/peps/pep-0008/
 .. _`rebase your changes`: https://git-scm.com/book/en/v2/Git-Branching-Rebasing
