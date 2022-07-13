@@ -15,6 +15,7 @@ from pyflakes.messages import UnusedImport
 from pyflakes.reporter import Reporter
 from pyflakes.api import (
     main,
+    check,
     checkPath,
     checkRecursive,
     iterSourceCode,
@@ -254,6 +255,17 @@ class TestReporter(TestCase):
             ("foo.py:3: a problem\n"
              "bad line of source\n"),
             err.getvalue())
+
+    def test_syntaxErrorNoText(self):
+        """
+        C{syntaxError} doesn't include text or nonsensical offsets if C{text} is C{None}.
+
+        This typically happens when reporting syntax errors from stdin.
+        """
+        err = io.StringIO()
+        reporter = Reporter(None, err)
+        reporter.syntaxError('<stdin>', 'a problem', 0, 0, None)
+        self.assertEqual(("<stdin>:1:1: a problem\n"), err.getvalue())
 
     def test_multiLineSyntaxError(self):
         """
@@ -606,7 +618,8 @@ x = "%s"
 """ % SNOWMAN).encode('utf-8')
         with self.makeTempFile(source) as sourcePath:
             self.assertHasErrors(
-                sourcePath, [f"{sourcePath}: problem decoding source\n"])
+                sourcePath,
+                [f"{sourcePath}:1:1: 'ascii' codec can't decode byte 0xe2 in position 21: ordinal not in range(128)\n"])  # noqa: E501
 
     def test_misencodedFileUTF16(self):
         """
@@ -647,6 +660,43 @@ x = "%s"
                          str(UnusedImport(file2, Node(1), 'contraband')))]))
         finally:
             shutil.rmtree(tempdir)
+
+    def test_stdinReportsErrors(self):
+        """
+        L{check} reports syntax errors from stdin
+        """
+        source = "max(1 for i in range(10), key=lambda x: x+1)\n"
+        err = io.StringIO()
+        count = withStderrTo(err, check, source, "<stdin>")
+        self.assertEqual(count, 1)
+        errlines = err.getvalue().split("\n")[:-1]
+
+        if PYPY:
+            expected_error = [
+                "<stdin>:1:3: Generator expression must be parenthesized if not sole argument",  # noqa: E501
+                "max(1 for i in range(10), key=lambda x: x+1)",
+                "  ^",
+            ]
+        elif sys.version_info >= (3, 9):
+            expected_error = [
+                "<stdin>:1:5: Generator expression must be parenthesized",
+                "max(1 for i in range(10), key=lambda x: x+1)",
+                "    ^",
+            ]
+        elif sys.version_info >= (3, 8):
+            expected_error = [
+                "<stdin>:1:5: Generator expression must be parenthesized",
+            ]
+        elif sys.version_info >= (3, 7):
+            expected_error = [
+                "<stdin>:1:4: Generator expression must be parenthesized",
+            ]
+        elif sys.version_info >= (3, 6):
+            expected_error = [
+                "<stdin>:1:4: Generator expression must be parenthesized if not sole argument",  # noqa: E501
+            ]
+
+        self.assertEqual(errlines, expected_error)
 
 
 class IntegrationTests(TestCase):
