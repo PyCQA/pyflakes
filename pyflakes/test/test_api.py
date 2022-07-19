@@ -401,8 +401,7 @@ def baz():
             exec(source)
         try:
             evaluate(source)
-        except SyntaxError:
-            e = sys.exc_info()[1]
+        except SyntaxError as e:
             if not PYPY and sys.version_info < (3, 10):
                 self.assertTrue(e.text.count('\n') > 1)
         else:
@@ -416,7 +415,7 @@ def baz():
             else:
                 message = 'invalid syntax'
 
-            if sys.version_info >= (3, 10):
+            if PYPY or sys.version_info >= (3, 10):
                 column = 12
             elif sys.version_info >= (3, 8):
                 column = 8
@@ -443,9 +442,7 @@ def baz():
             else:
                 msg = 'unexpected EOF while parsing'
 
-            if PYPY:
-                column = 7
-            elif sys.version_info >= (3, 10):
+            if PYPY or sys.version_info >= (3, 10):
                 column = 8
             else:
                 column = 9
@@ -463,16 +460,13 @@ def baz():
         syntax error reflects the cause for the syntax error.
         """
         with self.makeTempFile("if True:\n\tfoo =") as sourcePath:
-            column = 6 if PYPY else 7
-            last_line = '\t    ^' if PYPY else '\t     ^'
-
             self.assertHasErrors(
                 sourcePath,
-                ["""\
-{}:2:{}: invalid syntax
+                [f"""\
+{sourcePath}:2:7: invalid syntax
 \tfoo =
-{}
-""".format(sourcePath, column, last_line)])
+\t     ^
+"""])
 
     def test_nonDefaultFollowsDefaultSyntaxError(self):
         """
@@ -485,8 +479,10 @@ def foo(bar=baz, bax):
     pass
 """
         with self.makeTempFile(source) as sourcePath:
-            if PYPY:
-                column = 7
+            if PYPY and sys.version_info >= (3, 9):
+                column = 18
+            elif PYPY:
+                column = 8
             elif sys.version_info >= (3, 10):
                 column = 18
             elif sys.version_info >= (3, 9):
@@ -514,11 +510,9 @@ def foo(bar=baz, bax):
 foo(bar=baz, bax)
 """
         with self.makeTempFile(source) as sourcePath:
-            if PYPY:
-                column = 12
-            elif sys.version_info >= (3, 9):
+            if sys.version_info >= (3, 9):
                 column = 17
-            elif sys.version_info >= (3, 8):
+            elif not PYPY and sys.version_info >= (3, 8):
                 column = 14
             else:
                 column = 13
@@ -541,8 +535,10 @@ foo(bar=baz, bax)
         # ValueError: invalid \x escape
         with self.makeTempFile(r"foo = '\xyz'") as sourcePath:
             position_end = 1
-            if PYPY:
-                column = 5
+            if PYPY and sys.version_info >= (3, 9):
+                column = 7
+            elif PYPY:
+                column = 6
             elif sys.version_info >= (3, 9):
                 column = 13
             else:
@@ -671,17 +667,17 @@ x = "%s"
         self.assertEqual(count, 1)
         errlines = err.getvalue().split("\n")[:-1]
 
-        if PYPY:
-            expected_error = [
-                "<stdin>:1:3: Generator expression must be parenthesized if not sole argument",  # noqa: E501
-                "max(1 for i in range(10), key=lambda x: x+1)",
-                "  ^",
-            ]
-        elif sys.version_info >= (3, 9):
+        if sys.version_info >= (3, 9):
             expected_error = [
                 "<stdin>:1:5: Generator expression must be parenthesized",
                 "max(1 for i in range(10), key=lambda x: x+1)",
                 "    ^",
+            ]
+        elif PYPY:
+            expected_error = [
+                "<stdin>:1:4: Generator expression must be parenthesized if not sole argument",  # noqa: E501
+                "max(1 for i in range(10), key=lambda x: x+1)",
+                "   ^",
             ]
         elif sys.version_info >= (3, 8):
             expected_error = [
@@ -784,8 +780,8 @@ class IntegrationTests(TestCase):
         with open(self.tempfilepath, 'wb') as fd:
             fd.write(b"import")
         d = self.runPyflakes([self.tempfilepath])
-        error_msg = '{0}:1:{2}: invalid syntax{1}import{1}     {3}^{1}'.format(
-            self.tempfilepath, os.linesep, 6 if PYPY else 7, '' if PYPY else ' ')
+        error_msg = '{0}:1:7: invalid syntax{1}import{1}      ^{1}'.format(
+            self.tempfilepath, os.linesep)
         self.assertEqual(d, ('', error_msg, 1))
 
     def test_readFromStdin(self):

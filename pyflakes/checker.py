@@ -1393,10 +1393,7 @@ class Checker:
         for example in examples:
             try:
                 tree = ast.parse(example.source, "<doctest>")
-            except SyntaxError:
-                e = sys.exc_info()[1]
-                if PYPY:
-                    e.offset += 1
+            except SyntaxError as e:
                 position = (node_lineno + example.lineno + e.lineno,
                             example.indent + 4 + (e.offset or 0))
                 self.report(messages.DoctestSyntaxError, node, position)
