@@ -37,25 +37,8 @@ def check(codeString, filename, reporter=None):
     # First, compile into an AST and handle syntax errors.
     try:
         tree = ast.parse(codeString, filename=filename)
-    except SyntaxError:
-        value = sys.exc_info()[1]
-        msg = value.args[0]
-
-        (lineno, offset, text) = value.lineno, value.offset, value.text
-
-        if checker.PYPY:
-            if text is None:
-                lines = codeString.splitlines()
-                if len(lines) >= lineno:
-                    text = lines[lineno - 1]
-                    if isinstance(text, bytes):
-                        try:
-                            text = text.decode('ascii')
-                        except UnicodeDecodeError:
-                            text = None
-            offset -= 1
-
-        reporter.syntaxError(filename, msg, lineno, offset, text)
+    except SyntaxError as e:
+        reporter.syntaxError(filename, e.args[0], e.lineno, e.offset, e.text)
         return 1
     except Exception:
         reporter.unexpectedError(filename, 'problem decoding source')
@@ -83,9 +66,8 @@ def checkPath(filename, reporter=None):
     try:
         with open(filename, 'rb') as f:
             codestr = f.read()
-    except OSError:
-        msg = sys.exc_info()[1]
-        reporter.unexpectedError(filename, msg.args[1])
+    except OSError as e:
+        reporter.unexpectedError(filename, e.args[1])
         return 1
     return check(codestr, filename, reporter)
 
