@@ -55,14 +55,7 @@ def check(codeString, filename, reporter=None):
                             text = None
             offset -= 1
 
-        # If there's an encoding problem with the file, the text is None.
-        if text is None:
-            # Avoid using msg, since for the only known case, it contains a
-            # bogus message that claims the encoding the file declared was
-            # unknown.
-            reporter.unexpectedError(filename, 'problem decoding source')
-        else:
-            reporter.syntaxError(filename, msg, lineno, offset, text)
+        reporter.syntaxError(filename, msg, lineno, offset, text)
         return 1
     except Exception:
         reporter.unexpectedError(filename, 'problem decoding source')
