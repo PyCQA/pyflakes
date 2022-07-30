@@ -1,3 +1,14 @@
+2.5.0 (2022-07-30)
+
+- Drop support for EOL python 2.7 / 3.4 / 3.5
+- Ignore ``__all__`` when not directly assigned
+- Handle ``TypeAlias`` annotations as aliases (PEP 613)
+- Assignment expressions (``:=``) target outer scope in comprehensions
+- Add support for new python 3.11 syntax
+- Unify output so it is always ``filename:lineno:col:  message``
+- Properly report ``SyntaxError`` from stdin in python < 3.9
+- Fix offsets of ``SyntaxError``s in pypy
+
 2.4.0 (2021-10-06)
 
 - Remove unused tracing code (``traceTree``)
