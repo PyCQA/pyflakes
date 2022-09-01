@@ -134,10 +134,6 @@ class MultiValueRepeatedKeyVariable(Message):
 class LateFutureImport(Message):
     message = 'from __future__ imports must occur at the beginning of the file'
 
-    def __init__(self, filename, loc):
-        Message.__init__(self, filename, loc)
-        self.message_args = ()
-
 
 class FutureFeatureNotDefined(Message):
     """An undefined __future__ feature name was imported."""
