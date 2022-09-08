@@ -2265,7 +2265,6 @@ class Checker:
             self.scope[node.name] = prev_definition
 
     def ANNASSIGN(self, node):
-        self.handleNode(node.target, node)
         self.handleAnnotation(node.annotation, node)
         # If the assignment has value, handle the *value* now.
         if node.value:
@@ -2274,6 +2273,7 @@ class Checker:
                 self.handleAnnotation(node.value, node)
             else:
                 self.handleNode(node.value, node)
+        self.handleNode(node.target, node)
 
     def COMPARE(self, node):
         left = node.left
