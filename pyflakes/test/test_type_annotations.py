@@ -298,6 +298,11 @@ class TestTypeAnnotations(TestCase):
         a: 'a: "A"'
         ''', m.ForwardAnnotationSyntaxError)
 
+    def test_variable_annotation_references_self_name_undefined(self):
+        self.flakes("""
+        x: int = x
+        """, m.UndefinedName)
+
     def test_TypeAlias_annotations(self):
         self.flakes("""
         from typing_extensions import TypeAlias
