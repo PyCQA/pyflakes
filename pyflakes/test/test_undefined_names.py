@@ -814,7 +814,6 @@ class NameTests(TestCase):
         raised.
         """
         tree = ast.parse("x = 10")
-        file_tokens = checker.make_tokens("x = 10")
         # Make it into something unrecognizable.
         tree.body[0].targets[0].ctx = object()
-        self.assertRaises(RuntimeError, checker.Checker, tree, file_tokens=file_tokens)
+        self.assertRaises(RuntimeError, checker.Checker, tree)

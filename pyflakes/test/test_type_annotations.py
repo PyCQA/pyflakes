@@ -17,22 +17,22 @@ class TestTypeAnnotations(TestCase):
         from typing import overload
 
         @overload
-        def f(s):  # type: (None) -> None
+        def f(s: None) -> None:
             pass
 
         @overload
-        def f(s):  # type: (int) -> int
+        def f(s: int) -> int:
             pass
 
         def f(s):
             return s
 
         @typing.overload
-        def g(s):  # type: (None) -> None
+        def g(s: None) -> None:
             pass
 
         @typing.overload
-        def g(s):  # type: (int) -> int
+        def g(s: int) -> int:
             pass
 
         def g(s):
@@ -46,22 +46,22 @@ class TestTypeAnnotations(TestCase):
         from typing_extensions import overload
 
         @overload
-        def f(s):  # type: (None) -> None
+        def f(s: None) -> None:
             pass
 
         @overload
-        def f(s):  # type: (int) -> int
+        def f(s: int) -> int:
             pass
 
         def f(s):
             return s
 
         @typing_extensions.overload
-        def g(s):  # type: (None) -> None
+        def g(s: None) -> None:
             pass
 
         @typing_extensions.overload
-        def g(s):  # type: (int) -> int
+        def g(s: int) -> int:
             pass
 
         def g(s):
@@ -74,11 +74,11 @@ class TestTypeAnnotations(TestCase):
         from typing import overload
 
         @overload
-        async def f(s):  # type: (None) -> None
+        async def f(s: None) -> None:
             pass
 
         @overload
-        async def f(s):  # type: (int) -> int
+        async def f(s: int) -> int:
             pass
 
         async def f(s):
@@ -92,12 +92,12 @@ class TestTypeAnnotations(TestCase):
 
             @dec
             @overload
-            def f(x):  # type: (int) -> int
+            def f(x: int) -> int:
                 pass
 
             @dec
             @overload
-            def f(x):  # type: (str) -> str
+            def f(x: str) -> str:
                 pass
 
             @dec
@@ -110,11 +110,11 @@ class TestTypeAnnotations(TestCase):
 
         class C:
             @overload
-            def f(self, x):  # type: (int) -> int
+            def f(self, x: int) -> int:
                 pass
 
             @overload
-            def f(self, x):  # type: (str) -> str
+            def f(self, x: str) -> str:
                 pass
 
             def f(self, x): return x
@@ -126,11 +126,11 @@ class TestTypeAnnotations(TestCase):
         import typing as t
 
         @t.overload
-        def f(s):  # type: (None) -> None
+        def f(s: None) -> None:
             pass
 
         @t.overload
-        def f(s):  # type: (int) -> int
+        def f(s: int) -> int:
             pass
 
         def f(s):
@@ -416,115 +416,6 @@ class TestTypeAnnotations(TestCase):
             __all__: List[str]
         ''')
 
-    def test_typeCommentsMarkImportsAsUsed(self):
-        self.flakes("""
-        from mod import A, B, C, D, E, F, G
-
-
-        def f(
-            a,  # type: A
-        ):
-            # type: (...) -> B
-            for b in a:  # type: C
-                with b as c:  # type: D
-                    d = c.x  # type: E
-                    return d
-
-
-        def g(x):  # type: (F) -> G
-            return x.y
-        """)
-
-    def test_typeCommentsFullSignature(self):
-        self.flakes("""
-        from mod import A, B, C, D
-        def f(a, b):
-            # type: (A, B[C]) -> D
-            return a + b
-        """)
-
-    def test_typeCommentsStarArgs(self):
-        self.flakes("""
-        from mod import A, B, C, D
-        def f(a, *b, **c):
-            # type: (A, *B, **C) -> D
-            return a + b
-        """)
-
-    def test_typeCommentsFullSignatureWithDocstring(self):
-        self.flakes('''
-        from mod import A, B, C, D
-        def f(a, b):
-            # type: (A, B[C]) -> D
-            """do the thing!"""
-            return a + b
-        ''')
-
-    def test_typeCommentsAdditionalComment(self):
-        self.flakes("""
-        from mod import F
-
-        x = 1 # type: F  # noqa
-        """)
-
-    def test_typeCommentsNoWhitespaceAnnotation(self):
-        self.flakes("""
-        from mod import F
-
-        x = 1  #type:F
-        """)
-
-    def test_typeCommentsInvalidDoesNotMarkAsUsed(self):
-        self.flakes("""
-        from mod import F
-
-        # type: F
-        """, m.UnusedImport)
-
-    def test_typeCommentsSyntaxError(self):
-        self.flakes("""
-        def f(x):  # type: (F[) -> None
-            pass
-        """, m.CommentAnnotationSyntaxError)
-
-    def test_typeCommentsSyntaxErrorCorrectLine(self):
-        checker = self.flakes("""\
-        x = 1
-        # type: definitely not a PEP 484 comment
-        """, m.CommentAnnotationSyntaxError)
-        self.assertEqual(checker.messages[0].lineno, 2)
-
-    def test_typeCommentsAssignedToPreviousNode(self):
-        # This test demonstrates an issue in the implementation which
-        # associates the type comment with a node above it, however the type
-        # comment isn't valid according to mypy.  If an improved approach
-        # which can detect these "invalid" type comments is implemented, this
-        # test should be removed / improved to assert that new check.
-        self.flakes("""
-        from mod import F
-        x = 1
-        # type: F
-        """)
-
-    def test_typeIgnore(self):
-        self.flakes("""
-        a = 0  # type: ignore
-        b = 0  # type: ignore[excuse]
-        c = 0  # type: ignore=excuse
-        d = 0  # type: ignore [excuse]
-        e = 0  # type: ignore whatever
-        """)
-
-    def test_typeIgnoreBogus(self):
-        self.flakes("""
-        x = 1  # type: ignored
-        """, m.UndefinedName)
-
-    def test_typeIgnoreBogusUnicode(self):
-        self.flakes("""
-        x = 2  # type: ignore\xc3
-        """, m.UndefinedName)
-
     def test_return_annotation_is_class_scope_variable(self):
         self.flakes("""
         from typing import TypeVar
@@ -714,7 +605,7 @@ class TestTypeAnnotations(TestCase):
             if TYPE_CHECKING:
                 from t import T
 
-            def f():  # type: () -> T
+            def f() -> T:
                 pass
         """)
         # False: the old, more-compatible approach
@@ -722,7 +613,7 @@ class TestTypeAnnotations(TestCase):
             if False:
                 from t import T
 
-            def f():  # type: () -> T
+            def f() -> T:
                 pass
         """)
         # some choose to assign a constant and do it that way
@@ -732,7 +623,7 @@ class TestTypeAnnotations(TestCase):
             if MYPY:
                 from t import T
 
-            def f():  # type: () -> T
+            def f() -> T:
                 pass
         """)
 
@@ -746,7 +637,7 @@ class TestTypeAnnotations(TestCase):
                 Protocol = object
 
             class C(Protocol):
-                def f():  # type: () -> int
+                def f() -> int:
                     pass
         """)
 

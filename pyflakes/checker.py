@@ -7,8 +7,6 @@ Also, it models the Bindings and Scopes.
 import __future__
 import builtins
 import ast
-import bisect
-import collections
 import contextlib
 import doctest
 import functools
@@ -16,7 +14,7 @@ import os
 import re
 import string
 import sys
-import tokenize
+import warnings
 
 from pyflakes import messages
 
@@ -76,16 +74,6 @@ def _is_name_or_attr(node, name):  # type: (ast.AST, str) -> bool
         (isinstance(node, ast.Name) and node.id == name) or
         (isinstance(node, ast.Attribute) and node.attr == name)
     )
-
-
-# https://github.com/python/typed_ast/blob/1.4.0/ast27/Parser/tokenizer.c#L102-L104
-TYPE_COMMENT_RE = re.compile(r'^#\s*type:\s*')
-# https://github.com/python/typed_ast/blob/1.4.0/ast27/Parser/tokenizer.c#L1408-L1413
-ASCII_NON_ALNUM = ''.join([chr(i) for i in range(128) if not chr(i).isalnum()])
-TYPE_IGNORE_RE = re.compile(
-    TYPE_COMMENT_RE.pattern + fr'ignore([{ASCII_NON_ALNUM}]|$)')
-# https://github.com/python/typed_ast/blob/1.4.0/ast27/Grammar/Grammar#L147
-TYPE_FUNC_RE = re.compile(r'^(\(.*?\))\s*->\s*(.*)$')
 
 
 MAPPING_KEY_RE = re.compile(r'\(([^()]*)\)')
@@ -623,13 +611,6 @@ class DoctestScope(ModuleScope):
     """Scope for a doctest."""
 
 
-class DummyNode:
-    """Used in place of an `ast.AST` to set error message positions"""
-    def __init__(self, lineno, col_offset):
-        self.lineno = lineno
-        self.col_offset = col_offset
-
-
 class DetectClassScopedMagic:
     names = dir()
 
@@ -749,63 +730,6 @@ def in_string_annotation(func):
     return in_annotation_func
 
 
-def make_tokens(code):
-    # PY3: tokenize.tokenize requires readline of bytes
-    if not isinstance(code, bytes):
-        code = code.encode('UTF-8')
-    lines = iter(code.splitlines(True))
-    # next(lines, b'') is to prevent an error in pypy3
-    return tuple(tokenize.tokenize(lambda: next(lines, b'')))
-
-
-class _TypeableVisitor(ast.NodeVisitor):
-    """Collect the line number and nodes which are deemed typeable by
-    PEP 484
-
-    https://www.python.org/dev/peps/pep-0484/#type-comments
-    """
-    def __init__(self):
-        self.typeable_lines = []
-        self.typeable_nodes = {}
-
-    def _typeable(self, node):
-        # if there is more than one typeable thing on a line last one wins
-        self.typeable_lines.append(node.lineno)
-        self.typeable_nodes[node.lineno] = node
-
-        self.generic_visit(node)
-
-    visit_Assign = visit_For = visit_FunctionDef = visit_With = _typeable
-    visit_AsyncFor = visit_AsyncFunctionDef = visit_AsyncWith = _typeable
-
-
-def _collect_type_comments(tree, tokens):
-    visitor = _TypeableVisitor()
-    visitor.visit(tree)
-
-    type_comments = collections.defaultdict(list)
-    for tp, text, start, _, _ in tokens:
-        if (
-                tp != tokenize.COMMENT or  # skip non comments
-                not TYPE_COMMENT_RE.match(text) or  # skip non-type comments
-                TYPE_IGNORE_RE.match(text)  # skip ignores
-        ):
-            continue
-
-        # search for the typeable node at or before the line number of the
-        # type comment.
-        # if the bisection insertion point is before any nodes this is an
-        # invalid type comment which is ignored.
-        lineno, _ = start
-        idx = bisect.bisect_right(visitor.typeable_lines, lineno)
-        if idx == 0:
-            continue
-        node = visitor.typeable_nodes[visitor.typeable_lines[idx - 1]]
-        type_comments[node].append((start, text))
-
-    return type_comments
-
-
 class Checker:
     """
     I check the cleanliness and sanity of Python code.
@@ -842,9 +766,6 @@ class Checker:
         builtIns.update(_customBuiltIns.split(','))
     del _customBuiltIns
 
-    # TODO: file_tokens= is required to perform checks on type comments,
-    #       eventually make this a required positional argument.  For now it
-    #       is defaulted to `()` for api compatibility.
     def __init__(self, tree, filename='(none)', builtins=None,
                  withDoctest='PYFLAKES_DOCTEST' in os.environ, file_tokens=()):
         self._nodeHandlers = {}
@@ -862,7 +783,6 @@ class Checker:
             raise RuntimeError('No scope implemented for the node %r' % tree)
         self.exceptHandlers = [()]
         self.root = tree
-        self._type_comments = _collect_type_comments(tree, file_tokens)
         for builtin in self.builtIns:
             self.addBinding(None, Builtin(builtin))
         self.handleChildren(tree)
@@ -878,6 +798,12 @@ class Checker:
         del self.scopeStack[1:]
         self.popScope()
         self.checkDeadScopes()
+
+        if file_tokens:
+            warnings.warn(
+                '`file_tokens` will be removed in a future version',
+                stacklevel=2,
+            )
 
     def deferFunction(self, callable):
         """
@@ -1308,27 +1234,7 @@ class Checker:
             self.annotationsFutureEnabled
         )
 
-    def _handle_type_comments(self, node):
-        for (lineno, col_offset), comment in self._type_comments.get(node, ()):
-            comment = comment.split(':', 1)[1].strip()
-            func_match = TYPE_FUNC_RE.match(comment)
-            if func_match:
-                parts = (
-                    func_match.group(1).replace('*', ''),
-                    func_match.group(2).strip(),
-                )
-            else:
-                parts = (comment,)
-
-            for part in parts:
-                self.deferFunction(functools.partial(
-                    self.handleStringAnnotation,
-                    part, DummyNode(lineno, col_offset), lineno, col_offset,
-                    messages.CommentAnnotationSyntaxError,
-                ))
-
     def handleChildren(self, tree, omit=None):
-        self._handle_type_comments(tree)
         for node in iter_child_nodes(tree, omit=omit):
             self.handleNode(node, tree)
 
