@@ -588,7 +588,7 @@ class FunctionScope(Scope):
         self.returnValue = None     # First non-empty return
         self.isGenerator = False    # Detect a generator
 
-    def unusedAssignments(self):
+    def unused_assignments(self):
         """
         Return a generator for the assignments which have not been used.
         """
@@ -598,6 +598,14 @@ class FunctionScope(Scope):
                     name not in self.globals and
                     not self.usesLocals and
                     isinstance(binding, Assignment)):
+                yield name, binding
+
+    def unused_annotations(self):
+        """
+        Return a generator for the annotations which have not been used.
+        """
+        for name, binding in self.items():
+            if not binding.used and isinstance(binding, Annotation):
                 yield name, binding
 
 
@@ -1156,6 +1164,7 @@ class Checker:
 
             binding = scope.get(name, None)
             if isinstance(binding, Annotation) and not self._in_postponed_annotation:
+                scope[name].used = True
                 continue
 
             if name == 'print' and isinstance(binding, Builtin):
@@ -2084,13 +2093,22 @@ class Checker:
 
             self.handleChildren(node, omit=['decorator_list', 'returns'])
 
-            def checkUnusedAssignments():
+            def check_unused_assignments():
                 """
                 Check to see if any assignments have not been used.
                 """
-                for name, binding in self.scope.unusedAssignments():
+                for name, binding in self.scope.unused_assignments():
                     self.report(messages.UnusedVariable, binding.source, name)
-            self.deferAssignment(checkUnusedAssignments)
+
+            def check_unused_annotations():
+                """
+                Check to see if any annotations have not been used.
+                """
+                for name, binding in self.scope.unused_annotations():
+                    self.report(messages.UnusedAnnotation, binding.source, name)
+
+            self.deferAssignment(check_unused_assignments)
+            self.deferAssignment(check_unused_annotations)
 
             self.popScope()
 

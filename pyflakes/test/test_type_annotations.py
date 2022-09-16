@@ -174,7 +174,7 @@ class TestTypeAnnotations(TestCase):
         def f():
             name: str
             age: int
-        ''')
+        ''', m.UnusedAnnotation, m.UnusedAnnotation)
         self.flakes('''
         def f():
             name: str = 'Bob'
@@ -190,7 +190,7 @@ class TestTypeAnnotations(TestCase):
         from typing import Any
         def f():
             a: Any
-        ''')
+        ''', m.UnusedAnnotation)
         self.flakes('''
         foo: not_a_real_type
         ''', m.UndefinedName)
@@ -356,17 +356,22 @@ class TestTypeAnnotations(TestCase):
         class Cls:
             y: int
         ''')
-        # TODO: this should print a UnusedVariable message
         self.flakes('''
         def f():
             x: int
-        ''')
+        ''', m.UnusedAnnotation)
         # This should only print one UnusedVariable message
         self.flakes('''
         def f():
             x: int
             x = 3
         ''', m.UnusedVariable)
+
+    def test_unassigned_annotation_is_undefined(self):
+        self.flakes('''
+        name: str
+        print(name)
+        ''', m.UndefinedName)
 
     def test_annotated_async_def(self):
         self.flakes('''
