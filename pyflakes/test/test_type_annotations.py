@@ -356,7 +356,6 @@ class TestTypeAnnotations(TestCase):
         class Cls:
             y: int
         ''')
-        # This should print an UnusedAnnotation message
         self.flakes('''
         def f():
             x: int
