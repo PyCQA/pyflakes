@@ -293,6 +293,11 @@ class Test(TestCase):
         ''', m.UndefinedName).messages[0]
         self.assertEqual(exc.lineno, 5)
         self.assertEqual(exc.col, 20)
+        # end_col_offset and end_lineno are new in Python 3.8
+        if sys.version_info >= (3, 8):
+            # check that offsets are also added to end_col and end_lineno
+            self.assertEqual(exc.end_lineno, 5)
+            self.assertEqual(exc.end_col, 21)
 
     def test_offsetAfterDoctests(self):
         exc = self.flakes('''

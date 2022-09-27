@@ -1270,9 +1270,13 @@ class Checker:
     def handleNode(self, node, parent):
         if node is None:
             return
-        if self.offset and getattr(node, 'lineno', None) is not None:
-            node.lineno += self.offset[0]
-            node.col_offset += self.offset[1]
+        if self.offset:
+            if getattr(node, 'lineno', None) is not None:
+                node.lineno += self.offset[0]
+                node.col_offset += self.offset[1]
+            if getattr(node, 'end_lineno', None) is not None:
+                node.end_lineno += self.offset[0]
+                node.end_col_offset += self.offset[1]
         if self.futuresAllowed and not (isinstance(node, ast.ImportFrom) or
                                         self.isDocstring(node)):
             self.futuresAllowed = False

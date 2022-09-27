@@ -11,6 +11,8 @@ class Message:
         self.filename = filename
         self.lineno = loc.lineno
         self.col = loc.col_offset
+        self.end_col = getattr(loc, 'end_col_offset', None)
+        self.end_lineno = getattr(loc, 'end_lineno', None)
 
     def __str__(self):
         return '{}:{}:{}: {}'.format(self.filename, self.lineno, self.col+1,
