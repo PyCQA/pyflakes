@@ -24,11 +24,11 @@ It can be installed with::
 Useful tips:
 
 * Be sure to install it for a version of Python which is compatible
-  with your codebase: for Python 2, ``pip2 install pyflakes`` and for
-  Python3, ``pip3 install pyflakes``.
+  with your codebase: ``python#.# -m pip install pyflakes`` (for example,
+  ``python3.10 -m pip install pyflakes``)
 
-* You can also invoke Pyflakes with ``python3 -m pyflakes .`` or
-  ``python2 -m pyflakes .`` if you have it installed for both versions.
+* You can also invoke Pyflakes with ``python#.# -m pyflakes .`` if you want
+  to run it for a specific python version.
 
 * If you require more options and more flexibility, you could give a
   look to Flake8_ too.
