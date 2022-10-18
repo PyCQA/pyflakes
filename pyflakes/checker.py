@@ -548,7 +548,7 @@ class FunctionScope(Scope):
     """
     usesLocals = False
     alwaysUsed = {'__tracebackhide__', '__traceback_info__',
-                  '__traceback_supplement__'}
+                  '__traceback_supplement__', '__debuggerskip__'}
 
     def __init__(self):
         super().__init__()

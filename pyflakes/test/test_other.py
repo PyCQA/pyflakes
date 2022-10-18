@@ -1349,6 +1349,16 @@ class TestUnusedAssignment(TestCase):
                 __tracebackhide__ = True
         """)
 
+    def test_debuggerskipSpecialVariable(self):
+        """
+        Do not warn about unused local variable __debuggerskip__, which is
+        a special variable for IPython.
+        """
+        self.flakes("""
+            def helper():
+                __debuggerskip__ = True
+        """)
+
     def test_ifexp(self):
         """
         Test C{foo if bar else baz} statements.
