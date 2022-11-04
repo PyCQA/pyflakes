@@ -574,7 +574,6 @@ class FunctionScope(Scope):
         # Simplify: manage the special locals as globals
         self.globals = self.alwaysUsed.copy()
         self.returnValue = None     # First non-empty return
-        self.isGenerator = False    # Detect a generator
 
     def unused_assignments(self):
         """
@@ -1937,7 +1936,6 @@ class Checker:
             self.report(messages.YieldOutsideFunction, node)
             return
 
-        self.scope.isGenerator = True
         self.handleNode(node.value, node)
 
     AWAIT = YIELDFROM = YIELD
