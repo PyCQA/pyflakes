@@ -1,3 +1,9 @@
+3.0.0 (2022-11-23)
+
+- Detect undefined name in variable defined by an annotated assignment
+- Add a new error for names which are annotated but unused
+- Remove handling of python 2.x ``# type:`` comments.  Use annotations instead
+
 2.5.0 (2022-07-30)
 
 - Drop support for EOL python 2.7 / 3.4 / 3.5
