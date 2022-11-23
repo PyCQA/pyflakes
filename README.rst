@@ -64,7 +64,7 @@ Issues are tracked on `GitHub <https://github.com/PyCQA/pyflakes/issues>`_.
 
 Patches may be submitted via a `GitHub pull request`_ or via the mailing list
 if you prefer. If you are comfortable doing so, please `rebase your changes`_
-so they may be applied to master with a fast-forward merge, and each commit is
+so they may be applied to main with a fast-forward merge, and each commit is
 a coherent unit of work with a well-written log message.  If you are not
 comfortable with this rebase workflow, the project maintainers will be happy to
 rebase your commits for you.
@@ -84,4 +84,4 @@ All changes should include tests and pass flake8_.
 Changelog
 ---------
 
-Please see `NEWS.rst <https://github.com/PyCQA/pyflakes/blob/master/NEWS.rst>`_.
+Please see `NEWS.rst <https://github.com/PyCQA/pyflakes/blob/main/NEWS.rst>`_.
