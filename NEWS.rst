@@ -1,3 +1,7 @@
+3.0.1 (2022-11-24)
+
+- Fix crash on augmented assign to ``print`` builtin
+
 3.0.0 (2022-11-23)
 
 - Detect undefined name in variable defined by an annotated assignment
