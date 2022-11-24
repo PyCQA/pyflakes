@@ -62,8 +62,8 @@ Contributing
 
 Issues are tracked on `GitHub <https://github.com/PyCQA/pyflakes/issues>`_.
 
-Patches may be submitted via a `GitHub pull request`_ or via the mailing list
-if you prefer. If you are comfortable doing so, please `rebase your changes`_
+Patches may be submitted via a `GitHub pull request`_.
+If you are comfortable doing so, please `rebase your changes`_
 so they may be applied to main with a fast-forward merge, and each commit is
 a coherent unit of work with a well-written log message.  If you are not
 comfortable with this rebase workflow, the project maintainers will be happy to
