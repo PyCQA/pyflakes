@@ -2052,6 +2052,10 @@ class TestIncompatiblePrintOperator(TestCase):
         self.assertEqual(exc.lineno, 4)
         self.assertEqual(exc.col, 0)
 
+    def test_print_augmented_assign(self):
+        # nonsense, but shouldn't crash pyflakes
+        self.flakes('print += 1')
+
     def test_print_function_assignment(self):
         """
         A valid assignment, tested for catching false positives.

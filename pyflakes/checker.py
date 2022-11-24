@@ -1068,7 +1068,7 @@ class Checker:
         )
         return handler
 
-    def handleNodeLoad(self, node):
+    def handleNodeLoad(self, node, parent):
         name = getNodeName(node)
         if not name:
             return
@@ -1093,7 +1093,6 @@ class Checker:
                 continue
 
             if name == 'print' and isinstance(binding, Builtin):
-                parent = self.getParent(node)
                 if (isinstance(parent, ast.BinOp) and
                         isinstance(parent.op, ast.RShift)):
                     self.report(messages.InvalidPrintSyntax, node)
@@ -1880,7 +1879,7 @@ class Checker:
         """
         # Locate the name in locals / function / globals scopes.
         if isinstance(node.ctx, ast.Load):
-            self.handleNodeLoad(node)
+            self.handleNodeLoad(node, self.getParent(node))
             if (node.id == 'locals' and isinstance(self.scope, FunctionScope) and
                     isinstance(node._pyflakes_parent, ast.Call)):
                 # we are doing locals() call in current scope
@@ -2049,7 +2048,7 @@ class Checker:
         self.addBinding(node, ClassDefinition(node.name, node))
 
     def AUGASSIGN(self, node):
-        self.handleNodeLoad(node.target)
+        self.handleNodeLoad(node.target, node)
         self.handleNode(node.value, node)
         self.handleNode(node.target, node)
 
