@@ -7,6 +7,7 @@ Also, it models the Bindings and Scopes.
 import __future__
 import builtins
 import ast
+import collections
 import contextlib
 import doctest
 import functools
@@ -735,7 +736,6 @@ class Checker:
     nodeDepth = 0
     offset = None
     _in_annotation = AnnotationState.NONE
-    _in_deferred = False
 
     builtIns = set(builtin_vars).union(_MAGIC_GLOBALS)
     _customBuiltIns = os.environ.get('PYFLAKES_BUILTINS')
@@ -746,7 +746,7 @@ class Checker:
     def __init__(self, tree, filename='(none)', builtins=None,
                  withDoctest='PYFLAKES_DOCTEST' in os.environ, file_tokens=()):
         self._nodeHandlers = {}
-        self._deferredFunctions = []
+        self._deferred = collections.deque()
         self.deadScopes = []
         self.messages = []
         self.filename = filename
@@ -762,12 +762,8 @@ class Checker:
         for builtin in self.builtIns:
             self.addBinding(None, Builtin(builtin))
         self.handleChildren(tree)
-        self._in_deferred = True
-        self.runDeferred(self._deferredFunctions)
-        # Set _deferredFunctions to None so that deferFunction will fail
-        # noisily if called after we've run through the deferred functions.
-        self._deferredFunctions = None
-        del self.scopeStack[1:]
+
+        self._run_deferred()
 
         self.popScope()
         self.checkDeadScopes()
@@ -787,16 +783,17 @@ class Checker:
         `callable` is called, the scope at the time this is called will be
         restored, however it will contain any new bindings added to it.
         """
-        self._deferredFunctions.append((callable, self.scopeStack[:], self.offset))
+        self._deferred.append((callable, self.scopeStack[:], self.offset))
 
-    def runDeferred(self, deferred):
-        """
-        Run the callables in C{deferred} using their associated scope stack.
-        """
-        for handler, scope, offset in deferred:
-            self.scopeStack = scope
-            self.offset = offset
+    def _run_deferred(self):
+        orig = (self.scopeStack, self.offset)
+
+        while self._deferred:
+            handler, scope, offset = self._deferred.popleft()
+            self.scopeStack, self.offset = scope, offset
             handler()
+
+        self.scopeStack, self.offset = orig
 
     def _in_doctest(self):
         return (len(self.scopeStack) >= 2 and
@@ -1696,10 +1693,7 @@ class Checker:
                 node.col_offset,
                 messages.ForwardAnnotationSyntaxError,
             )
-            if self._in_deferred:
-                fn()
-            else:
-                self.deferFunction(fn)
+            self.deferFunction(fn)
 
     def CONSTANT(self, node):
         if isinstance(node.value, str):
