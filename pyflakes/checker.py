@@ -753,19 +753,21 @@ class Checker:
         if builtins:
             self.builtIns = self.builtIns.union(builtins)
         self.withDoctest = withDoctest
-        try:
-            self.scopeStack = [Checker._ast_node_scope[type(tree)]()]
-        except KeyError:
-            raise RuntimeError('No scope implemented for the node %r' % tree)
         self.exceptHandlers = [()]
         self.root = tree
-        for builtin in self.builtIns:
-            self.addBinding(None, Builtin(builtin))
-        self.handleChildren(tree)
 
-        self._run_deferred()
+        self.scopeStack = []
+        try:
+            scope_tp = Checker._ast_node_scope[type(tree)]
+        except KeyError:
+            raise RuntimeError('No scope implemented for the node %r' % tree)
 
-        self.popScope()
+        with self.in_scope(scope_tp):
+            for builtin in self.builtIns:
+                self.addBinding(None, Builtin(builtin))
+            self.handleChildren(tree)
+            self._run_deferred()
+
         self.checkDeadScopes()
 
         if file_tokens:
@@ -830,8 +832,13 @@ class Checker:
     def scope(self):
         return self.scopeStack[-1]
 
-    def popScope(self):
-        self.deadScopes.append(self.scopeStack.pop())
+    @contextlib.contextmanager
+    def in_scope(self, cls):
+        self.scopeStack.append(cls())
+        try:
+            yield
+        finally:
+            self.deadScopes.append(self.scopeStack.pop())
 
     def checkDeadScopes(self):
         """
@@ -898,9 +905,6 @@ class Checker:
                         else:
                             messg = messages.RedefinedWhileUnused
                         self.report(messg, node, value.name, value.source)
-
-    def pushScope(self, scopeClass=FunctionScope):
-        self.scopeStack.append(scopeClass())
 
     def report(self, messageClass, *args, **kwargs):
         self.messages.append(messageClass(self.filename, *args, **kwargs))
@@ -1264,22 +1268,21 @@ class Checker:
         saved_stack = self.scopeStack
         self.scopeStack = [self.scopeStack[0]]
         node_offset = self.offset or (0, 0)
-        self.pushScope(DoctestScope)
-        if '_' not in self.scopeStack[0]:
-            self.addBinding(None, Builtin('_'))
-        for example in examples:
-            try:
-                tree = ast.parse(example.source, "<doctest>")
-            except SyntaxError as e:
-                position = (node_lineno + example.lineno + e.lineno,
-                            example.indent + 4 + (e.offset or 0))
-                self.report(messages.DoctestSyntaxError, node, position)
-            else:
-                self.offset = (node_offset[0] + node_lineno + example.lineno,
-                               node_offset[1] + example.indent + 4)
-                self.handleChildren(tree)
-                self.offset = node_offset
-        self.popScope()
+        with self.in_scope(DoctestScope):
+            if '_' not in self.scopeStack[0]:
+                self.addBinding(None, Builtin('_'))
+            for example in examples:
+                try:
+                    tree = ast.parse(example.source, "<doctest>")
+                except SyntaxError as e:
+                    position = (node_lineno + example.lineno + e.lineno,
+                                example.indent + 4 + (e.offset or 0))
+                    self.report(messages.DoctestSyntaxError, node, position)
+                else:
+                    self.offset = (node_offset[0] + node_lineno + example.lineno,
+                                   node_offset[1] + example.indent + 4)
+                    self.handleChildren(tree)
+                    self.offset = node_offset
         self.scopeStack = saved_stack
 
     @in_string_annotation
@@ -1825,9 +1828,8 @@ class Checker:
     NONLOCAL = GLOBAL
 
     def GENERATOREXP(self, node):
-        self.pushScope(GeneratorScope)
-        self.handleChildren(node)
-        self.popScope()
+        with self.in_scope(GeneratorScope):
+            self.handleChildren(node)
 
     LISTCOMP = DICTCOMP = SETCOMP = GENERATOREXP
 
@@ -1943,11 +1945,8 @@ class Checker:
             self.handleNode(default, node)
 
         def runFunction():
-            self.pushScope()
-
-            self.handleChildren(node, omit=['decorator_list', 'returns'])
-
-            self.popScope()
+            with self.in_scope(FunctionScope):
+                self.handleChildren(node, omit=['decorator_list', 'returns'])
 
         self.deferFunction(runFunction)
 
@@ -1969,16 +1968,15 @@ class Checker:
             self.handleNode(baseNode, node)
         for keywordNode in node.keywords:
             self.handleNode(keywordNode, node)
-        self.pushScope(ClassScope)
-        # doctest does not process doctest within a doctest
-        # classes within classes are processed.
-        if (self.withDoctest and
-                not self._in_doctest() and
-                not isinstance(self.scope, FunctionScope)):
-            self.deferFunction(lambda: self.handleDoctests(node))
-        for stmt in node.body:
-            self.handleNode(stmt, node)
-        self.popScope()
+        with self.in_scope(ClassScope):
+            # doctest does not process doctest within a doctest
+            # classes within classes are processed.
+            if (self.withDoctest and
+                    not self._in_doctest() and
+                    not isinstance(self.scope, FunctionScope)):
+                self.deferFunction(lambda: self.handleDoctests(node))
+            for stmt in node.body:
+                self.handleNode(stmt, node)
         self.addBinding(node, ClassDefinition(node.name, node))
 
     def AUGASSIGN(self, node):
