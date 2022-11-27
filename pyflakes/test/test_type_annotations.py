@@ -594,6 +594,20 @@ class TestTypeAnnotations(TestCase):
                 return None
         """)
 
+    def test_forward_annotations_for_classes_in_scope(self):
+        # see #749
+        self.flakes("""
+        from typing import Optional
+
+        def f():
+            class C:
+                a: "D"
+                b: Optional["D"]
+                c: "Optional[D]"
+
+            class D: pass
+        """)
+
     def test_idomiatic_typing_guards(self):
         # typing.TYPE_CHECKING: python3.5.3+
         self.flakes("""
