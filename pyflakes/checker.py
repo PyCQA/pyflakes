@@ -769,7 +769,6 @@ class Checker:
                  withDoctest='PYFLAKES_DOCTEST' in os.environ, file_tokens=()):
         self._nodeHandlers = {}
         self._deferredFunctions = []
-        self._deferredAssignments = []
         self.deadScopes = []
         self.messages = []
         self.filename = filename
@@ -790,11 +789,8 @@ class Checker:
         # Set _deferredFunctions to None so that deferFunction will fail
         # noisily if called after we've run through the deferred functions.
         self._deferredFunctions = None
-        self.runDeferred(self._deferredAssignments)
-        # Set _deferredAssignments to None so that deferAssignment will fail
-        # noisily if called after we've run through the deferred assignments.
-        self._deferredAssignments = None
         del self.scopeStack[1:]
+
         self.popScope()
         self.checkDeadScopes()
 
@@ -814,13 +810,6 @@ class Checker:
         restored, however it will contain any new bindings added to it.
         """
         self._deferredFunctions.append((callable, self.scopeStack[:], self.offset))
-
-    def deferAssignment(self, callable):
-        """
-        Schedule an assignment handler to be called just after deferred
-        function handlers.
-        """
-        self._deferredAssignments.append((callable, self.scopeStack[:], self.offset))
 
     def runDeferred(self, deferred):
         """
@@ -878,6 +867,12 @@ class Checker:
             # imports in classes are public members
             if isinstance(scope, ClassScope):
                 continue
+
+            if isinstance(scope, FunctionScope):
+                for name, binding in scope.unused_assignments():
+                    self.report(messages.UnusedVariable, binding.source, name)
+                for name, binding in scope.unused_annotations():
+                    self.report(messages.UnusedAnnotation, binding.source, name)
 
             all_binding = scope.get('__all__')
             if all_binding and not isinstance(all_binding, ExportBinding):
@@ -1991,27 +1986,9 @@ class Checker:
             self.handleNode(default, node)
 
         def runFunction():
-
             self.pushScope()
 
             self.handleChildren(node, omit=['decorator_list', 'returns'])
-
-            def check_unused_assignments():
-                """
-                Check to see if any assignments have not been used.
-                """
-                for name, binding in self.scope.unused_assignments():
-                    self.report(messages.UnusedVariable, binding.source, name)
-
-            def check_unused_annotations():
-                """
-                Check to see if any annotations have not been used.
-                """
-                for name, binding in self.scope.unused_annotations():
-                    self.report(messages.UnusedAnnotation, binding.source, name)
-
-            self.deferAssignment(check_unused_assignments)
-            self.deferAssignment(check_unused_annotations)
 
             self.popScope()
 
