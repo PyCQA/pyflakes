@@ -198,13 +198,6 @@ class BreakOutsideLoop(Message):
     message = '\'break\' outside loop'
 
 
-class ContinueInFinally(Message):
-    """
-    Indicates a continue statement in a finally block in a while or for loop.
-    """
-    message = '\'continue\' not supported inside \'finally\' clause'
-
-
 class DefaultExceptNotLast(Message):
     """
     Indicates an except: block as not the last exception handler.

@@ -379,7 +379,6 @@ class TestTypeAnnotations(TestCase):
         async def func(c: c) -> None: pass
         ''')
 
-    @skipIf(version_info < (3, 7), 'new in Python 3.7')
     def test_postponed_annotations(self):
         self.flakes('''
         from __future__ import annotations
@@ -434,7 +433,6 @@ class TestTypeAnnotations(TestCase):
                 return Y
         """, m.UndefinedName)
 
-    @skipIf(version_info < (3, 8), 'new in Python 3.8')
     def test_positional_only_argument_annotations(self):
         self.flakes("""
         from x import C
@@ -584,7 +582,6 @@ class TestTypeAnnotations(TestCase):
                 return None
         """)
 
-    @skipIf(version_info < (3, 7), 'new in Python 3.7')
     def test_partial_string_annotations_with_future_annotations(self):
         self.flakes("""
             from __future__ import annotations

@@ -445,36 +445,6 @@ class Test(TestCase):
                     continue
         ''')
 
-    @skipIf(version_info > (3, 8), "Python <= 3.8 only")
-    def test_continueInFinally(self):
-        # 'continue' inside 'finally' is a special syntax error
-        # that is removed in 3.8
-        self.flakes('''
-        while True:
-            try:
-                pass
-            finally:
-                continue
-        ''', m.ContinueInFinally)
-
-        self.flakes('''
-        while True:
-            try:
-                pass
-            finally:
-                if 1:
-                    if 2:
-                        continue
-        ''', m.ContinueInFinally)
-
-        # Even when not in a loop, this is the error Python gives
-        self.flakes('''
-        try:
-            pass
-        finally:
-            continue
-        ''', m.ContinueInFinally)
-
     def test_breakOutsideLoop(self):
         self.flakes('''
         break
@@ -1716,7 +1686,6 @@ class TestUnusedAssignment(TestCase):
         print(f'\x7b4*baz\N{RIGHT CURLY BRACKET}')
         ''')
 
-    @skipIf(version_info < (3, 8), 'new in Python 3.8')
     def test_assign_expr(self):
         """Test PEP 572 assignment expressions are treated as usage / write."""
         self.flakes('''
@@ -1725,7 +1694,6 @@ class TestUnusedAssignment(TestCase):
         print(x)
         ''')
 
-    @skipIf(version_info < (3, 8), 'new in Python 3.8')
     def test_assign_expr_generator_scope(self):
         """Test assignment expressions in generator expressions."""
         self.flakes('''
@@ -1733,7 +1701,6 @@ class TestUnusedAssignment(TestCase):
             print(y)
         ''')
 
-    @skipIf(version_info < (3, 8), 'new in Python 3.8')
     def test_assign_expr_nested(self):
         """Test assignment expressions in nested expressions."""
         self.flakes('''
@@ -1971,19 +1938,6 @@ class TestAsyncStatements(TestCase):
                 break
             return output
         ''', m.BreakOutsideLoop)
-
-    @skipIf(version_info > (3, 8), "Python <= 3.8 only")
-    def test_continueInAsyncForFinally(self):
-        self.flakes('''
-        async def read_data(db):
-            output = []
-            async for row in db.cursor():
-                try:
-                    output.append(row)
-                finally:
-                    continue
-            return output
-        ''', m.ContinueInFinally)
 
     def test_asyncWith(self):
         self.flakes('''

@@ -60,8 +60,6 @@ class Reporter:
         lineno = max(lineno, 1)
 
         if offset is not None:
-            if sys.version_info < (3, 8) and text is not None:
-                offset = offset - (len(text) - len(line)) + 1
             # some versions of python emit an offset of -1 for certain encoding errors
             offset = max(offset, 1)
             self._stderr.write('%s:%d:%d: %s\n' %

@@ -18,7 +18,6 @@ import warnings
 
 from pyflakes import messages
 
-PY38_PLUS = sys.version_info >= (3, 8)
 PYPY = hasattr(sys, 'pypy_version_info')
 
 builtin_vars = dir(builtins)
@@ -35,15 +34,12 @@ def getAlternatives(n):
 
 FOR_TYPES = (ast.For, ast.AsyncFor)
 
-if PY38_PLUS:
-    def _is_singleton(node):  # type: (ast.AST) -> bool
-        return (
-            isinstance(node, ast.Constant) and
-            isinstance(node.value, (bool, type(Ellipsis), type(None)))
-        )
-else:
-    def _is_singleton(node):  # type: (ast.AST) -> bool
-        return isinstance(node, (ast.NameConstant, ast.Ellipsis))
+
+def _is_singleton(node):  # type: (ast.AST) -> bool
+    return (
+        isinstance(node, ast.Constant) and
+        isinstance(node.value, (bool, type(Ellipsis), type(None)))
+    )
 
 
 def _is_tuple_constant(node):  # type: (ast.AST) -> bool
@@ -53,16 +49,8 @@ def _is_tuple_constant(node):  # type: (ast.AST) -> bool
     )
 
 
-if PY38_PLUS:
-    def _is_constant(node):
-        return isinstance(node, ast.Constant) or _is_tuple_constant(node)
-else:
-    def _is_constant(node):
-        return (
-            isinstance(node, (ast.Str, ast.Num, ast.Bytes)) or
-            _is_singleton(node) or
-            _is_tuple_constant(node)
-        )
+def _is_constant(node):
+    return isinstance(node, ast.Constant) or _is_tuple_constant(node)
 
 
 def _is_const_non_singleton(node):  # type: (ast.AST) -> bool
@@ -1181,7 +1169,7 @@ class Checker:
                 )
         ):
             binding = ExportBinding(name, node._pyflakes_parent, self.scope)
-        elif PY38_PLUS and isinstance(parent_stmt, ast.NamedExpr):
+        elif isinstance(parent_stmt, ast.NamedExpr):
             binding = NamedExprAssignment(name, node)
         else:
             binding = Assignment(name, node)
@@ -1257,13 +1245,7 @@ class Checker:
         if not isinstance(node, ast.Str):
             return (None, None)
 
-        if PYPY or PY38_PLUS:
-            doctest_lineno = node.lineno - 1
-        else:
-            # Computed incorrectly if the docstring has backslash
-            doctest_lineno = node.lineno - node.s.count('\n') - 1
-
-        return (node.s, doctest_lineno)
+        return (node.s, node.lineno - 1)
 
     def handleNode(self, node, parent):
         if node is None:
@@ -1734,12 +1716,9 @@ class Checker:
             else:
                 self.deferFunction(fn)
 
-    if PY38_PLUS:
-        def CONSTANT(self, node):
-            if isinstance(node.value, str):
-                return self.STR(node)
-    else:
-        NUM = BYTES = ELLIPSIS = CONSTANT = ignore
+    def CONSTANT(self, node):
+        if isinstance(node.value, str):
+            return self.STR(node)
 
     # "slice" type nodes
     SLICE = EXTSLICE = INDEX = handleChildren
@@ -1905,11 +1884,6 @@ class Checker:
                     return
             if isinstance(n, (ast.FunctionDef, ast.ClassDef)):
                 break
-            # Handle Try/TryFinally difference in Python < and >= 3.3
-            if hasattr(n, 'finalbody') and isinstance(node, ast.Continue):
-                if n_child in n.finalbody and not PY38_PLUS:
-                    self.report(messages.ContinueInFinally, node)
-                    return
         if isinstance(node, ast.Continue):
             self.report(messages.ContinueOutsideLoop, node)
         else:  # ast.Break
@@ -1957,10 +1931,9 @@ class Checker:
         args = []
         annotations = []
 
-        if PY38_PLUS:
-            for arg in node.args.posonlyargs:
-                args.append(arg.arg)
-                annotations.append(arg.annotation)
+        for arg in node.args.posonlyargs:
+            args.append(arg.arg)
+            annotations.append(arg.annotation)
         for arg in node.args.args + node.args.kwonlyargs:
             args.append(arg.arg)
             annotations.append(arg.annotation)
