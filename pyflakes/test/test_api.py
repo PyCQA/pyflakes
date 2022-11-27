@@ -233,9 +233,7 @@ class TestReporter(TestCase):
         """
         err = io.StringIO()
         reporter = Reporter(None, err)
-        reporter.syntaxError('foo.py', 'a problem', 3,
-                             8 if sys.version_info >= (3, 8) else 7,
-                             'bad line of source')
+        reporter.syntaxError('foo.py', 'a problem', 3, 8, 'bad line of source')
         self.assertEqual(
             ("foo.py:3:8: a problem\n"
              "bad line of source\n"
@@ -281,11 +279,10 @@ class TestReporter(TestCase):
         reporter = Reporter(None, err)
         reporter.syntaxError('foo.py', 'a problem', 3, len(lines[0]) + 7,
                              '\n'.join(lines))
-        column = 25 if sys.version_info >= (3, 8) else 7
         self.assertEqual(
-            ("foo.py:3:%d: a problem\n" % column +
+            ("foo.py:3:25: a problem\n" +
              lines[-1] + "\n" +
-             " " * (column - 1) + "^\n"),
+             " " * 24 + "^\n"),
             err.getvalue())
 
     def test_unexpectedError(self):
@@ -417,10 +414,8 @@ def baz():
 
             if PYPY or sys.version_info >= (3, 10):
                 column = 12
-            elif sys.version_info >= (3, 8):
-                column = 8
             else:
-                column = 11
+                column = 8
             self.assertHasErrors(
                 sourcePath,
                 ["""\
@@ -487,10 +482,8 @@ def foo(bar=baz, bax):
                 column = 18
             elif sys.version_info >= (3, 9):
                 column = 21
-            elif sys.version_info >= (3, 8):
-                column = 9
             else:
-                column = 8
+                column = 9
             last_line = ' ' * (column - 1) + '^\n'
             columnstr = '%d:' % column
             self.assertHasErrors(
@@ -512,7 +505,7 @@ foo(bar=baz, bax)
         with self.makeTempFile(source) as sourcePath:
             if sys.version_info >= (3, 9):
                 column = 17
-            elif not PYPY and sys.version_info >= (3, 8):
+            elif not PYPY:
                 column = 14
             else:
                 column = 13
@@ -679,17 +672,9 @@ x = "%s"
                 "max(1 for i in range(10), key=lambda x: x+1)",
                 "   ^",
             ]
-        elif sys.version_info >= (3, 8):
+        else:
             expected_error = [
                 "<stdin>:1:5: Generator expression must be parenthesized",
-            ]
-        elif sys.version_info >= (3, 7):
-            expected_error = [
-                "<stdin>:1:4: Generator expression must be parenthesized",
-            ]
-        elif sys.version_info >= (3, 6):
-            expected_error = [
-                "<stdin>:1:4: Generator expression must be parenthesized if not sole argument",  # noqa: E501
             ]
 
         self.assertEqual(errlines, expected_error)
