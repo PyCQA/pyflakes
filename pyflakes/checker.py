@@ -718,17 +718,7 @@ def in_string_annotation(func):
 
 
 class Checker:
-    """
-    I check the cleanliness and sanity of Python code.
-
-    @ivar _deferredFunctions: Tracking list used by L{deferFunction}.  Elements
-        of the list are two-tuples.  The first element is the callable passed
-        to L{deferFunction}.  The second element is a copy of the scope stack
-        at the time L{deferFunction} was called.
-
-    @ivar _deferredAssignments: Similar to C{_deferredFunctions}, but for
-        callables which are deferred assignment checks.
-    """
+    """I check the cleanliness and sanity of Python code."""
 
     _ast_node_scope = {
         ast.Module: ModuleScope,
