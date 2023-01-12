@@ -263,6 +263,11 @@ class Definition(Binding):
     """
     A binding that defines a function or a class.
     """
+    def redefines(self, other):
+        return (
+            super().redefines(other) or
+            (isinstance(other, Assignment) and self.name == other.name)
+        )
 
 
 class Builtin(Definition):
