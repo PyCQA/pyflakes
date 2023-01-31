@@ -367,6 +367,13 @@ class TestTypeAnnotations(TestCase):
             x = 3
         ''', m.UnusedVariable)
 
+    def test_unused_annotation_in_outer_scope_reassigned_in_local_scope(self):
+        self.flakes('''
+        x: int
+        x.__dict__
+        def f(): x = 1
+        ''', m.UndefinedName, m.UnusedVariable)
+
     def test_unassigned_annotation_is_undefined(self):
         self.flakes('''
         name: str

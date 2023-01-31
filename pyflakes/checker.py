@@ -1068,7 +1068,7 @@ class Checker:
 
             binding = scope.get(name, None)
             if isinstance(binding, Annotation) and not self._in_postponed_annotation:
-                scope[name].used = True
+                scope[name].used = (self.scope, node)
                 continue
 
             if name == 'print' and isinstance(binding, Builtin):
