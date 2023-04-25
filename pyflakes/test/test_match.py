@@ -81,3 +81,14 @@ class TestMatch(TestCase):
                 case {'foo': k1, **rest}:
                     print(f'{k1=} {rest=}')
         ''')
+
+    def test_defined_in_different_branches(self):
+        self.flakes('''
+            def f(x):
+                match x:
+                    case 1:
+                        def y(): pass
+                    case _:
+                        def y(): print(1)
+                return y
+        ''')

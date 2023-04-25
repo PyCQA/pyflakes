@@ -29,8 +29,10 @@ parse_format_string = string.Formatter().parse
 def getAlternatives(n):
     if isinstance(n, ast.If):
         return [n.body]
-    if isinstance(n, ast.Try):
+    elif isinstance(n, ast.Try):
         return [n.body + n.orelse] + [[hdl] for hdl in n.handlers]
+    elif sys.version_info >= (3, 10) and isinstance(n, ast.Match):
+        return [mc.body for mc in n.cases]
 
 
 FOR_TYPES = (ast.For, ast.AsyncFor)
