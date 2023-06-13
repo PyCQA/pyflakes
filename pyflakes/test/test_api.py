@@ -621,8 +621,12 @@ x = "%s"
 x = "%s"
 """ % SNOWMAN).encode('utf-16')
         with self.makeTempFile(source) as sourcePath:
-            self.assertHasErrors(
-                sourcePath, [f"{sourcePath}: problem decoding source\n"])
+            if sys.version_info < (3, 11, 4):
+                expected = f"{sourcePath}: problem decoding source\n"
+            else:
+                expected = f"{sourcePath}:1: source code string cannot contain null bytes\n"  # noqa: E501
+
+            self.assertHasErrors(sourcePath, [expected])
 
     def test_checkRecursive(self):
         """
