@@ -200,27 +200,12 @@ def iter_child_nodes(node, omit=None, _fields_order=_FieldsOrder()):
 
 
 def convert_to_value(item):
-    if isinstance(item, ast.Str):
-        return item.s
-    elif hasattr(ast, 'Bytes') and isinstance(item, ast.Bytes):
-        return item.s
+    if isinstance(item, ast.Constant):
+        return item.value
     elif isinstance(item, ast.Tuple):
         return tuple(convert_to_value(i) for i in item.elts)
-    elif isinstance(item, ast.Num):
-        return item.n
     elif isinstance(item, ast.Name):
-        result = VariableKey(item=item)
-        constants_lookup = {
-            'True': True,
-            'False': False,
-            'None': None,
-        }
-        return constants_lookup.get(
-            result.name,
-            result,
-        )
-    elif isinstance(item, ast.NameConstant):
-        return item.value
+        return VariableKey(item=item)
     else:
         return UnhandledKeyType()
 
@@ -517,8 +502,8 @@ class ExportBinding(Binding):
 
         def _add_to_names(container):
             for node in container.elts:
-                if isinstance(node, ast.Str):
-                    self.names.append(node.s)
+                if isinstance(node, ast.Constant) and isinstance(node.value, str):
+                    self.names.append(node.value)
 
         if isinstance(source.value, (ast.List, ast.Tuple)):
             _add_to_names(source.value)
@@ -1229,16 +1214,21 @@ class Checker:
         Determine if the given node is a docstring, as long as it is at the
         correct place in the node tree.
         """
-        return isinstance(node, ast.Str) or (isinstance(node, ast.Expr) and
-                                             isinstance(node.value, ast.Str))
+        return (
+            isinstance(node, ast.Expr) and
+            isinstance(node.value, ast.Constant) and
+            isinstance(node.value.value, str)
+        )
 
     def getDocstring(self, node):
-        if isinstance(node, ast.Expr):
-            node = node.value
-        if not isinstance(node, ast.Str):
-            return (None, None)
-
-        return (node.s, node.lineno - 1)
+        if (
+                isinstance(node, ast.Expr) and
+                isinstance(node.value, ast.Constant) and
+                isinstance(node.value.value, str)
+        ):
+            return node.value.value, node.lineno - 1
+        else:
+            return None, None
 
     def handleNode(self, node, parent):
         if node is None:
@@ -1246,8 +1236,12 @@ class Checker:
         if self.offset and getattr(node, 'lineno', None) is not None:
             node.lineno += self.offset[0]
             node.col_offset += self.offset[1]
-        if self.futuresAllowed and not (isinstance(node, ast.ImportFrom) or
-                                        self.isDocstring(node)):
+        if (
+                self.futuresAllowed and
+                self.nodeDepth == 0 and
+                not isinstance(node, ast.ImportFrom) and
+                not self.isDocstring(node)
+        ):
             self.futuresAllowed = False
         self.nodeDepth += 1
         node._pyflakes_depth = self.nodeDepth
@@ -1318,11 +1312,14 @@ class Checker:
 
     @in_annotation
     def handleAnnotation(self, annotation, node):
-        if isinstance(annotation, ast.Str):
+        if (
+                isinstance(annotation, ast.Constant) and
+                isinstance(annotation.value, str)
+        ):
             # Defer handling forward annotation.
             self.deferFunction(functools.partial(
                 self.handleStringAnnotation,
-                annotation.s,
+                annotation.value,
                 node,
                 annotation.lineno,
                 annotation.col_offset,
@@ -1387,7 +1384,7 @@ class Checker:
 
     def _handle_string_dot_format(self, node):
         try:
-            placeholders = tuple(parse_format_string(node.func.value.s))
+            placeholders = tuple(parse_format_string(node.func.value.value))
         except ValueError as e:
             self.report(messages.StringDotFormatInvalidFormat, node, e)
             return
@@ -1503,7 +1500,8 @@ class Checker:
     def CALL(self, node):
         if (
                 isinstance(node.func, ast.Attribute) and
-                isinstance(node.func.value, ast.Str) and
+                isinstance(node.func.value, ast.Constant) and
+                isinstance(node.func.value.value, str) and
                 node.func.attr == 'format'
         ):
             self._handle_string_dot_format(node)
@@ -1584,7 +1582,7 @@ class Checker:
 
     def _handle_percent_format(self, node):
         try:
-            placeholders = parse_percent_format(node.left.s)
+            placeholders = parse_percent_format(node.left.value)
         except ValueError:
             self.report(
                 messages.PercentFormatInvalidFormat,
@@ -1663,13 +1661,16 @@ class Checker:
 
         if (
                 isinstance(node.right, ast.Dict) and
-                all(isinstance(k, ast.Str) for k in node.right.keys)
+                all(
+                    isinstance(k, ast.Constant) and isinstance(k.value, str)
+                    for k in node.right.keys
+                )
         ):
             if positional and positional_count > 1:
                 self.report(messages.PercentFormatExpectedSequence, node)
                 return
 
-            substitution_keys = {k.s for k in node.right.keys}
+            substitution_keys = {k.value for k in node.right.keys}
             extra_keys = substitution_keys - named
             missing_keys = named - substitution_keys
             if not positional and extra_keys:
@@ -1688,26 +1689,23 @@ class Checker:
     def BINOP(self, node):
         if (
                 isinstance(node.op, ast.Mod) and
-                isinstance(node.left, ast.Str)
+                isinstance(node.left, ast.Constant) and
+                isinstance(node.left.value, str)
         ):
             self._handle_percent_format(node)
         self.handleChildren(node)
 
-    def STR(self, node):
-        if self._in_annotation:
+    def CONSTANT(self, node):
+        if isinstance(node.value, str) and self._in_annotation:
             fn = functools.partial(
                 self.handleStringAnnotation,
-                node.s,
+                node.value,
                 node,
                 node.lineno,
                 node.col_offset,
                 messages.ForwardAnnotationSyntaxError,
             )
             self.deferFunction(fn)
-
-    def CONSTANT(self, node):
-        if isinstance(node.value, str):
-            return self.STR(node)
 
     # "slice" type nodes
     SLICE = EXTSLICE = INDEX = handleChildren
