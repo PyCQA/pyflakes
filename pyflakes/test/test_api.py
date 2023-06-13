@@ -474,6 +474,11 @@ def foo(bar=baz, bax):
     pass
 """
         with self.makeTempFile(source) as sourcePath:
+            if sys.version_info >= (3, 12):
+                msg = 'parameter without a default follows parameter with a default'  # noqa: E501
+            else:
+                msg = 'non-default argument follows default argument'
+
             if PYPY and sys.version_info >= (3, 9):
                 column = 18
             elif PYPY:
@@ -485,13 +490,13 @@ def foo(bar=baz, bax):
             else:
                 column = 9
             last_line = ' ' * (column - 1) + '^\n'
-            columnstr = '%d:' % column
             self.assertHasErrors(
                 sourcePath,
-                ["""\
-{}:1:{} non-default argument follows default argument
+                [f"""\
+{sourcePath}:1:{column}: {msg}
 def foo(bar=baz, bax):
-{}""".format(sourcePath, columnstr, last_line)])
+{last_line}"""]
+            )
 
     def test_nonKeywordAfterKeywordSyntaxError(self):
         """
@@ -532,7 +537,7 @@ foo(bar=baz, bax)
                 column = 7
             elif PYPY:
                 column = 6
-            elif sys.version_info >= (3, 9):
+            elif (3, 9) <= sys.version_info < (3, 12):
                 column = 13
             else:
                 column = 7
