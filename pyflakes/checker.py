@@ -577,6 +577,10 @@ class FunctionScope(Scope):
                 yield name, binding
 
 
+class TypeScope(Scope):
+    pass
+
+
 class GeneratorScope(Scope):
     pass
 
@@ -1039,7 +1043,12 @@ class Checker:
         if not name:
             return
 
-        in_generators = None
+        # only the following can access class scoped variables (since classes
+        # aren't really a scope)
+        # - direct accesses (not within a nested scope)
+        # - generators
+        # - type annotations (for generics, etc.)
+        can_access_class_vars = None
         importStarred = None
 
         # try enclosing function scopes and global scope
@@ -1047,7 +1056,7 @@ class Checker:
             if isinstance(scope, ClassScope):
                 if name == '__class__':
                     return
-                elif in_generators is False:
+                elif can_access_class_vars is False:
                     # only generators used in a class scope can access the
                     # names of the class. this is skipped during the first
                     # iteration
@@ -1082,8 +1091,10 @@ class Checker:
 
             importStarred = importStarred or scope.importStarred
 
-            if in_generators is not False:
-                in_generators = isinstance(scope, GeneratorScope)
+            if can_access_class_vars is not False:
+                can_access_class_vars = isinstance(
+                    scope, (TypeScope, GeneratorScope),
+                )
 
         if importStarred:
             from_list = []
@@ -1310,6 +1321,10 @@ class Checker:
 
         self.handleNode(parsed_annotation, node)
 
+    def handle_annotation_always_deferred(self, annotation, parent):
+        fn = in_annotation(Checker.handleNode)
+        self.deferFunction(lambda: fn(self, annotation, parent))
+
     @in_annotation
     def handleAnnotation(self, annotation, node):
         if (
@@ -1326,8 +1341,7 @@ class Checker:
                 messages.ForwardAnnotationSyntaxError,
             ))
         elif self.annotationsFutureEnabled:
-            fn = in_annotation(Checker.handleNode)
-            self.deferFunction(lambda: fn(self, annotation, node))
+            self.handle_annotation_always_deferred(annotation, node)
         else:
             self.handleNode(annotation, node)
 
@@ -1902,7 +1916,10 @@ class Checker:
     def FUNCTIONDEF(self, node):
         for deco in node.decorator_list:
             self.handleNode(deco, node)
-        self.LAMBDA(node)
+
+        with self._type_param_scope(node):
+            self.LAMBDA(node)
+
         self.addBinding(node, FunctionDefinition(node.name, node))
         # doctest does not process doctest within a doctest,
         # or in nested functions.
@@ -1951,7 +1968,10 @@ class Checker:
 
         def runFunction():
             with self.in_scope(FunctionScope):
-                self.handleChildren(node, omit=['decorator_list', 'returns'])
+                self.handleChildren(
+                    node,
+                    omit=('decorator_list', 'returns', 'type_params'),
+                )
 
         self.deferFunction(runFunction)
 
@@ -1969,19 +1989,22 @@ class Checker:
         """
         for deco in node.decorator_list:
             self.handleNode(deco, node)
-        for baseNode in node.bases:
-            self.handleNode(baseNode, node)
-        for keywordNode in node.keywords:
-            self.handleNode(keywordNode, node)
-        with self.in_scope(ClassScope):
-            # doctest does not process doctest within a doctest
-            # classes within classes are processed.
-            if (self.withDoctest and
-                    not self._in_doctest() and
-                    not isinstance(self.scope, FunctionScope)):
-                self.deferFunction(lambda: self.handleDoctests(node))
-            for stmt in node.body:
-                self.handleNode(stmt, node)
+
+        with self._type_param_scope(node):
+            for baseNode in node.bases:
+                self.handleNode(baseNode, node)
+            for keywordNode in node.keywords:
+                self.handleNode(keywordNode, node)
+            with self.in_scope(ClassScope):
+                # doctest does not process doctest within a doctest
+                # classes within classes are processed.
+                if (self.withDoctest and
+                        not self._in_doctest() and
+                        not isinstance(self.scope, FunctionScope)):
+                    self.deferFunction(lambda: self.handleDoctests(node))
+                for stmt in node.body:
+                    self.handleNode(stmt, node)
+
         self.addBinding(node, ClassDefinition(node.name, node))
 
     def AUGASSIGN(self, node):
@@ -2155,3 +2178,21 @@ class Checker:
         self.handleChildren(node)
 
     MATCHAS = MATCHMAPPING = MATCHSTAR = _match_target
+
+    @contextlib.contextmanager
+    def _type_param_scope(self, node):
+        with contextlib.ExitStack() as ctx:
+            if sys.version_info >= (3, 12):
+                ctx.enter_context(self.in_scope(TypeScope))
+                for param in node.type_params:
+                    self.handleNode(param, node)
+            yield
+
+    def TYPEVAR(self, node):
+        self.handleNodeStore(node)
+        self.handle_annotation_always_deferred(node.bound, node)
+
+    def TYPEALIAS(self, node):
+        self.handleNode(node.name, node)
+        with self._type_param_scope(node):
+            self.handle_annotation_always_deferred(node.value, node)
