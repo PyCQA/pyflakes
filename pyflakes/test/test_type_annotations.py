@@ -713,3 +713,70 @@ class TestTypeAnnotations(TestCase):
 
             def g(x: Shape[*Ts]) -> Shape[*Ts]: ...
         """)
+
+    @skipIf(version_info < (3, 12), 'new in Python 3.12')
+    def test_type_statements(self):
+        self.flakes("""
+            type ListOrSet[T] = list[T] | set[T]
+
+            def f(x: ListOrSet[str]) -> None: ...
+
+            type RecursiveType = int | list[RecursiveType]
+
+            type ForwardRef = int | C
+
+            type ForwardRefInBounds[T: C] = T
+
+            class C: pass
+        """)
+
+    @skipIf(version_info < (3, 12), 'new in Python 3.12')
+    def test_type_parameters_functions(self):
+        self.flakes("""
+            def f[T](t: T) -> T: return t
+
+            async def g[T](t: T) -> T: return t
+
+            def with_forward_ref[T: C](t: T) -> T: return t
+
+            def can_access_inside[T](t: T) -> T:
+                print(T)
+                return t
+
+            class C: pass
+        """)
+
+    @skipIf(version_info < (3, 12), 'new in Python 3.12')
+    def test_type_parameters_do_not_escape_function_scopes(self):
+        self.flakes("""
+            from x import g
+
+            @g(T)  # not accessible in decorators
+            def f[T](t: T) -> T: return t
+
+            T  # not accessible afterwards
+        """, m.UndefinedName, m.UndefinedName)
+
+    @skipIf(version_info < (3, 12), 'new in Python 3.12')
+    def test_type_parameters_classes(self):
+        self.flakes("""
+            class C[T](list[T]): pass
+
+            class UsesForward[T: Forward](list[T]): pass
+
+            class Forward: pass
+
+            class WithinBody[T](list[T]):
+                t = T
+        """)
+
+    @skipIf(version_info < (3, 12), 'new in Python 3.12')
+    def test_type_parameters_do_not_escape_class_scopes(self):
+        self.flakes("""
+            from x import g
+
+            @g(T)  # not accessible in decorators
+            class C[T](list[T]): pass
+
+            T  # not accessible afterwards
+        """, m.UndefinedName, m.UndefinedName)

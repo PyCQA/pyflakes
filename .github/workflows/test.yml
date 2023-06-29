@@ -33,3 +33,13 @@ jobs:
 
       - name: Tox tests
         run: tox -e py
+  # TODO: after flake8 6.1 include this in the main matrix
+  py312:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.12-dev'
+    - run: pip install --upgrade tox
+    - run: tox -e py312
