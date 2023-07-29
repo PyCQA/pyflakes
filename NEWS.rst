@@ -1,3 +1,14 @@
+3.1.0 (2023-07-29)
+
+- Drop support for EOL python 3.6 / 3.7
+- Remove ``ContinueInFinally`` check (only relevant in python < 3.8)
+- Fix forward annotations inside a nested scope
+- Produce an error when a definition shadows an unused variable
+- Fix accessed global annotation being redefined in a local scope
+- Allow redefinition of functions across ``match`` arms
+- Fix potential ``None`` for ``lineno`` during tokenization errors
+- Add support for PEP 695 and python 3.12
+
 3.0.1 (2022-11-24)
 
 - Fix crash on augmented assign to ``print`` builtin
