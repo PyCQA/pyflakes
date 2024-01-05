@@ -1,3 +1,8 @@
+3.2.0 (2024-01-04)
+
+- Add support for ``*T`` (TypeVarTuple) and ``**P`` (ParamSpec) in PEP 695
+  annotations.
+
 3.1.0 (2023-07-29)
 
 - Drop support for EOL python 3.6 / 3.7
