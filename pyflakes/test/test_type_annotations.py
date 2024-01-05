@@ -780,3 +780,20 @@ class TestTypeAnnotations(TestCase):
 
             T  # not accessible afterwards
         """, m.UndefinedName, m.UndefinedName)
+
+    @skipIf(version_info < (3, 12), 'new in Python 3.12')
+    def test_type_parameters_TypeVarTuple(self):
+        self.flakes("""
+        def f[*T](*args: *T) -> None: ...
+        """)
+
+    @skipIf(version_info < (3, 12), 'new in Python 3.12')
+    def test_type_parameters_ParamSpec(self):
+        self.flakes("""
+        from typing import Callable
+
+        def f[R, **P](f: Callable[P, R]) -> Callable[P, R]:
+            def g(*args: P.args, **kwargs: P.kwargs) -> R:
+                return f(*args, **kwargs)
+            return g
+        """)
