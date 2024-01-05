@@ -2192,6 +2192,8 @@ class Checker:
         self.handleNodeStore(node)
         self.handle_annotation_always_deferred(node.bound, node)
 
+    PARAMSPEC = TYPEVARTUPLE = handleNodeStore
+
     def TYPEALIAS(self, node):
         self.handleNode(node.name, node)
         with self._type_param_scope(node):
