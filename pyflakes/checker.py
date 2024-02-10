@@ -1003,14 +1003,17 @@ class Checker:
         # don't treat annotations as assignments if there is an existing value
         # in scope
         if value.name not in self.scope or not isinstance(value, Annotation):
-            cur_scope_pos = -1
-            # As per PEP 572, use scope in which outermost generator is defined
-            while (
-                isinstance(value, NamedExprAssignment) and
-                isinstance(self.scopeStack[cur_scope_pos], GeneratorScope)
-            ):
-                cur_scope_pos -= 1
-            self.scopeStack[cur_scope_pos][value.name] = value
+            if isinstance(value, NamedExprAssignment):
+                # PEP 572: use scope in which outermost generator is defined
+                scope = next(
+                    scope
+                    for scope in reversed(self.scopeStack)
+                    if not isinstance(scope, GeneratorScope)
+                )
+                # it may be a re-assignment to an already existing name
+                scope.setdefault(value.name, value)
+            else:
+                self.scope[value.name] = value
 
     def _unknown_handler(self, node):
         # this environment variable configures whether to error on unknown

@@ -1707,6 +1707,13 @@ class TestUnusedAssignment(TestCase):
             print(y)
         ''')
 
+    def test_assign_expr_generator_scope_reassigns_parameter(self):
+        self.flakes('''
+        def foo(x):
+            fns = [lambda x: x + 1, lambda x: x + 2, lambda x: x + 3]
+            return [(x := fn(x)) for fn in fns]
+        ''')
+
     def test_assign_expr_nested(self):
         """Test assignment expressions in nested expressions."""
         self.flakes('''
