@@ -405,10 +405,10 @@ def baz():
             self.fail()
 
         with self.makeTempFile(source) as sourcePath:
-            if PYPY:
-                message = 'end of file (EOF) while scanning triple-quoted string literal'
-            elif sys.version_info >= (3, 10):
+            if sys.version_info >= (3, 10):
                 message = 'unterminated triple-quoted string literal (detected at line 8)'  # noqa: E501
+            elif PYPY:
+                message = 'end of file (EOF) while scanning triple-quoted string literal'
             else:
                 message = 'invalid syntax'
 
@@ -430,10 +430,10 @@ def baz():
         syntax error reflects the cause for the syntax error.
         """
         with self.makeTempFile("def foo(") as sourcePath:
-            if PYPY:
-                msg = 'parenthesis is never closed'
-            elif sys.version_info >= (3, 10):
+            if sys.version_info >= (3, 10):
                 msg = "'(' was never closed"
+            elif PYPY:
+                msg = 'parenthesis is never closed'
             else:
                 msg = 'unexpected EOF while parsing'
 
@@ -611,9 +611,14 @@ x = "%s"
 x = "%s"
 """ % SNOWMAN).encode('utf-8')
         with self.makeTempFile(source) as sourcePath:
-            self.assertHasErrors(
-                sourcePath,
-                [f"{sourcePath}:1:1: 'ascii' codec can't decode byte 0xe2 in position 21: ordinal not in range(128)\n"])  # noqa: E501
+            if PYPY and sys.version_info >= (3, 10):
+                prefix = f"{sourcePath}:1:"
+            else:
+                prefix = f"{sourcePath}:1:1:"
+            error = f"{prefix} 'ascii' codec can't decode byte 0xe2 in position 21: ordinal not in range(128)\n"  # noqa: E501
+            if PYPY and sys.version_info >= (3, 10):
+                error += "# coding: ascii\n"
+            self.assertHasErrors(sourcePath, [error])
 
     def test_misencodedFileUTF16(self):
         """
