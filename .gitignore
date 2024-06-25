@@ -1,6 +1,7 @@
 *.egg
 *.egg-info
 *.pyc
+*.leo
 .tox
 /.cache/
 /dist/
