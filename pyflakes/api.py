@@ -159,8 +159,11 @@ def _get_version():
     """
     Retrieve and format package version along with python version & OS used
     """
-    return ('%s Python %s on %s' %
-            (__version__, platform.python_version(), platform.system()))
+    return (
+        f"ekr-fork-pylint: {__version__} on {platform.system()}"
+        # '%s Python %s on %s' %
+            # (__version__, platform.python_version(), platform.system()))
+    )
 
 
 def main(prog=None, args=None):
@@ -171,15 +174,20 @@ def main(prog=None, args=None):
     _exitOnSignal('SIGINT', '... stopped')
     _exitOnSignal('SIGPIPE', 1)
 
-    parser = argparse.ArgumentParser(prog=prog,
-                                     description='Check Python source files for errors')
+    parser = argparse.ArgumentParser(
+        prog=prog,
+        description='EKR: Check Python source files for errors')
     parser.add_argument('-V', '--version', action='version', version=_get_version())
-    parser.add_argument('path', nargs='*',
-                        help='Path(s) of Python file(s) to check. STDIN if not given.')
+    parser.add_argument(
+        'path', nargs='*', help='List of files to check')
+        # help='Path(s) of Python file(s) to check. STDIN if not given.')
     args = parser.parse_args(args=args).path
     reporter = modReporter._makeDefaultReporter()
     if args:
         warnings = checkRecursive(args, reporter)
     else:
-        warnings = check(sys.stdin.read(), '<stdin>', reporter)
+        ### warnings = check(sys.stdin.read(), '<stdin>', reporter)
+        warnings = 1
+        print('EKR: no files given')
+        
     raise SystemExit(warnings > 0)
