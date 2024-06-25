@@ -164,18 +164,6 @@ class _FieldsOrder(dict):
         self[node_class] = fields = self._get_fields(node_class)
         return fields
 
-
-def counter(items):
-    """
-    Simplest required implementation of collections.Counter. Required as 2.6
-    does not have Counter in collections.
-    """
-    results = {}
-    for item in items:
-        results[item] = results.get(item, 0) + 1
-    return results
-
-
 def iter_child_nodes(node, omit=None, _fields_order=_FieldsOrder()):
     """
     Yield all direct child nodes of *node*, that is, all fields that
@@ -1773,6 +1761,7 @@ class Checker:
         # Complain if there are duplicate keys with different values
         # If they have the same value it's not going to cause potentially
         # unexpected behaviour so we'll not complain.
+        counter = collections.Counter
         keys = [
             convert_to_value(key) for key in node.keys
         ]
