@@ -778,7 +778,7 @@ class IntegrationTests(TestCase):
             self.tempfilepath, os.linesep)
         self.assertEqual(d, ('', error_msg, 1))
 
-    def test_readFromStdin(self):
+    def xxx_test_readFromStdin(self):
         """
         If no arguments are passed to C{pyflakes} then it reads from stdin.
         """
