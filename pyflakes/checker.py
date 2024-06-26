@@ -164,6 +164,7 @@ class _FieldsOrder(dict):
         self[node_class] = fields = self._get_fields(node_class)
         return fields
 
+
 def iter_child_nodes(node, omit=None, _fields_order=_FieldsOrder()):
     """
     Yield all direct child nodes of *node*, that is, all fields that
