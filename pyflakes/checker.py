@@ -1761,12 +1761,11 @@ class Checker:
         # Complain if there are duplicate keys with different values
         # If they have the same value it's not going to cause potentially
         # unexpected behaviour so we'll not complain.
-        counter = collections.Counter
         keys = [
             convert_to_value(key) for key in node.keys
         ]
 
-        key_counts = counter(keys)
+        key_counts = collections.Counter(keys)
         duplicate_keys = [
             key for key, count in key_counts.items()
             if count > 1
@@ -1775,7 +1774,7 @@ class Checker:
         for key in duplicate_keys:
             key_indices = [i for i, i_key in enumerate(keys) if i_key == key]
 
-            values = counter(
+            values = collections.Counter(
                 convert_to_value(node.values[index])
                 for index in key_indices
             )
