@@ -1248,7 +1248,7 @@ class Checker:
         else:
             self.handleNode(annotation, node)
 
-    #@+node:ekr.20240702085302.112: *4* Checker.handleChildren
+    #@+node:ekr.20240702085302.112: *4* Checker.handleChildren & synonyms
     def handleChildren(self, tree, omit=None):
         for node in iter_child_nodes(tree, omit=omit):
             self.handleNode(node, tree)
@@ -1260,6 +1260,17 @@ class Checker:
     # "expr" type nodes
     BOOLOP = UNARYOP = SET = ATTRIBUTE = STARRED = NAMECONSTANT = \
         NAMEDEXPR = handleChildren
+
+    # additional node types
+    COMPREHENSION = KEYWORD = FORMATTEDVALUE = handleChildren
+
+    MATCH = MATCH_CASE = MATCHCLASS = MATCHOR = MATCHSEQUENCE = handleChildren
+    MATCHSINGLETON = MATCHVALUE = handleChildren
+
+    # "slice" type nodes
+    SLICE = EXTSLICE = INDEX = handleChildren
+
+
     #@+node:ekr.20240702085302.120: *4* Checker.handleDoctests
     _getDoctestExamples = doctest.DocTestParser().get_examples
 
@@ -1295,7 +1306,7 @@ class Checker:
                     self.offset = node_offset
         self.scopeStack = saved_stack
 
-    #@+node:ekr.20240702085302.119: *4* Checker.handleNode
+    #@+node:ekr.20240702085302.119: *4* Checker.handleNode & synonyms
     def handleNode(self, node, parent):
         if node is None:
             return
@@ -1895,10 +1906,6 @@ class Checker:
 
         self.handleChildren(node)
 
-    #@+node:ekr.20240702085302.132: *4* Checker.COMPREHENSION, KEYWORD, FORMATTEDVALUE
-    # additional node types
-    COMPREHENSION = KEYWORD = FORMATTEDVALUE = handleChildren
-
     #@+node:ekr.20240702085302.130: *4* Checker.CONSTANT & related operators
     def CONSTANT(self, node):
         if isinstance(node.value, str) and self._in_annotation:
@@ -1911,9 +1918,6 @@ class Checker:
                 messages.ForwardAnnotationSyntaxError,
             )
             self.deferFunction(fn)
-
-    # "slice" type nodes
-    SLICE = EXTSLICE = INDEX = handleChildren
 
     #@+node:ekr.20240702085302.140: *4* Checker.CONTINUE & BREAK
     def CONTINUE(self, node):
@@ -2208,9 +2212,6 @@ class Checker:
         self.deferFunction(runFunction)
 
     #@+node:ekr.20240702085302.156: *4* Checker.MATCH* & _match_target
-    MATCH = MATCH_CASE = MATCHCLASS = MATCHOR = MATCHSEQUENCE = handleChildren
-    MATCHSINGLETON = MATCHVALUE = handleChildren
-
     def _match_target(self, node):
         self.handleNodeStore(node)
         self.handleChildren(node)
