@@ -200,7 +200,7 @@ def main(prog=None, args=None):
     else:
         ### warnings = check(sys.stdin.read(), '<stdin>', reporter)
         warnings = 1
-        print('EKR: no files given')
+        print('EKR: no files or directories given')
 
     raise SystemExit(warnings > 0)
 #@-others

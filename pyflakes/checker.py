@@ -28,6 +28,10 @@ PYPY = hasattr(sys, 'pypy_version_info')
 builtin_vars = dir(builtins)
 
 parse_format_string = string.Formatter().parse
+
+FOR_TYPES = (ast.For, ast.AsyncFor)
+
+
 #@-<< checker.py: globals >>
 
 
@@ -41,10 +45,6 @@ def getAlternatives(n):
         return [n.body + n.orelse] + [[hdl] for hdl in n.handlers]
     elif sys.version_info >= (3, 10) and isinstance(n, ast.Match):
         return [mc.body for mc in n.cases]
-
-
-#@+node:ekr.20240702085302.5: *3* const: FOR_TYPES
-FOR_TYPES = (ast.For, ast.AsyncFor)
 
 
 #@+node:ekr.20240702085302.6: *3* function: _is_singleton
