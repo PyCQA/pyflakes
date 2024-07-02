@@ -1184,6 +1184,16 @@ class Checker:
             self.annotationsFutureEnabled
         )
 
+    #@+node:ekr.20240702085302.157: *4* Checker._type_param_scope (@contextlib.contextmanager)
+    @contextlib.contextmanager
+    def _type_param_scope(self, node):
+        with contextlib.ExitStack() as ctx:
+            if sys.version_info >= (3, 12):
+                ctx.enter_context(self.in_scope(TypeScope))
+                for param in node.type_params:
+                    self.handleNode(param, node)
+            yield
+
     #@+node:ekr.20240702085302.104: *4* Checker._unknown_handler
     def _unknown_handler(self, node):
         # this environment variable configures whether to error on unknown
@@ -1486,7 +1496,7 @@ class Checker:
             except KeyError:
                 self.report(messages.UndefinedName, node, name)
 
-    #@+node:ekr.20240702085302.117: *3* Checker: Visitors & helpers
+    #@+node:ekr.20240702085302.117: *3* Checker: Visitors
     #@+node:ekr.20240702085302.124: *4*  Checker.ignore
     def ignore(self, node):
         pass
@@ -1501,7 +1511,49 @@ class Checker:
     BOOLOP = UNARYOP = SET = ATTRIBUTE = STARRED = NAMECONSTANT = \
         NAMEDEXPR = handleChildren
 
-    #@+node:ekr.20240702085302.128: *4* Checker._handle_percent_format
+    #@+node:ekr.20240702085302.154: *4* Checker.ANNASSIGN
+    def ANNASSIGN(self, node):
+        self.handleAnnotation(node.annotation, node)
+        # If the assignment has value, handle the *value* now.
+        if node.value:
+            # If the annotation is `TypeAlias`, handle the *value* as an annotation.
+            if _is_typing(node.annotation, 'TypeAlias', self.scopeStack):
+                self.handleAnnotation(node.value, node)
+            else:
+                self.handleNode(node.value, node)
+        self.handleNode(node.target, node)
+
+    #@+node:ekr.20240702085302.146: *4* Checker.ARG
+    def ARG(self, node):
+        self.addBinding(node, Argument(node.arg, self.getScopeNode(node)))
+
+    #@+node:ekr.20240702085302.145: *4* Checker.ARGUMENTS   omit=('defaults', 'kw_defaults')
+    def ARGUMENTS(self, node):
+        self.handleChildren(node, omit=('defaults', 'kw_defaults'))
+
+    #@+node:ekr.20240702085302.136: *4* Checker.ASSERT
+    def ASSERT(self, node):
+        if isinstance(node.test, ast.Tuple) and node.test.elts != []:
+            self.report(messages.AssertTuple, node)
+        self.handleChildren(node)
+
+    #@+node:ekr.20240702085302.148: *4* Checker.AUGASSIGN
+    def AUGASSIGN(self, node):
+        self.handleNodeLoad(node.target, node)
+        self.handleNode(node.value, node)
+        self.handleNode(node.target, node)
+
+    #@+node:ekr.20240702085302.129: *4* Checker.BINOP & helper
+    def BINOP(self, node):
+        if (
+                isinstance(node.op, ast.Mod) and
+                isinstance(node.left, ast.Constant) and
+                isinstance(node.left.value, str)
+        ):
+            self._handle_percent_format(node)
+        self.handleChildren(node)
+
+    #@+node:ekr.20240702085302.128: *5* Checker._handle_percent_format
     def _handle_percent_format(self, node):
         try:
             placeholders = parse_percent_format(node.left.value)
@@ -1608,7 +1660,91 @@ class Checker:
                     ', '.join(sorted(missing_keys)),
                 )
 
-    #@+node:ekr.20240702085302.126: *4* Checker._handle_string_dot_format
+    #@+node:ekr.20240702085302.127: *4* Checker.CALL & helper omit=('args', 'elts', 'keywords')
+    def CALL(self, node):
+        if (
+                isinstance(node.func, ast.Attribute) and
+                isinstance(node.func.value, ast.Constant) and
+                isinstance(node.func.value.value, str) and
+                node.func.attr == 'format'
+        ):
+            self._handle_string_dot_format(node)
+
+        omit = []
+        annotated = []
+        not_annotated = []
+
+        if (
+            _is_typing(node.func, 'cast', self.scopeStack) and
+            len(node.args) >= 1
+        ):
+            with self._enter_annotation():
+                self.handleNode(node.args[0], node)
+
+        elif _is_typing(node.func, 'TypeVar', self.scopeStack):
+
+            # TypeVar("T", "int", "str")
+            omit += ["args"]
+            annotated += [arg for arg in node.args[1:]]
+
+            # TypeVar("T", bound="str")
+            omit += ["keywords"]
+            annotated += [k.value for k in node.keywords if k.arg == "bound"]
+            not_annotated += [
+                (k, ["value"] if k.arg == "bound" else None)
+                for k in node.keywords
+            ]
+
+        elif _is_typing(node.func, "TypedDict", self.scopeStack):
+            # TypedDict("a", {"a": int})
+            if len(node.args) > 1 and isinstance(node.args[1], ast.Dict):
+                omit += ["args"]
+                annotated += node.args[1].values
+                not_annotated += [
+                    (arg, ["values"] if i == 1 else None)
+                    for i, arg in enumerate(node.args)
+                ]
+
+            # TypedDict("a", a=int)
+            omit += ["keywords"]
+            annotated += [k.value for k in node.keywords]
+            not_annotated += [(k, ["value"]) for k in node.keywords]
+
+        elif _is_typing(node.func, "NamedTuple", self.scopeStack):
+            # NamedTuple("a", [("a", int)])
+            if (
+                len(node.args) > 1 and
+                isinstance(node.args[1], (ast.Tuple, ast.List)) and
+                all(isinstance(x, (ast.Tuple, ast.List)) and
+                    len(x.elts) == 2 for x in node.args[1].elts)
+            ):
+                omit += ["args"]
+                annotated += [elt.elts[1] for elt in node.args[1].elts]
+                not_annotated += [(elt.elts[0], None) for elt in node.args[1].elts]
+                not_annotated += [
+                    (arg, ["elts"] if i == 1 else None)
+                    for i, arg in enumerate(node.args)
+                ]
+                not_annotated += [(elt, "elts") for elt in node.args[1].elts]
+
+            # NamedTuple("a", a=int)
+            omit += ["keywords"]
+            annotated += [k.value for k in node.keywords]
+            not_annotated += [(k, ["value"]) for k in node.keywords]
+
+        if omit:
+            with self._enter_annotation(AnnotationState.NONE):
+                for na_node, na_omit in not_annotated:
+                    self.handleChildren(na_node, omit=na_omit)
+                self.handleChildren(node, omit=omit)
+
+            with self._enter_annotation():
+                for annotated_node in annotated:
+                    self.handleNode(annotated_node, node)
+        else:
+            self.handleChildren(node)
+
+    #@+node:ekr.20240702085302.126: *5* Checker._handle_string_dot_format
     def _handle_string_dot_format(self, node):
         try:
             placeholders = tuple(parse_format_string(node.func.value.value))
@@ -1723,142 +1859,6 @@ class Checker:
                 node,
                 ', '.join(sorted(str(x) for x in missing_arguments)),
             )
-
-    #@+node:ekr.20240702085302.157: *4* Checker._type_param_scope (@contextlib.contextmanager)
-    @contextlib.contextmanager
-    def _type_param_scope(self, node):
-        with contextlib.ExitStack() as ctx:
-            if sys.version_info >= (3, 12):
-                ctx.enter_context(self.in_scope(TypeScope))
-                for param in node.type_params:
-                    self.handleNode(param, node)
-            yield
-
-    #@+node:ekr.20240702085302.154: *4* Checker.ANNASSIGN
-    def ANNASSIGN(self, node):
-        self.handleAnnotation(node.annotation, node)
-        # If the assignment has value, handle the *value* now.
-        if node.value:
-            # If the annotation is `TypeAlias`, handle the *value* as an annotation.
-            if _is_typing(node.annotation, 'TypeAlias', self.scopeStack):
-                self.handleAnnotation(node.value, node)
-            else:
-                self.handleNode(node.value, node)
-        self.handleNode(node.target, node)
-
-    #@+node:ekr.20240702085302.146: *4* Checker.ARG
-    def ARG(self, node):
-        self.addBinding(node, Argument(node.arg, self.getScopeNode(node)))
-
-    #@+node:ekr.20240702085302.145: *4* Checker.ARGUMENTS   omit=('defaults', 'kw_defaults')
-    def ARGUMENTS(self, node):
-        self.handleChildren(node, omit=('defaults', 'kw_defaults'))
-
-    #@+node:ekr.20240702085302.136: *4* Checker.ASSERT
-    def ASSERT(self, node):
-        if isinstance(node.test, ast.Tuple) and node.test.elts != []:
-            self.report(messages.AssertTuple, node)
-        self.handleChildren(node)
-
-    #@+node:ekr.20240702085302.148: *4* Checker.AUGASSIGN
-    def AUGASSIGN(self, node):
-        self.handleNodeLoad(node.target, node)
-        self.handleNode(node.value, node)
-        self.handleNode(node.target, node)
-
-    #@+node:ekr.20240702085302.129: *4* Checker.BINOP
-    def BINOP(self, node):
-        if (
-                isinstance(node.op, ast.Mod) and
-                isinstance(node.left, ast.Constant) and
-                isinstance(node.left.value, str)
-        ):
-            self._handle_percent_format(node)
-        self.handleChildren(node)
-
-    #@+node:ekr.20240702085302.127: *4* Checker.CALL  omit=('args', 'elts', 'keywords')
-    def CALL(self, node):
-        if (
-                isinstance(node.func, ast.Attribute) and
-                isinstance(node.func.value, ast.Constant) and
-                isinstance(node.func.value.value, str) and
-                node.func.attr == 'format'
-        ):
-            self._handle_string_dot_format(node)
-
-        omit = []
-        annotated = []
-        not_annotated = []
-
-        if (
-            _is_typing(node.func, 'cast', self.scopeStack) and
-            len(node.args) >= 1
-        ):
-            with self._enter_annotation():
-                self.handleNode(node.args[0], node)
-
-        elif _is_typing(node.func, 'TypeVar', self.scopeStack):
-
-            # TypeVar("T", "int", "str")
-            omit += ["args"]
-            annotated += [arg for arg in node.args[1:]]
-
-            # TypeVar("T", bound="str")
-            omit += ["keywords"]
-            annotated += [k.value for k in node.keywords if k.arg == "bound"]
-            not_annotated += [
-                (k, ["value"] if k.arg == "bound" else None)
-                for k in node.keywords
-            ]
-
-        elif _is_typing(node.func, "TypedDict", self.scopeStack):
-            # TypedDict("a", {"a": int})
-            if len(node.args) > 1 and isinstance(node.args[1], ast.Dict):
-                omit += ["args"]
-                annotated += node.args[1].values
-                not_annotated += [
-                    (arg, ["values"] if i == 1 else None)
-                    for i, arg in enumerate(node.args)
-                ]
-
-            # TypedDict("a", a=int)
-            omit += ["keywords"]
-            annotated += [k.value for k in node.keywords]
-            not_annotated += [(k, ["value"]) for k in node.keywords]
-
-        elif _is_typing(node.func, "NamedTuple", self.scopeStack):
-            # NamedTuple("a", [("a", int)])
-            if (
-                len(node.args) > 1 and
-                isinstance(node.args[1], (ast.Tuple, ast.List)) and
-                all(isinstance(x, (ast.Tuple, ast.List)) and
-                    len(x.elts) == 2 for x in node.args[1].elts)
-            ):
-                omit += ["args"]
-                annotated += [elt.elts[1] for elt in node.args[1].elts]
-                not_annotated += [(elt.elts[0], None) for elt in node.args[1].elts]
-                not_annotated += [
-                    (arg, ["elts"] if i == 1 else None)
-                    for i, arg in enumerate(node.args)
-                ]
-                not_annotated += [(elt, "elts") for elt in node.args[1].elts]
-
-            # NamedTuple("a", a=int)
-            omit += ["keywords"]
-            annotated += [k.value for k in node.keywords]
-            not_annotated += [(k, ["value"]) for k in node.keywords]
-
-        if omit:
-            with self._enter_annotation(AnnotationState.NONE):
-                for na_node, na_omit in not_annotated:
-                    self.handleChildren(na_node, omit=na_omit)
-                self.handleChildren(node, omit=omit)
-
-            with self._enter_annotation():
-                for annotated_node in annotated:
-                    self.handleNode(annotated_node, node)
-        else:
-            self.handleChildren(node)
 
     #@+node:ekr.20240702085302.147: *4* Checker.CLASSDEF
     def CLASSDEF(self, node):
