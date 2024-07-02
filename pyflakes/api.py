@@ -161,8 +161,7 @@ def _get_version():
     """
     return (
         f"ekr-fork-pylint: {__version__} on {platform.system()}"
-        # '%s Python %s on %s' %
-            # (__version__, platform.python_version(), platform.system()))
+        # '%s Python %s on %s' % (__version__, platform.python_version(), platform.system()))
     )
 
 
@@ -184,10 +183,11 @@ def main(prog=None, args=None):
     args = parser.parse_args(args=args).path
     reporter = modReporter._makeDefaultReporter()
     if args:
+        print('ekr-fork-pyflakes:api.main args', args)
         warnings = checkRecursive(args, reporter)
     else:
         ### warnings = check(sys.stdin.read(), '<stdin>', reporter)
         warnings = 1
         print('EKR: no files given')
-        
+
     raise SystemExit(warnings > 0)
