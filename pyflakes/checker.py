@@ -1134,6 +1134,56 @@ class Checker:
             else:
                 self.scope[value.name] = value
 
+    #@+node:ekr.20240702085302.113: *4* Checker: is*
+    #@+node:ekr.20240702085302.114: *5* Checker.isLiteralTupleUnpacking
+    def isLiteralTupleUnpacking(self, node):
+        if isinstance(node, ast.Assign):
+            for child in node.targets + [node.value]:
+                if not hasattr(child, 'elts'):
+                    return False
+            return True
+
+    #@+node:ekr.20240702085302.115: *5* Checker.isDocstring
+    def isDocstring(self, node):
+        """
+        Determine if the given node is a docstring, as long as it is at the
+        correct place in the node tree.
+        """
+        return (
+            isinstance(node, ast.Expr) and
+            isinstance(node.value, ast.Constant) and
+            isinstance(node.value.value, str)
+        )
+
+    #@+node:ekr.20240702085302.116: *4* Checker.getDocstring
+    def getDocstring(self, node):
+        if (
+                isinstance(node, ast.Expr) and
+                isinstance(node.value, ast.Constant) and
+                isinstance(node.value.value, str)
+        ):
+            return node.value.value, node.lineno - 1
+        else:
+            return None, None
+
+    #@+node:ekr.20240702110753.1: *3* Checker: Utils for visitors
+    #@+node:ekr.20240702085302.110: *4* Checker._enter_annotation
+    @contextlib.contextmanager
+    def _enter_annotation(self, ann_type=AnnotationState.BARE):
+        orig, self._in_annotation = self._in_annotation, ann_type
+        try:
+            yield
+        finally:
+            self._in_annotation = orig
+
+    #@+node:ekr.20240702085302.111: *4* Checker._in_postponed_annotation
+    @property
+    def _in_postponed_annotation(self):
+        return (
+            self._in_annotation == AnnotationState.STRING or
+            self.annotationsFutureEnabled
+        )
+
     #@+node:ekr.20240702085302.104: *4* Checker._unknown_handler
     def _unknown_handler(self, node):
         # this environment variable configures whether to error on unknown
@@ -1161,6 +1211,120 @@ class Checker:
             self, nodeType, self._unknown_handler,
         )
         return handler
+
+    #@+node:ekr.20240702085302.122: *4* Checker.handle_annotation_always_deferred
+    def handle_annotation_always_deferred(self, annotation, parent):
+        fn = in_annotation(Checker.handleNode)
+        self.deferFunction(lambda: fn(self, annotation, parent))
+
+    #@+node:ekr.20240702085302.123: *4* Checker.handleAnnotation
+    @in_annotation
+    def handleAnnotation(self, annotation, node):
+        if (
+                isinstance(annotation, ast.Constant) and
+                isinstance(annotation.value, str)
+        ):
+            # Defer handling forward annotation.
+            self.deferFunction(functools.partial(
+                self.handleStringAnnotation,
+                annotation.value,
+                node,
+                annotation.lineno,
+                annotation.col_offset,
+                messages.ForwardAnnotationSyntaxError,
+            ))
+        elif self.annotationsFutureEnabled:
+            self.handle_annotation_always_deferred(annotation, node)
+        else:
+            self.handleNode(annotation, node)
+
+    #@+node:ekr.20240702085302.112: *4* Checker.handleChildren
+    def handleChildren(self, tree, omit=None):
+        for node in iter_child_nodes(tree, omit=omit):
+            self.handleNode(node, tree)
+
+    #@+node:ekr.20240702085302.120: *4* Checker.handleDoctests
+    _getDoctestExamples = doctest.DocTestParser().get_examples
+
+    def handleDoctests(self, node):
+        try:
+            (docstring, node_lineno) = self.getDocstring(node.body[0])
+            examples = docstring and self._getDoctestExamples(docstring)
+        except (ValueError, IndexError):
+            # e.g. line 6 of the docstring for <string> has inconsistent
+            # leading whitespace: ...
+            return
+        if not examples:
+            return
+
+        # Place doctest in module scope
+        saved_stack = self.scopeStack
+        self.scopeStack = [self.scopeStack[0]]
+        node_offset = self.offset or (0, 0)
+        with self.in_scope(DoctestScope):
+            if '_' not in self.scopeStack[0]:
+                self.addBinding(None, Builtin('_'))
+            for example in examples:
+                try:
+                    tree = ast.parse(example.source, "<doctest>")
+                except SyntaxError as e:
+                    position = (node_lineno + example.lineno + e.lineno,
+                                example.indent + 4 + (e.offset or 0))
+                    self.report(messages.DoctestSyntaxError, node, position)
+                else:
+                    self.offset = (node_offset[0] + node_lineno + example.lineno,
+                                   node_offset[1] + example.indent + 4)
+                    self.handleChildren(tree)
+                    self.offset = node_offset
+        self.scopeStack = saved_stack
+
+    #@+node:ekr.20240702085302.119: *4* Checker.handleNode
+    def handleNode(self, node, parent):
+        if node is None:
+            return
+        if self.offset and getattr(node, 'lineno', None) is not None:
+            node.lineno += self.offset[0]
+            node.col_offset += self.offset[1]
+        if (
+                self.futuresAllowed and
+                self.nodeDepth == 0 and
+                not isinstance(node, ast.ImportFrom) and
+                not self.isDocstring(node)
+        ):
+            self.futuresAllowed = False
+        self.nodeDepth += 1
+        node._pyflakes_depth = self.nodeDepth
+        node._pyflakes_parent = parent
+        try:
+            handler = self.getNodeHandler(node.__class__)
+            handler(node)
+        finally:
+            self.nodeDepth -= 1
+
+    #@+node:ekr.20240702085302.121: *4* Checker.handleStringAnnotation
+    @in_string_annotation
+    def handleStringAnnotation(self, s, node, ref_lineno, ref_col_offset, err):
+        try:
+            tree = ast.parse(s)
+        except SyntaxError:
+            self.report(err, node, s)
+            return
+
+        body = tree.body
+        if len(body) != 1 or not isinstance(body[0], ast.Expr):
+            self.report(err, node, s)
+            return
+
+        parsed_annotation = tree.body[0].value
+        for descendant in ast.walk(parsed_annotation):
+            if (
+                    'lineno' in descendant._attributes and
+                    'col_offset' in descendant._attributes
+            ):
+                descendant.lineno = ref_lineno
+                descendant.col_offset = ref_col_offset
+
+        self.handleNode(parsed_annotation, node)
 
     #@+node:ekr.20240702085302.106: *4* Checker: handleNodeLoad/Store/Delete
     #@+node:ekr.20240702085302.107: *5* Checker.handleNodeLoad
@@ -1322,61 +1486,7 @@ class Checker:
             except KeyError:
                 self.report(messages.UndefinedName, node, name)
 
-    #@+node:ekr.20240702085302.110: *4* Checker._enter_annotation
-    @contextlib.contextmanager
-    def _enter_annotation(self, ann_type=AnnotationState.BARE):
-        orig, self._in_annotation = self._in_annotation, ann_type
-        try:
-            yield
-        finally:
-            self._in_annotation = orig
-
-    #@+node:ekr.20240702085302.111: *4* Checker._in_postponed_annotation
-    @property
-    def _in_postponed_annotation(self):
-        return (
-            self._in_annotation == AnnotationState.STRING or
-            self.annotationsFutureEnabled
-        )
-
-    #@+node:ekr.20240702085302.112: *4* Checker.handleChildren
-    def handleChildren(self, tree, omit=None):
-        for node in iter_child_nodes(tree, omit=omit):
-            self.handleNode(node, tree)
-
-    #@+node:ekr.20240702085302.113: *4* Checker: is*
-    #@+node:ekr.20240702085302.114: *5* Checker.isLiteralTupleUnpacking
-    def isLiteralTupleUnpacking(self, node):
-        if isinstance(node, ast.Assign):
-            for child in node.targets + [node.value]:
-                if not hasattr(child, 'elts'):
-                    return False
-            return True
-
-    #@+node:ekr.20240702085302.115: *5* Checker.isDocstring
-    def isDocstring(self, node):
-        """
-        Determine if the given node is a docstring, as long as it is at the
-        correct place in the node tree.
-        """
-        return (
-            isinstance(node, ast.Expr) and
-            isinstance(node.value, ast.Constant) and
-            isinstance(node.value.value, str)
-        )
-
-    #@+node:ekr.20240702085302.116: *4* Checker.getDocstring
-    def getDocstring(self, node):
-        if (
-                isinstance(node, ast.Expr) and
-                isinstance(node.value, ast.Constant) and
-                isinstance(node.value.value, str)
-        ):
-            return node.value.value, node.lineno - 1
-        else:
-            return None, None
-
-    #@+node:ekr.20240702085302.117: *3* Checker: visitors & helpers
+    #@+node:ekr.20240702085302.117: *3* Checker: Visitors & helpers
     #@+node:ekr.20240702085302.124: *4*  Checker.ignore
     def ignore(self, node):
         pass
@@ -2266,116 +2376,6 @@ class Checker:
         self.handleNode(node.value, node)
 
     AWAIT = YIELDFROM = YIELD
-
-    #@+node:ekr.20240702085302.118: *3* Checker: handle*
-    #@+node:ekr.20240702085302.119: *4* Checker.handleNode
-    def handleNode(self, node, parent):
-        if node is None:
-            return
-        if self.offset and getattr(node, 'lineno', None) is not None:
-            node.lineno += self.offset[0]
-            node.col_offset += self.offset[1]
-        if (
-                self.futuresAllowed and
-                self.nodeDepth == 0 and
-                not isinstance(node, ast.ImportFrom) and
-                not self.isDocstring(node)
-        ):
-            self.futuresAllowed = False
-        self.nodeDepth += 1
-        node._pyflakes_depth = self.nodeDepth
-        node._pyflakes_parent = parent
-        try:
-            handler = self.getNodeHandler(node.__class__)
-            handler(node)
-        finally:
-            self.nodeDepth -= 1
-
-    #@+node:ekr.20240702085302.120: *4* Checker.handleDoctests
-    _getDoctestExamples = doctest.DocTestParser().get_examples
-
-    def handleDoctests(self, node):
-        try:
-            (docstring, node_lineno) = self.getDocstring(node.body[0])
-            examples = docstring and self._getDoctestExamples(docstring)
-        except (ValueError, IndexError):
-            # e.g. line 6 of the docstring for <string> has inconsistent
-            # leading whitespace: ...
-            return
-        if not examples:
-            return
-
-        # Place doctest in module scope
-        saved_stack = self.scopeStack
-        self.scopeStack = [self.scopeStack[0]]
-        node_offset = self.offset or (0, 0)
-        with self.in_scope(DoctestScope):
-            if '_' not in self.scopeStack[0]:
-                self.addBinding(None, Builtin('_'))
-            for example in examples:
-                try:
-                    tree = ast.parse(example.source, "<doctest>")
-                except SyntaxError as e:
-                    position = (node_lineno + example.lineno + e.lineno,
-                                example.indent + 4 + (e.offset or 0))
-                    self.report(messages.DoctestSyntaxError, node, position)
-                else:
-                    self.offset = (node_offset[0] + node_lineno + example.lineno,
-                                   node_offset[1] + example.indent + 4)
-                    self.handleChildren(tree)
-                    self.offset = node_offset
-        self.scopeStack = saved_stack
-
-    #@+node:ekr.20240702085302.121: *4* Checker.handleStringAnnotation
-    @in_string_annotation
-    def handleStringAnnotation(self, s, node, ref_lineno, ref_col_offset, err):
-        try:
-            tree = ast.parse(s)
-        except SyntaxError:
-            self.report(err, node, s)
-            return
-
-        body = tree.body
-        if len(body) != 1 or not isinstance(body[0], ast.Expr):
-            self.report(err, node, s)
-            return
-
-        parsed_annotation = tree.body[0].value
-        for descendant in ast.walk(parsed_annotation):
-            if (
-                    'lineno' in descendant._attributes and
-                    'col_offset' in descendant._attributes
-            ):
-                descendant.lineno = ref_lineno
-                descendant.col_offset = ref_col_offset
-
-        self.handleNode(parsed_annotation, node)
-
-    #@+node:ekr.20240702085302.122: *4* Checker.handle_annotation_always_deferred
-    def handle_annotation_always_deferred(self, annotation, parent):
-        fn = in_annotation(Checker.handleNode)
-        self.deferFunction(lambda: fn(self, annotation, parent))
-
-    #@+node:ekr.20240702085302.123: *4* Checker.handleAnnotation
-    @in_annotation
-    def handleAnnotation(self, annotation, node):
-        if (
-                isinstance(annotation, ast.Constant) and
-                isinstance(annotation.value, str)
-        ):
-            # Defer handling forward annotation.
-            self.deferFunction(functools.partial(
-                self.handleStringAnnotation,
-                annotation.value,
-                node,
-                annotation.lineno,
-                annotation.col_offset,
-                messages.ForwardAnnotationSyntaxError,
-            ))
-        elif self.annotationsFutureEnabled:
-            self.handle_annotation_always_deferred(annotation, node)
-        else:
-            self.handleNode(annotation, node)
 
     #@-others
 #@-others
