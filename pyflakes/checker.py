@@ -1792,6 +1792,10 @@ class Checker:
 
         self.handleChildren(node)
 
+    #@+node:ekr.20240702085302.132: *4* Checker.COMPREHENSION, KEYWORD, FORMATTEDVALUE
+    # additional node types
+    COMPREHENSION = KEYWORD = FORMATTEDVALUE = handleChildren
+
     #@+node:ekr.20240702085302.130: *4* Checker.CONSTANT & related operators
     def CONSTANT(self, node):
         if isinstance(node.value, str) and self._in_annotation:
@@ -2263,12 +2267,8 @@ class Checker:
 
     AWAIT = YIELDFROM = YIELD
 
-    #@+node:ekr.20240702085302.132: *4* Checker: COMPREHENSION, KEYWORD, FORMATTEDVALUE
-    # additional node types
-    COMPREHENSION = KEYWORD = FORMATTEDVALUE = handleChildren
-
-    #@+node:ekr.20240702085302.118: *4* Checker: handle*
-    #@+node:ekr.20240702085302.119: *5* Checker.handleNode
+    #@+node:ekr.20240702085302.118: *3* Checker: handle*
+    #@+node:ekr.20240702085302.119: *4* Checker.handleNode
     def handleNode(self, node, parent):
         if node is None:
             return
@@ -2291,7 +2291,7 @@ class Checker:
         finally:
             self.nodeDepth -= 1
 
-    #@+node:ekr.20240702085302.120: *5* Checker.handleDoctests
+    #@+node:ekr.20240702085302.120: *4* Checker.handleDoctests
     _getDoctestExamples = doctest.DocTestParser().get_examples
 
     def handleDoctests(self, node):
@@ -2326,7 +2326,7 @@ class Checker:
                     self.offset = node_offset
         self.scopeStack = saved_stack
 
-    #@+node:ekr.20240702085302.121: *5* Checker.handleStringAnnotation
+    #@+node:ekr.20240702085302.121: *4* Checker.handleStringAnnotation
     @in_string_annotation
     def handleStringAnnotation(self, s, node, ref_lineno, ref_col_offset, err):
         try:
@@ -2351,12 +2351,12 @@ class Checker:
 
         self.handleNode(parsed_annotation, node)
 
-    #@+node:ekr.20240702085302.122: *5* Checker.handle_annotation_always_deferred
+    #@+node:ekr.20240702085302.122: *4* Checker.handle_annotation_always_deferred
     def handle_annotation_always_deferred(self, annotation, parent):
         fn = in_annotation(Checker.handleNode)
         self.deferFunction(lambda: fn(self, annotation, parent))
 
-    #@+node:ekr.20240702085302.123: *5* Checker.handleAnnotation
+    #@+node:ekr.20240702085302.123: *4* Checker.handleAnnotation
     @in_annotation
     def handleAnnotation(self, annotation, node):
         if (
