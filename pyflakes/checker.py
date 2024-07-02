@@ -1550,16 +1550,21 @@ class Checker:
         # expr* kw_defaults, arg? kwarg, expr* defaults)
 
     def ARGUMENTS(self, node):
-        if 1:
+        if 0:
             # g.trace(node)
+            # EKR: Unit tests fail w/o these omissions.
             self.handleChildren(node, omit=('defaults', 'kw_defaults'))
+        elif 1:
+            for node2 in iter_child_nodes(node, omit=('defaults', 'kw_defaults')):
+                self.handleNode(node2, node)
         else:
             for field_name in (
                 'posonlyargs', 'args', 'vararg', 'kwonlyargs', 'kwarg',
                 # 'kw_defaults', 'defaults',
             ):
                 child = getattr(node, field_name, None)
-                ekr_iter_child_nodes(child)
+                iter_child_nodes(child)
+                ### ekr_iter_child_nodes(child)
     #@+node:ekr.20240702085302.136: *4* Checker.ASSERT
     def ASSERT(self, node):
         if isinstance(node.test, ast.Tuple) and node.test.elts != []:
