@@ -1253,6 +1253,13 @@ class Checker:
         for node in iter_child_nodes(tree, omit=omit):
             self.handleNode(node, tree)
 
+    # "stmt" type nodes
+    DELETE = FOR = ASYNCFOR = WHILE = WITH = WITHITEM = ASYNCWITH = \
+        EXPR = ASSIGN = handleChildren
+
+    # "expr" type nodes
+    BOOLOP = UNARYOP = SET = ATTRIBUTE = STARRED = NAMECONSTANT = \
+        NAMEDEXPR = handleChildren
     #@+node:ekr.20240702085302.120: *4* Checker.handleDoctests
     _getDoctestExamples = doctest.DocTestParser().get_examples
 
@@ -1497,20 +1504,6 @@ class Checker:
                 self.report(messages.UndefinedName, node, name)
 
     #@+node:ekr.20240702085302.117: *3* Checker: Visitors
-    #@+node:ekr.20240702085302.124: *4*  Checker.ignore
-    def ignore(self, node):
-        pass
-
-    # "stmt" type nodes
-    DELETE = FOR = ASYNCFOR = WHILE = WITH = WITHITEM = ASYNCWITH = \
-        EXPR = ASSIGN = handleChildren
-
-    PASS = ignore
-
-    # "expr" type nodes
-    BOOLOP = UNARYOP = SET = ATTRIBUTE = STARRED = NAMECONSTANT = \
-        NAMEDEXPR = handleChildren
-
     #@+node:ekr.20240702085302.154: *4* Checker.ANNASSIGN
     def ANNASSIGN(self, node):
         self.handleAnnotation(node.annotation, node)
@@ -1922,15 +1915,6 @@ class Checker:
     # "slice" type nodes
     SLICE = EXTSLICE = INDEX = handleChildren
 
-    # expression contexts are node instances too, though being constants
-    LOAD = STORE = DEL = AUGLOAD = AUGSTORE = PARAM = ignore
-
-    # same for operators
-    AND = OR = ADD = SUB = MULT = DIV = MOD = POW = LSHIFT = RSHIFT = \
-        BITOR = BITXOR = BITAND = FLOORDIV = INVERT = NOT = UADD = USUB = \
-        EQ = NOTEQ = LT = LTE = GT = GTE = IS = ISNOT = IN = NOTIN = \
-        MATMULT = ignore
-
     #@+node:ekr.20240702085302.140: *4* Checker.CONTINUE & BREAK
     def CONTINUE(self, node):
         # Walk the tree up until we see a loop (OK), a function or class
@@ -2101,6 +2085,28 @@ class Checker:
 
     IFEXP = IF
 
+    #@+node:ekr.20240702085302.124: *4* Checker.ignore
+    def ignore(self, node):
+        pass
+
+    # "stmt" type nodes
+    DELETE = FOR = ASYNCFOR = WHILE = WITH = WITHITEM = ASYNCWITH = \
+        EXPR = ASSIGN = handleChildren
+
+    PASS = ignore
+
+    # "expr" type nodes
+    BOOLOP = UNARYOP = SET = ATTRIBUTE = STARRED = NAMECONSTANT = \
+        NAMEDEXPR = handleChildren
+
+    # expression contexts are node instances too, though being constants
+    LOAD = STORE = DEL = AUGLOAD = AUGSTORE = PARAM = ignore
+
+    # same for operators
+    AND = OR = ADD = SUB = MULT = DIV = MOD = POW = LSHIFT = RSHIFT = \
+        BITOR = BITXOR = BITAND = FLOORDIV = INVERT = NOT = UADD = USUB = \
+        EQ = NOTEQ = LT = LTE = GT = GTE = IS = ISNOT = IN = NOTIN = \
+        MATMULT = ignore
     #@+node:ekr.20240702085302.150: *4* Checker.IMPORT
     def IMPORT(self, node):
         for alias in node.names:
