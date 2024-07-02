@@ -36,7 +36,11 @@ LENGTH_RE = re.compile('[hlL]?')
 # https://docs.python.org/3/library/stdtypes.html#old-string-formatting
 VALID_CONVERSIONS = frozenset('diouxXeEfFgGcrsa%')
 
+# Globally defined names which are not attributes of the builtins module, or
+# are only present on some platforms.
+_MAGIC_GLOBALS = ['__file__', '__builtins__', '__annotations__', 'WindowsError']
 
+TYPING_MODULES = frozenset(('typing', 'typing_extensions'))
 
 #@-<< checker.py: globals >>
 
@@ -61,6 +65,11 @@ class _FieldsOrder(dict):
     def __missing__(self, node_class):
         self[node_class] = fields = self._get_fields(node_class)
         return fields
+
+
+#@+node:ekr.20240702085302.70: *3* class DetectClassScopedMagic
+class DetectClassScopedMagic:
+    names = dir()
 
 
 #@+node:ekr.20240702085302.24: *3* class UnhandledKeyType
@@ -95,7 +104,7 @@ class VariableKey:
 
 
     #@-others
-#@+node:ekr.20240702085302.3: ** checker.py: utils
+#@+node:ekr.20240702085302.3: ** checker.py: Utils
 #@+node:ekr.20240702085302.4: *3* function: getAlternatives
 def getAlternatives(n):
     if isinstance(n, ast.If):
@@ -409,37 +418,7 @@ class Definition(Binding):
 
 
     #@-others
-#@+node:ekr.20240702085302.56: *3* class ClassDefinition(Definition)
-class ClassDefinition(Definition):
-    pass
-
-
-#@+node:ekr.20240702085302.55: *3* class FunctionDefinition(Definition)
-class FunctionDefinition(Definition):
-    pass
-
-
-#@+node:ekr.20240702085302.21: *3* class Builtin(Definition)
-class Builtin(Definition):
-    """A definition created for all Python builtins."""
-
-    #@+others
-    #@+node:ekr.20240702085302.22: *4* Builtin.__init__
-    def __init__(self, name):
-        super().__init__(name, None)
-
-    #@+node:ekr.20240702085302.23: *4* Builtin.__repr__
-    def __repr__(self):
-        return '<{} object {!r} at 0x{:x}>'.format(
-            self.__class__.__name__,
-            self.name,
-            id(self)
-        )
-
-
-    #@-others
-#@+node:ekr.20240702085302.29: ** checker.py: Importation(Definition) class & subclasses
-#@+node:ekr.20240702085302.30: *3* class Importation(Definition)
+#@+node:ekr.20240702085302.30: *3*  class Importation(Definition)
 class Importation(Definition):
     """
     A binding created by an import statement.
@@ -487,6 +466,113 @@ class Importation(Definition):
 
 
     #@-others
+#@+node:ekr.20240702085302.41: *3*  class ImportationFrom(Importation)
+class ImportationFrom(Importation):
+
+    #@+others
+    #@+node:ekr.20240702085302.42: *4* ImportationFrom.__init__
+    def __init__(self, name, source, module, real_name=None):
+        self.module = module
+        self.real_name = real_name or name
+
+        if module.endswith('.'):
+            full_name = module + self.real_name
+        else:
+            full_name = module + '.' + self.real_name
+
+        super().__init__(name, source, full_name)
+
+    #@+node:ekr.20240702085302.43: *4* ImportationFrom.__str__
+    def __str__(self):
+        """Return import full name with alias."""
+        if self.real_name != self.name:
+            return self.fullName + ' as ' + self.name
+        else:
+            return self.fullName
+
+    #@+node:ekr.20240702085302.44: *4* ImportationFrom.source_statement
+    @property
+    def source_statement(self):
+        if self.real_name != self.name:
+            return f'from {self.module} import {self.real_name} as {self.name}'
+        else:
+            return f'from {self.module} import {self.name}'
+
+
+    #@-others
+#@+node:ekr.20240702085302.21: *3* class Builtin(Definition)
+class Builtin(Definition):
+    """A definition created for all Python builtins."""
+
+    #@+others
+    #@+node:ekr.20240702085302.22: *4* Builtin.__init__
+    def __init__(self, name):
+        super().__init__(name, None)
+
+    #@+node:ekr.20240702085302.23: *4* Builtin.__repr__
+    def __repr__(self):
+        return '<{} object {!r} at 0x{:x}>'.format(
+            self.__class__.__name__,
+            self.name,
+            id(self)
+        )
+
+
+    #@-others
+#@+node:ekr.20240702085302.56: *3* class ClassDefinition(Definition)
+class ClassDefinition(Definition):
+    pass
+
+
+#@+node:ekr.20240702085302.55: *3* class FunctionDefinition(Definition)
+class FunctionDefinition(Definition):
+    pass
+
+
+#@+node:ekr.20240702085302.49: *3* class FutureImportation(ImportationFrom)
+class FutureImportation(ImportationFrom):
+    """
+    A binding created by a from `__future__` import statement.
+
+    `__future__` imports are implicitly used.
+    """
+
+    #@+others
+    #@+node:ekr.20240702085302.50: *4* FutureImportation.__init__
+    def __init__(self, name, source, scope):
+        super().__init__(name, source, '__future__')
+        self.used = (scope, source)
+
+
+    #@-others
+#@+node:ekr.20240702085302.45: *3* class StarImportation(Importation)
+class StarImportation(Importation):
+    """A binding created by a 'from x import *' statement."""
+
+    #@+others
+    #@+node:ekr.20240702085302.46: *4* StarImportation.__init__
+    def __init__(self, name, source):
+        super().__init__('*', source)
+        # Each star importation needs a unique name, and
+        # may not be the module name otherwise it will be deemed imported
+        self.name = name + '.*'
+        self.fullName = name
+
+    #@+node:ekr.20240702085302.47: *4* StarImportation.source_statement
+    @property
+    def source_statement(self):
+        return 'from ' + self.fullName + ' import *'
+
+    #@+node:ekr.20240702085302.48: *4* StarImportation.__str__
+    def __str__(self):
+        # When the module ends with a ., avoid the ambiguous '..*'
+        if self.fullName.endswith('.'):
+            return self.source_statement
+        else:
+            return self.name
+
+
+    #@-others
 #@+node:ekr.20240702085302.36: *3* class SubmoduleImportation(Importation)
 class SubmoduleImportation(Importation):
     """
@@ -531,86 +617,8 @@ class SubmoduleImportation(Importation):
 
 
     #@-others
-#@+node:ekr.20240702085302.41: *3* class ImportationFrom(Importation)
-class ImportationFrom(Importation):
-
-    #@+others
-    #@+node:ekr.20240702085302.42: *4* ImportationFrom.__init__
-    def __init__(self, name, source, module, real_name=None):
-        self.module = module
-        self.real_name = real_name or name
-
-        if module.endswith('.'):
-            full_name = module + self.real_name
-        else:
-            full_name = module + '.' + self.real_name
-
-        super().__init__(name, source, full_name)
-
-    #@+node:ekr.20240702085302.43: *4* ImportationFrom.__str__
-    def __str__(self):
-        """Return import full name with alias."""
-        if self.real_name != self.name:
-            return self.fullName + ' as ' + self.name
-        else:
-            return self.fullName
-
-    #@+node:ekr.20240702085302.44: *4* ImportationFrom.source_statement
-    @property
-    def source_statement(self):
-        if self.real_name != self.name:
-            return f'from {self.module} import {self.real_name} as {self.name}'
-        else:
-            return f'from {self.module} import {self.name}'
-
-
-    #@-others
-#@+node:ekr.20240702085302.45: *3* class StarImportation(Importation)
-class StarImportation(Importation):
-    """A binding created by a 'from x import *' statement."""
-
-    #@+others
-    #@+node:ekr.20240702085302.46: *4* StarImportation.__init__
-    def __init__(self, name, source):
-        super().__init__('*', source)
-        # Each star importation needs a unique name, and
-        # may not be the module name otherwise it will be deemed imported
-        self.name = name + '.*'
-        self.fullName = name
-
-    #@+node:ekr.20240702085302.47: *4* StarImportation.source_statement
-    @property
-    def source_statement(self):
-        return 'from ' + self.fullName + ' import *'
-
-    #@+node:ekr.20240702085302.48: *4* StarImportation.__str__
-    def __str__(self):
-        # When the module ends with a ., avoid the ambiguous '..*'
-        if self.fullName.endswith('.'):
-            return self.source_statement
-        else:
-            return self.name
-
-
-    #@-others
-#@+node:ekr.20240702085302.49: *3* class FutureImportation(ImportationFrom)
-class FutureImportation(ImportationFrom):
-    """
-    A binding created by a from `__future__` import statement.
-
-    `__future__` imports are implicitly used.
-    """
-
-    #@+others
-    #@+node:ekr.20240702085302.50: *4* FutureImportation.__init__
-    def __init__(self, name, source, scope):
-        super().__init__(name, source, '__future__')
-        self.used = (scope, source)
-
-
-    #@-others
 #@+node:ekr.20240702085302.59: ** checker.py: Scope classes
-#@+node:ekr.20240702085302.60: *3* class Scope(dict)
+#@+node:ekr.20240702085302.60: *3*   class Scope(dict)
 class Scope(dict):
     importStarred = False       # set to True when import * is found
 
@@ -619,9 +627,21 @@ class Scope(dict):
         return f'<{scope_cls} at 0x{id(self):x} {dict.__repr__(self)}>'
 
 
+#@+node:ekr.20240702085302.68: *3*  class ModuleScope(Scope)
+class ModuleScope(Scope):
+    """Scope for a module."""
+    _futures_allowed = True
+    _annotations_future_enabled = False
+
+
 #@+node:ekr.20240702085302.61: *3* class ClassScope(Scope)
 class ClassScope(Scope):
     pass
+
+
+#@+node:ekr.20240702085302.69: *3* class DoctestScope(ModuleScope)
+class DoctestScope(ModuleScope):
+    """Scope for a doctest."""
 
 
 #@+node:ekr.20240702085302.62: *3* class FunctionScope(Scope)
@@ -667,42 +687,44 @@ class FunctionScope(Scope):
 
 
     #@-others
-#@+node:ekr.20240702085302.66: *3* class TypeScope(Scope)
-class TypeScope(Scope):
-    pass
-
-
 #@+node:ekr.20240702085302.67: *3* class GeneratorScope(Scope)
 class GeneratorScope(Scope):
     pass
 
 
-#@+node:ekr.20240702085302.68: *3* class ModuleScope(Scope)
-class ModuleScope(Scope):
-    """Scope for a module."""
-    _futures_allowed = True
-    _annotations_future_enabled = False
-
-
-#@+node:ekr.20240702085302.69: *3* class DoctestScope(ModuleScope)
-class DoctestScope(ModuleScope):
-    """Scope for a doctest."""
-
-
-#@+node:ekr.20240702085302.70: *3* class DetectClassScopedMagic
-class DetectClassScopedMagic:
-    names = dir()
-
-
-#@+node:ekr.20240702085302.71: *3* const: _MAGIC_GLOBALS
-# Globally defined names which are not attributes of the builtins module, or
-# are only present on some platforms.
-_MAGIC_GLOBALS = ['__file__', '__builtins__', '__annotations__', 'WindowsError']
+#@+node:ekr.20240702085302.66: *3* class TypeScope(Scope)
+class TypeScope(Scope):
+    pass
 
 
 #@+node:ekr.20240702085302.73: ** checker.py: Typing & Annotations
-#@+node:ekr.20240702085302.74: *3* const: TYPING_MODULES
-TYPING_MODULES = frozenset(('typing', 'typing_extensions'))
+#@+node:ekr.20240702085302.79: *3* class AnnotationState
+class AnnotationState:
+    NONE = 0
+    STRING = 1
+    BARE = 2
+
+#@+node:ekr.20240702085302.77: *3* function: _is_any_typing_member
+def _is_any_typing_member(node, scope_stack):
+    """
+    Determine whether `node` represents any member of a typing module.
+
+    This is used as part of working out whether we are within a type annotation
+    context.
+    """
+    return _is_typing_helper(node, lambda x: True, scope_stack)
+
+
+#@+node:ekr.20240702085302.76: *3* function: _is_typing
+def _is_typing(node, typing_attr, scope_stack):
+    """
+    Determine whether `node` represents the member of a typing module specified
+    by `typing_attr`.
+
+    This is used as part of working out whether we are within a type annotation
+    context.
+    """
+    return _is_typing_helper(node, lambda x: x == typing_attr, scope_stack)
 
 
 #@+node:ekr.20240702085302.75: *3* function: _is_typing_helper
@@ -750,47 +772,6 @@ def _is_typing_helper(node, is_name_match_fn, scope_stack):
     )
 
 
-#@+node:ekr.20240702085302.76: *3* function: _is_typing
-def _is_typing(node, typing_attr, scope_stack):
-    """
-    Determine whether `node` represents the member of a typing module specified
-    by `typing_attr`.
-
-    This is used as part of working out whether we are within a type annotation
-    context.
-    """
-    return _is_typing_helper(node, lambda x: x == typing_attr, scope_stack)
-
-
-#@+node:ekr.20240702085302.77: *3* function: _is_any_typing_member
-def _is_any_typing_member(node, scope_stack):
-    """
-    Determine whether `node` represents any member of a typing module.
-
-    This is used as part of working out whether we are within a type annotation
-    context.
-    """
-    return _is_typing_helper(node, lambda x: True, scope_stack)
-
-
-#@+node:ekr.20240702085302.78: *3* function: is_typing_overload
-def is_typing_overload(value, scope_stack):
-    return (
-        isinstance(value.source, (ast.FunctionDef, ast.AsyncFunctionDef)) and
-        any(
-            _is_typing(dec, 'overload', scope_stack)
-            for dec in value.source.decorator_list
-        )
-    )
-
-
-#@+node:ekr.20240702085302.79: *3* class AnnotationState
-class AnnotationState:
-    NONE = 0
-    STRING = 1
-    BARE = 2
-
-
 #@+node:ekr.20240702085302.80: *3* function: in_annotation
 def in_annotation(func):
     @functools.wraps(func)
@@ -807,6 +788,17 @@ def in_string_annotation(func):
         with self._enter_annotation(AnnotationState.STRING):
             return func(self, *args, **kwargs)
     return in_annotation_func
+
+
+#@+node:ekr.20240702085302.78: *3* function: is_typing_overload
+def is_typing_overload(value, scope_stack):
+    return (
+        isinstance(value.source, (ast.FunctionDef, ast.AsyncFunctionDef)) and
+        any(
+            _is_typing(dec, 'overload', scope_stack)
+            for dec in value.source.decorator_list
+        )
+    )
 
 
 #@+node:ekr.20240702085302.82: ** class Checker
