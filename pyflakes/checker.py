@@ -24,18 +24,77 @@ from pyflakes import messages
 #@+<< checker.py: globals >>
 #@+node:ekr.20240702085302.2: ** << checker.py: globals >>
 PYPY = hasattr(sys, 'pypy_version_info')
-
 builtin_vars = dir(builtins)
-
 parse_format_string = string.Formatter().parse
-
 FOR_TYPES = (ast.For, ast.AsyncFor)
+
+MAPPING_KEY_RE = re.compile(r'\(([^()]*)\)')
+CONVERSION_FLAG_RE = re.compile('[#0+ -]*')
+WIDTH_RE = re.compile(r'(?:\*|\d*)')
+PRECISION_RE = re.compile(r'(?:\.(?:\*|\d*))?')
+LENGTH_RE = re.compile('[hlL]?')
+# https://docs.python.org/3/library/stdtypes.html#old-string-formatting
+VALID_CONVERSIONS = frozenset('diouxXeEfFgGcrsa%')
+
 
 
 #@-<< checker.py: globals >>
 
 
 #@+others
+#@+node:ekr.20240702105119.1: ** checker.py: Utility classes
+#@+node:ekr.20240702085302.14: *3* class _FieldsOrder(dict)
+class _FieldsOrder(dict):
+    """Fix order of AST node fields."""
+
+    def _get_fields(self, node_class):
+        # handle iter before target, and generators before element
+        fields = node_class._fields
+        if 'iter' in fields:
+            key_first = 'iter'.find
+        elif 'generators' in fields:
+            key_first = 'generators'.find
+        else:
+            key_first = 'value'.find
+        return tuple(sorted(fields, key=key_first, reverse=True))
+
+    def __missing__(self, node_class):
+        self[node_class] = fields = self._get_fields(node_class)
+        return fields
+
+
+#@+node:ekr.20240702085302.24: *3* class UnhandledKeyType
+class UnhandledKeyType:
+    """
+    A dictionary key of a type that we cannot or do not check for duplicates.
+    """
+
+
+#@+node:ekr.20240702085302.25: *3* class VariableKey
+class VariableKey:
+    """
+    A dictionary key which is a variable.
+
+    @ivar item: The variable AST object.
+    """
+    #@+others
+    #@+node:ekr.20240702085302.26: *4* VariableKey.__init__
+    def __init__(self, item):
+        self.name = item.id
+
+    #@+node:ekr.20240702085302.27: *4* VariableKey.__eq__
+    def __eq__(self, compare):
+        return (
+            compare.__class__ == self.__class__ and
+            compare.name == self.name
+        )
+
+    #@+node:ekr.20240702085302.28: *4* VariableKey.__hash__
+    def __hash__(self):
+        return hash(self.name)
+
+
+    #@-others
 #@+node:ekr.20240702085302.3: ** checker.py: utils
 #@+node:ekr.20240702085302.4: *3* function: getAlternatives
 def getAlternatives(n):
@@ -79,16 +138,6 @@ def _is_name_or_attr(node, name):  # type: (ast.AST, str) -> bool
         (isinstance(node, ast.Name) and node.id == name) or
         (isinstance(node, ast.Attribute) and node.attr == name)
     )
-
-
-#@+node:ekr.20240702085302.11: *3* const: *_RE & VALID_CONVERSIONS
-MAPPING_KEY_RE = re.compile(r'\(([^()]*)\)')
-CONVERSION_FLAG_RE = re.compile('[#0+ -]*')
-WIDTH_RE = re.compile(r'(?:\*|\d*)')
-PRECISION_RE = re.compile(r'(?:\.(?:\*|\d*))?')
-LENGTH_RE = re.compile('[hlL]?')
-# https://docs.python.org/3/library/stdtypes.html#old-string-formatting
-VALID_CONVERSIONS = frozenset('diouxXeEfFgGcrsa%')
 
 
 #@+node:ekr.20240702085302.12: *3* function: _must_match
@@ -163,26 +212,6 @@ def parse_percent_format(s):
     return tuple(_parse_inner())
 
 
-#@+node:ekr.20240702085302.14: *3* class _FieldsOrder(dict)
-class _FieldsOrder(dict):
-    """Fix order of AST node fields."""
-
-    def _get_fields(self, node_class):
-        # handle iter before target, and generators before element
-        fields = node_class._fields
-        if 'iter' in fields:
-            key_first = 'iter'.find
-        elif 'generators' in fields:
-            key_first = 'generators'.find
-        else:
-            key_first = 'value'.find
-        return tuple(sorted(fields, key=key_first, reverse=True))
-
-    def __missing__(self, node_class):
-        self[node_class] = fields = self._get_fields(node_class)
-        return fields
-
-
 #@+node:ekr.20240702085302.15: *3* function: iter_child_nodes (Uses _FieldsOrder)
 def iter_child_nodes(node, omit=None, _fields_order=_FieldsOrder()):
     """
@@ -224,7 +253,19 @@ def is_notimplemented_name_node(node):
     return isinstance(node, ast.Name) and getNodeName(node) == 'NotImplemented'
 
 
-#@+node:ekr.20240702085302.18: ** class Binding
+#@+node:ekr.20240702085302.72: *3* function: getNodeName
+def getNodeName(node):
+    # Returns node.id, or node.name, or None
+    if hasattr(node, 'id'):     # One of the many nodes with an id
+        return node.id
+    if hasattr(node, 'name'):   # an ExceptHandler node
+        return node.name
+    if hasattr(node, 'rest'):   # a MatchMapping node
+        return node.rest
+
+
+#@+node:ekr.20240702104745.1: ** checker.py: Binding classes
+#@+node:ekr.20240702085302.18: *3* class Binding
 class Binding:
     """
     Represents the binding of a value to a name.
@@ -257,13 +298,109 @@ class Binding:
         return isinstance(other, Definition) and self.name == other.name
 
 
-#@+node:ekr.20240702085302.19: ** class Definition(Binding)
+#@+node:ekr.20240702085302.51: *3* class Argument(Binding)
+class Argument(Binding):
+    """
+    Represents binding a name as an argument.
+    """
+
+
+#@+node:ekr.20240702085302.52: *3* class Assignment(Binding) & NamedExprAssignment(Assignment)
+class Assignment(Binding):
+    """
+    Represents binding a name with an explicit assignment.
+
+    The checker will raise warnings for any Assignment that isn't used. Also,
+    the checker does not consider assignments in tuple/list unpacking to be
+    Assignments, rather it treats them as simple Bindings.
+    """
+
+
+class NamedExprAssignment(Assignment):
+    """
+    Represents binding a name with an assignment expression.
+    """
+
+
+#@+node:ekr.20240702085302.53: *3* class Annotation(Binding)
+class Annotation(Binding):
+    """
+    Represents binding a name to a type without an associated value.
+
+    As long as this name is not assigned a value in another binding, it is considered
+    undefined for most purposes. One notable exception is using the name as a type
+    annotation.
+    """
+
+    #@+others
+    #@+node:ekr.20240702085302.54: *4* Annotation.redefines
+    def redefines(self, other):
+        """An Annotation doesn't define any name, so it cannot redefine one."""
+        return False
+
+
+    #@-others
+#@+node:ekr.20240702085302.57: *3* class ExportBinding(Binding)
+class ExportBinding(Binding):
+    """
+    A binding created by an C{__all__} assignment.  If the names in the list
+    can be determined statically, they will be treated as names for export and
+    additional checking applied to them.
+
+    The only recognized C{__all__} assignment via list/tuple concatenation is in the
+    following format:
+
+        __all__ = ['a'] + ['b'] + ['c']
+
+    Names which are imported and not otherwise used but appear in the value of
+    C{__all__} will not have an unused import warning reported for them.
+    """
+
+    #@+others
+    #@+node:ekr.20240702085302.58: *4* ExportBinding.__init__
+    def __init__(self, name, source, scope):
+        if '__all__' in scope and isinstance(source, ast.AugAssign):
+            self.names = list(scope['__all__'].names)
+        else:
+            self.names = []
+
+        def _add_to_names(container):
+            for node in container.elts:
+                if isinstance(node, ast.Constant) and isinstance(node.value, str):
+                    self.names.append(node.value)
+
+        if isinstance(source.value, (ast.List, ast.Tuple)):
+            _add_to_names(source.value)
+        # If concatenating lists or tuples
+        elif isinstance(source.value, ast.BinOp):
+            currentValue = source.value
+            while isinstance(currentValue.right, (ast.List, ast.Tuple)):
+                left = currentValue.left
+                right = currentValue.right
+                _add_to_names(right)
+                # If more lists are being added
+                if isinstance(left, ast.BinOp):
+                    currentValue = left
+                # If just two lists are being added
+                elif isinstance(left, (ast.List, ast.Tuple)):
+                    _add_to_names(left)
+                    # All lists accounted for - done
+                    break
+                # If not list concatenation
+                else:
+                    break
+        super().__init__(name, source)
+
+
+    #@-others
+#@+node:ekr.20240702104659.1: ** checker.py: Definition classes
+#@+node:ekr.20240702085302.19: *3*  class Definition(Binding)
 class Definition(Binding):
     """
     A binding that defines a function or a class.
     """
     #@+others
-    #@+node:ekr.20240702085302.20: *3* Definition.redefines
+    #@+node:ekr.20240702085302.20: *4* Definition.redefines
     def redefines(self, other):
         return (
             super().redefines(other) or
@@ -272,16 +409,26 @@ class Definition(Binding):
 
 
     #@-others
-#@+node:ekr.20240702085302.21: ** class Builtin(Definition)
+#@+node:ekr.20240702085302.56: *3* class ClassDefinition(Definition)
+class ClassDefinition(Definition):
+    pass
+
+
+#@+node:ekr.20240702085302.55: *3* class FunctionDefinition(Definition)
+class FunctionDefinition(Definition):
+    pass
+
+
+#@+node:ekr.20240702085302.21: *3* class Builtin(Definition)
 class Builtin(Definition):
     """A definition created for all Python builtins."""
 
     #@+others
-    #@+node:ekr.20240702085302.22: *3* Builtin.__init__
+    #@+node:ekr.20240702085302.22: *4* Builtin.__init__
     def __init__(self, name):
         super().__init__(name, None)
 
-    #@+node:ekr.20240702085302.23: *3* Builtin.__repr__
+    #@+node:ekr.20240702085302.23: *4* Builtin.__repr__
     def __repr__(self):
         return '<{} object {!r} at 0x{:x}>'.format(
             self.__class__.__name__,
@@ -291,39 +438,7 @@ class Builtin(Definition):
 
 
     #@-others
-#@+node:ekr.20240702085302.24: ** class UnhandledKeyType
-class UnhandledKeyType:
-    """
-    A dictionary key of a type that we cannot or do not check for duplicates.
-    """
-
-
-#@+node:ekr.20240702085302.25: ** class VariableKey
-class VariableKey:
-    """
-    A dictionary key which is a variable.
-
-    @ivar item: The variable AST object.
-    """
-    #@+others
-    #@+node:ekr.20240702085302.26: *3* VariableKey.__init__
-    def __init__(self, item):
-        self.name = item.id
-
-    #@+node:ekr.20240702085302.27: *3* VariableKey.__eq__
-    def __eq__(self, compare):
-        return (
-            compare.__class__ == self.__class__ and
-            compare.name == self.name
-        )
-
-    #@+node:ekr.20240702085302.28: *3* VariableKey.__hash__
-    def __hash__(self):
-        return hash(self.name)
-
-
-    #@-others
-#@+node:ekr.20240702085302.29: ** checker.py: Importation class & subclasses
+#@+node:ekr.20240702085302.29: ** checker.py: Importation(Definition) class & subclasses
 #@+node:ekr.20240702085302.30: *3* class Importation(Definition)
 class Importation(Definition):
     """
@@ -494,112 +609,7 @@ class FutureImportation(ImportationFrom):
 
 
     #@-others
-#@+node:ekr.20240702085302.51: ** class Argument(Binding)
-class Argument(Binding):
-    """
-    Represents binding a name as an argument.
-    """
-
-
-#@+node:ekr.20240702085302.52: ** class Assignment(Binding) & NamedExprAssignment(Assignment)
-class Assignment(Binding):
-    """
-    Represents binding a name with an explicit assignment.
-
-    The checker will raise warnings for any Assignment that isn't used. Also,
-    the checker does not consider assignments in tuple/list unpacking to be
-    Assignments, rather it treats them as simple Bindings.
-    """
-
-
-class NamedExprAssignment(Assignment):
-    """
-    Represents binding a name with an assignment expression.
-    """
-
-
-#@+node:ekr.20240702085302.53: ** class Annotation(Binding)
-class Annotation(Binding):
-    """
-    Represents binding a name to a type without an associated value.
-
-    As long as this name is not assigned a value in another binding, it is considered
-    undefined for most purposes. One notable exception is using the name as a type
-    annotation.
-    """
-
-    #@+others
-    #@+node:ekr.20240702085302.54: *3* Annotation.redefines
-    def redefines(self, other):
-        """An Annotation doesn't define any name, so it cannot redefine one."""
-        return False
-
-
-    #@-others
-#@+node:ekr.20240702085302.55: ** class FunctionDefinition(Definition)
-class FunctionDefinition(Definition):
-    pass
-
-
-#@+node:ekr.20240702085302.56: ** class ClassDefinition(Definition)
-class ClassDefinition(Definition):
-    pass
-
-
-#@+node:ekr.20240702085302.57: ** class ExportBinding(Binding)
-class ExportBinding(Binding):
-    """
-    A binding created by an C{__all__} assignment.  If the names in the list
-    can be determined statically, they will be treated as names for export and
-    additional checking applied to them.
-
-    The only recognized C{__all__} assignment via list/tuple concatenation is in the
-    following format:
-
-        __all__ = ['a'] + ['b'] + ['c']
-
-    Names which are imported and not otherwise used but appear in the value of
-    C{__all__} will not have an unused import warning reported for them.
-    """
-
-    #@+others
-    #@+node:ekr.20240702085302.58: *3* ExportBinding.__init__
-    def __init__(self, name, source, scope):
-        if '__all__' in scope and isinstance(source, ast.AugAssign):
-            self.names = list(scope['__all__'].names)
-        else:
-            self.names = []
-
-        def _add_to_names(container):
-            for node in container.elts:
-                if isinstance(node, ast.Constant) and isinstance(node.value, str):
-                    self.names.append(node.value)
-
-        if isinstance(source.value, (ast.List, ast.Tuple)):
-            _add_to_names(source.value)
-        # If concatenating lists or tuples
-        elif isinstance(source.value, ast.BinOp):
-            currentValue = source.value
-            while isinstance(currentValue.right, (ast.List, ast.Tuple)):
-                left = currentValue.left
-                right = currentValue.right
-                _add_to_names(right)
-                # If more lists are being added
-                if isinstance(left, ast.BinOp):
-                    currentValue = left
-                # If just two lists are being added
-                elif isinstance(left, (ast.List, ast.Tuple)):
-                    _add_to_names(left)
-                    # All lists accounted for - done
-                    break
-                # If not list concatenation
-                else:
-                    break
-        super().__init__(name, source)
-
-
-    #@-others
-#@+node:ekr.20240702085302.59: ** checker.py: Scopes
+#@+node:ekr.20240702085302.59: ** checker.py: Scope classes
 #@+node:ekr.20240702085302.60: *3* class Scope(dict)
 class Scope(dict):
     importStarred = False       # set to True when import * is found
@@ -688,17 +698,6 @@ class DetectClassScopedMagic:
 # Globally defined names which are not attributes of the builtins module, or
 # are only present on some platforms.
 _MAGIC_GLOBALS = ['__file__', '__builtins__', '__annotations__', 'WindowsError']
-
-
-#@+node:ekr.20240702085302.72: ** function: getNodeName
-def getNodeName(node):
-    # Returns node.id, or node.name, or None
-    if hasattr(node, 'id'):     # One of the many nodes with an id
-        return node.id
-    if hasattr(node, 'name'):   # an ExceptHandler node
-        return node.name
-    if hasattr(node, 'rest'):   # a MatchMapping node
-        return node.rest
 
 
 #@+node:ekr.20240702085302.73: ** checker.py: Typing & Annotations
