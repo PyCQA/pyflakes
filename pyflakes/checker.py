@@ -21,6 +21,13 @@ import warnings
 
 from pyflakes import messages
 
+if 1:
+    leo_path = r'C:\Repos\leo-editor'
+    if leo_path not in sys.path:
+        sys.path.insert(1, leo_path)
+    from leo.core import leoGlobals as g
+    assert g
+
 #@+<< checker.py: globals >>
 #@+node:ekr.20240702085302.2: ** << checker.py: globals >>
 PYPY = hasattr(sys, 'pypy_version_info')
@@ -1370,117 +1377,7 @@ class Checker:
             return None, None
 
     #@+node:ekr.20240702085302.117: *3* Checker: visitors & helpers
-    #@+node:ekr.20240702085302.118: *4* Checker: handle*
-    #@+node:ekr.20240702085302.119: *5* Checker.handleNode
-    def handleNode(self, node, parent):
-        if node is None:
-            return
-        if self.offset and getattr(node, 'lineno', None) is not None:
-            node.lineno += self.offset[0]
-            node.col_offset += self.offset[1]
-        if (
-                self.futuresAllowed and
-                self.nodeDepth == 0 and
-                not isinstance(node, ast.ImportFrom) and
-                not self.isDocstring(node)
-        ):
-            self.futuresAllowed = False
-        self.nodeDepth += 1
-        node._pyflakes_depth = self.nodeDepth
-        node._pyflakes_parent = parent
-        try:
-            handler = self.getNodeHandler(node.__class__)
-            handler(node)
-        finally:
-            self.nodeDepth -= 1
-
-    #@+node:ekr.20240702085302.120: *5* Checker.handleDoctests
-    _getDoctestExamples = doctest.DocTestParser().get_examples
-
-    def handleDoctests(self, node):
-        try:
-            (docstring, node_lineno) = self.getDocstring(node.body[0])
-            examples = docstring and self._getDoctestExamples(docstring)
-        except (ValueError, IndexError):
-            # e.g. line 6 of the docstring for <string> has inconsistent
-            # leading whitespace: ...
-            return
-        if not examples:
-            return
-
-        # Place doctest in module scope
-        saved_stack = self.scopeStack
-        self.scopeStack = [self.scopeStack[0]]
-        node_offset = self.offset or (0, 0)
-        with self.in_scope(DoctestScope):
-            if '_' not in self.scopeStack[0]:
-                self.addBinding(None, Builtin('_'))
-            for example in examples:
-                try:
-                    tree = ast.parse(example.source, "<doctest>")
-                except SyntaxError as e:
-                    position = (node_lineno + example.lineno + e.lineno,
-                                example.indent + 4 + (e.offset or 0))
-                    self.report(messages.DoctestSyntaxError, node, position)
-                else:
-                    self.offset = (node_offset[0] + node_lineno + example.lineno,
-                                   node_offset[1] + example.indent + 4)
-                    self.handleChildren(tree)
-                    self.offset = node_offset
-        self.scopeStack = saved_stack
-
-    #@+node:ekr.20240702085302.121: *5* Checker.handleStringAnnotation
-    @in_string_annotation
-    def handleStringAnnotation(self, s, node, ref_lineno, ref_col_offset, err):
-        try:
-            tree = ast.parse(s)
-        except SyntaxError:
-            self.report(err, node, s)
-            return
-
-        body = tree.body
-        if len(body) != 1 or not isinstance(body[0], ast.Expr):
-            self.report(err, node, s)
-            return
-
-        parsed_annotation = tree.body[0].value
-        for descendant in ast.walk(parsed_annotation):
-            if (
-                    'lineno' in descendant._attributes and
-                    'col_offset' in descendant._attributes
-            ):
-                descendant.lineno = ref_lineno
-                descendant.col_offset = ref_col_offset
-
-        self.handleNode(parsed_annotation, node)
-
-    #@+node:ekr.20240702085302.122: *5* Checker.handle_annotation_always_deferred
-    def handle_annotation_always_deferred(self, annotation, parent):
-        fn = in_annotation(Checker.handleNode)
-        self.deferFunction(lambda: fn(self, annotation, parent))
-
-    #@+node:ekr.20240702085302.123: *5* Checker.handleAnnotation
-    @in_annotation
-    def handleAnnotation(self, annotation, node):
-        if (
-                isinstance(annotation, ast.Constant) and
-                isinstance(annotation.value, str)
-        ):
-            # Defer handling forward annotation.
-            self.deferFunction(functools.partial(
-                self.handleStringAnnotation,
-                annotation.value,
-                node,
-                annotation.lineno,
-                annotation.col_offset,
-                messages.ForwardAnnotationSyntaxError,
-            ))
-        elif self.annotationsFutureEnabled:
-            self.handle_annotation_always_deferred(annotation, node)
-        else:
-            self.handleNode(annotation, node)
-
-    #@+node:ekr.20240702085302.124: *4* Checker.ignore
+    #@+node:ekr.20240702085302.124: *4*  Checker.ignore
     def ignore(self, node):
         pass
 
@@ -1494,44 +1391,112 @@ class Checker:
     BOOLOP = UNARYOP = SET = ATTRIBUTE = STARRED = NAMECONSTANT = \
         NAMEDEXPR = handleChildren
 
-    #@+node:ekr.20240702085302.125: *4* Checker.SUBSCRIPT
-    def SUBSCRIPT(self, node):
-        if _is_name_or_attr(node.value, 'Literal'):
-            with self._enter_annotation(AnnotationState.NONE):
-                self.handleChildren(node)
-        elif _is_name_or_attr(node.value, 'Annotated'):
-            self.handleNode(node.value, node)
+    #@+node:ekr.20240702085302.128: *4* Checker._handle_percent_format
+    def _handle_percent_format(self, node):
+        try:
+            placeholders = parse_percent_format(node.left.value)
+        except ValueError:
+            self.report(
+                messages.PercentFormatInvalidFormat,
+                node,
+                'incomplete format',
+            )
+            return
 
-            # py39+
-            if isinstance(node.slice, ast.Tuple):
-                slice_tuple = node.slice
-            # <py39
-            elif (
-                    isinstance(node.slice, ast.Index) and
-                    isinstance(node.slice.value, ast.Tuple)
-            ):
-                slice_tuple = node.slice.value
-            else:
-                slice_tuple = None
+        named = set()
+        positional_count = 0
+        positional = None
+        for _, placeholder in placeholders:
+            if placeholder is None:
+                continue
+            name, _, width, precision, conversion = placeholder
 
-            # not a multi-arg `Annotated`
-            if slice_tuple is None or len(slice_tuple.elts) < 2:
-                self.handleNode(node.slice, node)
-            else:
-                # the first argument is the type
-                self.handleNode(slice_tuple.elts[0], node)
-                # the rest of the arguments are not
-                with self._enter_annotation(AnnotationState.NONE):
-                    for arg in slice_tuple.elts[1:]:
-                        self.handleNode(arg, node)
+            if conversion == '%':
+                continue
 
-            self.handleNode(node.ctx, node)
-        else:
-            if _is_any_typing_member(node.value, self.scopeStack):
-                with self._enter_annotation():
-                    self.handleChildren(node)
+            if conversion not in VALID_CONVERSIONS:
+                self.report(
+                    messages.PercentFormatUnsupportedFormatCharacter,
+                    node,
+                    conversion,
+                )
+
+            if positional is None and conversion:
+                positional = name is None
+
+            for part in (width, precision):
+                if part is not None and '*' in part:
+                    if not positional:
+                        self.report(
+                            messages.PercentFormatStarRequiresSequence,
+                            node,
+                        )
+                    else:
+                        positional_count += 1
+
+            if positional and name is not None:
+                self.report(
+                    messages.PercentFormatMixedPositionalAndNamed,
+                    node,
+                )
+                return
+            elif not positional and name is None:
+                self.report(
+                    messages.PercentFormatMixedPositionalAndNamed,
+                    node,
+                )
+                return
+
+            if positional:
+                positional_count += 1
             else:
-                self.handleChildren(node)
+                named.add(name)
+
+        if (
+                isinstance(node.right, (ast.List, ast.Tuple)) and
+                # does not have any *splats (py35+ feature)
+                not any(
+                    isinstance(elt, ast.Starred)
+                    for elt in node.right.elts
+                )
+        ):
+            substitution_count = len(node.right.elts)
+            if positional and positional_count != substitution_count:
+                self.report(
+                    messages.PercentFormatPositionalCountMismatch,
+                    node,
+                    positional_count,
+                    substitution_count,
+                )
+            elif not positional:
+                self.report(messages.PercentFormatExpectedMapping, node)
+
+        if (
+                isinstance(node.right, ast.Dict) and
+                all(
+                    isinstance(k, ast.Constant) and isinstance(k.value, str)
+                    for k in node.right.keys
+                )
+        ):
+            if positional and positional_count > 1:
+                self.report(messages.PercentFormatExpectedSequence, node)
+                return
+
+            substitution_keys = {k.value for k in node.right.keys}
+            extra_keys = substitution_keys - named
+            missing_keys = named - substitution_keys
+            if not positional and extra_keys:
+                self.report(
+                    messages.PercentFormatExtraNamedArguments,
+                    node,
+                    ', '.join(sorted(extra_keys)),
+                )
+            if not positional and missing_keys:
+                self.report(
+                    messages.PercentFormatMissingArgument,
+                    node,
+                    ', '.join(sorted(missing_keys)),
+                )
 
     #@+node:ekr.20240702085302.126: *4* Checker._handle_string_dot_format
     def _handle_string_dot_format(self, node):
@@ -1649,6 +1614,58 @@ class Checker:
                 ', '.join(sorted(str(x) for x in missing_arguments)),
             )
 
+    #@+node:ekr.20240702085302.157: *4* Checker._type_param_scope (@contextlib.contextmanager)
+    @contextlib.contextmanager
+    def _type_param_scope(self, node):
+        with contextlib.ExitStack() as ctx:
+            if sys.version_info >= (3, 12):
+                ctx.enter_context(self.in_scope(TypeScope))
+                for param in node.type_params:
+                    self.handleNode(param, node)
+            yield
+
+    #@+node:ekr.20240702085302.154: *4* Checker.ANNASSIGN
+    def ANNASSIGN(self, node):
+        self.handleAnnotation(node.annotation, node)
+        # If the assignment has value, handle the *value* now.
+        if node.value:
+            # If the annotation is `TypeAlias`, handle the *value* as an annotation.
+            if _is_typing(node.annotation, 'TypeAlias', self.scopeStack):
+                self.handleAnnotation(node.value, node)
+            else:
+                self.handleNode(node.value, node)
+        self.handleNode(node.target, node)
+
+    #@+node:ekr.20240702085302.146: *4* Checker.ARG
+    def ARG(self, node):
+        self.addBinding(node, Argument(node.arg, self.getScopeNode(node)))
+
+    #@+node:ekr.20240702085302.145: *4* Checker.ARGUMENTS   omit=('defaults', 'kw_defaults')
+    def ARGUMENTS(self, node):
+        self.handleChildren(node, omit=('defaults', 'kw_defaults'))
+
+    #@+node:ekr.20240702085302.136: *4* Checker.ASSERT
+    def ASSERT(self, node):
+        if isinstance(node.test, ast.Tuple) and node.test.elts != []:
+            self.report(messages.AssertTuple, node)
+        self.handleChildren(node)
+
+    #@+node:ekr.20240702085302.148: *4* Checker.AUGASSIGN
+    def AUGASSIGN(self, node):
+        self.handleNodeLoad(node.target, node)
+        self.handleNode(node.value, node)
+        self.handleNode(node.target, node)
+
+    #@+node:ekr.20240702085302.129: *4* Checker.BINOP
+    def BINOP(self, node):
+        if (
+                isinstance(node.op, ast.Mod) and
+                isinstance(node.left, ast.Constant) and
+                isinstance(node.left.value, str)
+        ):
+            self._handle_percent_format(node)
+        self.handleChildren(node)
+
     #@+node:ekr.20240702085302.127: *4* Checker.CALL  omit=('args', 'elts', 'keywords')
     def CALL(self, node):
         if (
@@ -1733,121 +1750,46 @@ class Checker:
         else:
             self.handleChildren(node)
 
-    #@+node:ekr.20240702085302.128: *4* Checker._handle_percent_format
-    def _handle_percent_format(self, node):
-        try:
-            placeholders = parse_percent_format(node.left.value)
-        except ValueError:
-            self.report(
-                messages.PercentFormatInvalidFormat,
-                node,
-                'incomplete format',
-            )
-            return
+    #@+node:ekr.20240702085302.147: *4* Checker.CLASSDEF
+    def CLASSDEF(self, node):
+        """
+        Check names used in a class definition, including its decorators, base
+        classes, and the body of its definition.  Additionally, add its name to
+        the current scope.
+        """
+        for deco in node.decorator_list:
+            self.handleNode(deco, node)
 
-        named = set()
-        positional_count = 0
-        positional = None
-        for _, placeholder in placeholders:
-            if placeholder is None:
-                continue
-            name, _, width, precision, conversion = placeholder
+        with self._type_param_scope(node):
+            for baseNode in node.bases:
+                self.handleNode(baseNode, node)
+            for keywordNode in node.keywords:
+                self.handleNode(keywordNode, node)
+            with self.in_scope(ClassScope):
+                # doctest does not process doctest within a doctest
+                # classes within classes are processed.
+                if (self.withDoctest and
+                        not self._in_doctest() and
+                        not isinstance(self.scope, FunctionScope)):
+                    self.deferFunction(lambda: self.handleDoctests(node))
+                for stmt in node.body:
+                    self.handleNode(stmt, node)
 
-            if conversion == '%':
-                continue
+        self.addBinding(node, ClassDefinition(node.name, node))
 
-            if conversion not in VALID_CONVERSIONS:
-                self.report(
-                    messages.PercentFormatUnsupportedFormatCharacter,
-                    node,
-                    conversion,
-                )
+    #@+node:ekr.20240702085302.155: *4* Checker.COMPARE
+    def COMPARE(self, node):
+        left = node.left
+        for op, right in zip(node.ops, node.comparators):
+            if (
+                    isinstance(op, (ast.Is, ast.IsNot)) and (
+                        _is_const_non_singleton(left) or
+                        _is_const_non_singleton(right)
+                    )
+            ):
+                self.report(messages.IsLiteral, node)
+            left = right
 
-            if positional is None and conversion:
-                positional = name is None
-
-            for part in (width, precision):
-                if part is not None and '*' in part:
-                    if not positional:
-                        self.report(
-                            messages.PercentFormatStarRequiresSequence,
-                            node,
-                        )
-                    else:
-                        positional_count += 1
-
-            if positional and name is not None:
-                self.report(
-                    messages.PercentFormatMixedPositionalAndNamed,
-                    node,
-                )
-                return
-            elif not positional and name is None:
-                self.report(
-                    messages.PercentFormatMixedPositionalAndNamed,
-                    node,
-                )
-                return
-
-            if positional:
-                positional_count += 1
-            else:
-                named.add(name)
-
-        if (
-                isinstance(node.right, (ast.List, ast.Tuple)) and
-                # does not have any *splats (py35+ feature)
-                not any(
-                    isinstance(elt, ast.Starred)
-                    for elt in node.right.elts
-                )
-        ):
-            substitution_count = len(node.right.elts)
-            if positional and positional_count != substitution_count:
-                self.report(
-                    messages.PercentFormatPositionalCountMismatch,
-                    node,
-                    positional_count,
-                    substitution_count,
-                )
-            elif not positional:
-                self.report(messages.PercentFormatExpectedMapping, node)
-
-        if (
-                isinstance(node.right, ast.Dict) and
-                all(
-                    isinstance(k, ast.Constant) and isinstance(k.value, str)
-                    for k in node.right.keys
-                )
-        ):
-            if positional and positional_count > 1:
-                self.report(messages.PercentFormatExpectedSequence, node)
-                return
-
-            substitution_keys = {k.value for k in node.right.keys}
-            extra_keys = substitution_keys - named
-            missing_keys = named - substitution_keys
-            if not positional and extra_keys:
-                self.report(
-                    messages.PercentFormatExtraNamedArguments,
-                    node,
-                    ', '.join(sorted(extra_keys)),
-                )
-            if not positional and missing_keys:
-                self.report(
-                    messages.PercentFormatMissingArgument,
-                    node,
-                    ', '.join(sorted(missing_keys)),
-                )
-
-    #@+node:ekr.20240702085302.129: *4* Checker.BINOP
-    def BINOP(self, node):
-        if (
-                isinstance(node.op, ast.Mod) and
-                isinstance(node.left, ast.Constant) and
-                isinstance(node.left.value, str)
-        ):
-            self._handle_percent_format(node)
         self.handleChildren(node)
 
     #@+node:ekr.20240702085302.130: *4* Checker.CONSTANT & related operators
@@ -1875,41 +1817,26 @@ class Checker:
         EQ = NOTEQ = LT = LTE = GT = GTE = IS = ISNOT = IN = NOTIN = \
         MATMULT = ignore
 
-    #@+node:ekr.20240702085302.131: *4* Checker.RAISE
-    def RAISE(self, node):
-        self.handleChildren(node)
+    #@+node:ekr.20240702085302.140: *4* Checker.CONTINUE & BREAK
+    def CONTINUE(self, node):
+        # Walk the tree up until we see a loop (OK), a function or class
+        # definition (not OK), for 'continue', a finally block (not OK), or
+        # the top module scope (not OK)
+        n = node
+        while hasattr(n, '_pyflakes_parent'):
+            n, n_child = n._pyflakes_parent, n
+            if isinstance(n, (ast.While, ast.For, ast.AsyncFor)):
+                # Doesn't apply unless it's in the loop itself
+                if n_child not in n.orelse:
+                    return
+            if isinstance(n, (ast.FunctionDef, ast.ClassDef)):
+                break
+        if isinstance(node, ast.Continue):
+            self.report(messages.ContinueOutsideLoop, node)
+        else:  # ast.Break
+            self.report(messages.BreakOutsideLoop, node)
 
-        arg = node.exc
-
-        if isinstance(arg, ast.Call):
-            if is_notimplemented_name_node(arg.func):
-                # Handle "raise NotImplemented(...)"
-                self.report(messages.RaiseNotImplemented, node)
-        elif is_notimplemented_name_node(arg):
-            # Handle "raise NotImplemented"
-            self.report(messages.RaiseNotImplemented, node)
-
-    #@+node:ekr.20240702085302.132: *4* Checker: COMPREHENSION, KEYWORD, FORMATTEDVALUE
-    # additional node types
-    COMPREHENSION = KEYWORD = FORMATTEDVALUE = handleChildren
-
-    #@+node:ekr.20240702085302.133: *4* Checker.JOINEDSTR
-    _in_fstring = False
-
-    def JOINEDSTR(self, node):
-        if (
-                # the conversion / etc. flags are parsed as f-strings without
-                # placeholders
-                not self._in_fstring and
-                not any(isinstance(x, ast.FormattedValue) for x in node.values)
-        ):
-            self.report(messages.FStringMissingPlaceholders, node)
-
-        self._in_fstring, orig = True, self._in_fstring
-        try:
-            self.handleChildren(node)
-        finally:
-            self._in_fstring = orig
+    BREAK = CONTINUE
 
     #@+node:ekr.20240702085302.134: *4* Checker.DICT
     def DICT(self, node):
@@ -1947,322 +1874,6 @@ class Checker:
                             key,
                         )
         self.handleChildren(node)
-
-    #@+node:ekr.20240702085302.135: *4* Checker.IF & IFEXPR
-    def IF(self, node):
-        if isinstance(node.test, ast.Tuple) and node.test.elts != []:
-            self.report(messages.IfTuple, node)
-        self.handleChildren(node)
-
-    IFEXP = IF
-
-    #@+node:ekr.20240702085302.136: *4* Checker.ASSERT
-    def ASSERT(self, node):
-        if isinstance(node.test, ast.Tuple) and node.test.elts != []:
-            self.report(messages.AssertTuple, node)
-        self.handleChildren(node)
-
-    #@+node:ekr.20240702085302.137: *4* Checker.GLOBAL & NONLOCAL
-    def GLOBAL(self, node):
-        """
-        Keep track of globals declarations.
-        """
-        global_scope_index = 1 if self._in_doctest() else 0
-        global_scope = self.scopeStack[global_scope_index]
-
-        # Ignore 'global' statement in global scope.
-        if self.scope is not global_scope:
-
-            # One 'global' statement can bind multiple (comma-delimited) names.
-            for node_name in node.names:
-                node_value = Assignment(node_name, node)
-
-                # Remove UndefinedName messages already reported for this name.
-                # TODO: if the global is not used in this scope, it does not
-                # become a globally defined name.  See test_unused_global.
-                self.messages = [
-                    m for m in self.messages if not
-                    isinstance(m, messages.UndefinedName) or
-                    m.message_args[0] != node_name]
-
-                # Bind name to global scope if it doesn't exist already.
-                global_scope.setdefault(node_name, node_value)
-
-                # Bind name to non-global scopes, but as already "used".
-                node_value.used = (global_scope, node)
-                for scope in self.scopeStack[global_scope_index + 1:]:
-                    scope[node_name] = node_value
-
-    NONLOCAL = GLOBAL
-
-    #@+node:ekr.20240702085302.138: *4* Checker.GENERATOREXP & *COMP
-    def GENERATOREXP(self, node):
-        with self.in_scope(GeneratorScope):
-            self.handleChildren(node)
-
-    LISTCOMP = DICTCOMP = SETCOMP = GENERATOREXP
-
-    #@+node:ekr.20240702085302.139: *4* Checker.NAME
-    def NAME(self, node):
-        """
-        Handle occurrence of Name (which can be a load/store/delete access.)
-        """
-        # Locate the name in locals / function / globals scopes.
-        if isinstance(node.ctx, ast.Load):
-            self.handleNodeLoad(node, self.getParent(node))
-            if (node.id == 'locals' and isinstance(self.scope, FunctionScope) and
-                    isinstance(node._pyflakes_parent, ast.Call)):
-                # we are doing locals() call in current scope
-                self.scope.usesLocals = True
-        elif isinstance(node.ctx, ast.Store):
-            self.handleNodeStore(node)
-        elif isinstance(node.ctx, ast.Del):
-            self.handleNodeDelete(node)
-        else:
-            # Unknown context
-            raise RuntimeError(f"Got impossible expression context: {node.ctx!r}")
-
-    #@+node:ekr.20240702085302.140: *4* Checker.CONTINUE & BREAK
-    def CONTINUE(self, node):
-        # Walk the tree up until we see a loop (OK), a function or class
-        # definition (not OK), for 'continue', a finally block (not OK), or
-        # the top module scope (not OK)
-        n = node
-        while hasattr(n, '_pyflakes_parent'):
-            n, n_child = n._pyflakes_parent, n
-            if isinstance(n, (ast.While, ast.For, ast.AsyncFor)):
-                # Doesn't apply unless it's in the loop itself
-                if n_child not in n.orelse:
-                    return
-            if isinstance(n, (ast.FunctionDef, ast.ClassDef)):
-                break
-        if isinstance(node, ast.Continue):
-            self.report(messages.ContinueOutsideLoop, node)
-        else:  # ast.Break
-            self.report(messages.BreakOutsideLoop, node)
-
-    BREAK = CONTINUE
-
-    #@+node:ekr.20240702085302.141: *4* Checker.RETURN
-    def RETURN(self, node):
-        if isinstance(self.scope, (ClassScope, ModuleScope)):
-            self.report(messages.ReturnOutsideFunction, node)
-            return
-
-        if (
-            node.value and
-            hasattr(self.scope, 'returnValue') and
-            not self.scope.returnValue
-        ):
-            self.scope.returnValue = node.value
-        self.handleNode(node.value, node)
-
-    #@+node:ekr.20240702085302.142: *4* Checker.YIELD
-    def YIELD(self, node):
-        if isinstance(self.scope, (ClassScope, ModuleScope)):
-            self.report(messages.YieldOutsideFunction, node)
-            return
-
-        self.handleNode(node.value, node)
-
-    AWAIT = YIELDFROM = YIELD
-
-    #@+node:ekr.20240702085302.143: *4* Checker.FUNCTIONDEF & ASYNCFUNCTIONDEF
-    def FUNCTIONDEF(self, node):
-        for deco in node.decorator_list:
-            self.handleNode(deco, node)
-
-        with self._type_param_scope(node):
-            self.LAMBDA(node)
-
-        self.addBinding(node, FunctionDefinition(node.name, node))
-        # doctest does not process doctest within a doctest,
-        # or in nested functions.
-        if (self.withDoctest and
-                not self._in_doctest() and
-                not isinstance(self.scope, FunctionScope)):
-            self.deferFunction(lambda: self.handleDoctests(node))
-
-    ASYNCFUNCTIONDEF = FUNCTIONDEF
-
-    #@+node:ekr.20240702085302.144: *4* Checker.LAMBDA  omit=('decorator_list', 'returns', 'type_params')
-    def LAMBDA(self, node):
-        args = []
-        annotations = []
-
-        for arg in node.args.posonlyargs:
-            args.append(arg.arg)
-            annotations.append(arg.annotation)
-        for arg in node.args.args + node.args.kwonlyargs:
-            args.append(arg.arg)
-            annotations.append(arg.annotation)
-        defaults = node.args.defaults + node.args.kw_defaults
-
-        has_annotations = not isinstance(node, ast.Lambda)
-
-        for arg_name in ('vararg', 'kwarg'):
-            wildcard = getattr(node.args, arg_name)
-            if not wildcard:
-                continue
-            args.append(wildcard.arg)
-            if has_annotations:
-                annotations.append(wildcard.annotation)
-
-        if has_annotations:
-            annotations.append(node.returns)
-
-        if len(set(args)) < len(args):
-            for (idx, arg) in enumerate(args):
-                if arg in args[:idx]:
-                    self.report(messages.DuplicateArgument, node, arg)
-
-        for annotation in annotations:
-            self.handleAnnotation(annotation, node)
-
-        for default in defaults:
-            self.handleNode(default, node)
-
-        def runFunction():
-            with self.in_scope(FunctionScope):
-                self.handleChildren(
-                    node,
-                    omit=('decorator_list', 'returns', 'type_params'),
-                )
-
-        self.deferFunction(runFunction)
-
-    #@+node:ekr.20240702085302.145: *4* Checker.ARGUMENTS   omit=('defaults', 'kw_defaults')
-    def ARGUMENTS(self, node):
-        self.handleChildren(node, omit=('defaults', 'kw_defaults'))
-
-    #@+node:ekr.20240702085302.146: *4* Checker.ARG
-    def ARG(self, node):
-        self.addBinding(node, Argument(node.arg, self.getScopeNode(node)))
-
-    #@+node:ekr.20240702085302.147: *4* Checker.CLASSDEF
-    def CLASSDEF(self, node):
-        """
-        Check names used in a class definition, including its decorators, base
-        classes, and the body of its definition.  Additionally, add its name to
-        the current scope.
-        """
-        for deco in node.decorator_list:
-            self.handleNode(deco, node)
-
-        with self._type_param_scope(node):
-            for baseNode in node.bases:
-                self.handleNode(baseNode, node)
-            for keywordNode in node.keywords:
-                self.handleNode(keywordNode, node)
-            with self.in_scope(ClassScope):
-                # doctest does not process doctest within a doctest
-                # classes within classes are processed.
-                if (self.withDoctest and
-                        not self._in_doctest() and
-                        not isinstance(self.scope, FunctionScope)):
-                    self.deferFunction(lambda: self.handleDoctests(node))
-                for stmt in node.body:
-                    self.handleNode(stmt, node)
-
-        self.addBinding(node, ClassDefinition(node.name, node))
-
-    #@+node:ekr.20240702085302.148: *4* Checker.AUGASSIGN
-    def AUGASSIGN(self, node):
-        self.handleNodeLoad(node.target, node)
-        self.handleNode(node.value, node)
-        self.handleNode(node.target, node)
-
-    #@+node:ekr.20240702085302.149: *4* Checker.TUPLE & LIST
-    def TUPLE(self, node):
-        if isinstance(node.ctx, ast.Store):
-            # Python 3 advanced tuple unpacking: a, *b, c = d.
-            # Only one starred expression is allowed, and no more than 1<<8
-            # assignments are allowed before a stared expression. There is
-            # also a limit of 1<<24 expressions after the starred expression,
-            # which is impossible to test due to memory restrictions, but we
-            # add it here anyway
-            has_starred = False
-            star_loc = -1
-            for i, n in enumerate(node.elts):
-                if isinstance(n, ast.Starred):
-                    if has_starred:
-                        self.report(messages.TwoStarredExpressions, node)
-                        # The SyntaxError doesn't distinguish two from more
-                        # than two.
-                        break
-                    has_starred = True
-                    star_loc = i
-            if star_loc >= 1 << 8 or len(node.elts) - star_loc - 1 >= 1 << 24:
-                self.report(messages.TooManyExpressionsInStarredAssignment, node)
-        self.handleChildren(node)
-
-    LIST = TUPLE
-
-    #@+node:ekr.20240702085302.150: *4* Checker.IMPORT
-    def IMPORT(self, node):
-        for alias in node.names:
-            if '.' in alias.name and not alias.asname:
-                importation = SubmoduleImportation(alias.name, node)
-            else:
-                name = alias.asname or alias.name
-                importation = Importation(name, node, alias.name)
-            self.addBinding(node, importation)
-
-    #@+node:ekr.20240702085302.151: *4* Checker.IMPORTFROM
-    def IMPORTFROM(self, node):
-        if node.module == '__future__':
-            if not self.futuresAllowed:
-                self.report(messages.LateFutureImport, node)
-        else:
-            self.futuresAllowed = False
-
-        module = ('.' * node.level) + (node.module or '')
-
-        for alias in node.names:
-            name = alias.asname or alias.name
-            if node.module == '__future__':
-                importation = FutureImportation(name, node, self.scope)
-                if alias.name not in __future__.all_feature_names:
-                    self.report(messages.FutureFeatureNotDefined,
-                                node, alias.name)
-                if alias.name == 'annotations':
-                    self.annotationsFutureEnabled = True
-            elif alias.name == '*':
-                if not isinstance(self.scope, ModuleScope):
-                    self.report(messages.ImportStarNotPermitted,
-                                node, module)
-                    continue
-
-                self.scope.importStarred = True
-                self.report(messages.ImportStarUsed, node, module)
-                importation = StarImportation(module, node)
-            else:
-                importation = ImportationFrom(name, node,
-                                              module, alias.name)
-            self.addBinding(node, importation)
-
-    #@+node:ekr.20240702085302.152: *4* Checker.TRY & TRYSTAR omit='body'
-    def TRY(self, node):
-        handler_names = []
-        # List the exception handlers
-        for i, handler in enumerate(node.handlers):
-            if isinstance(handler.type, ast.Tuple):
-                for exc_type in handler.type.elts:
-                    handler_names.append(getNodeName(exc_type))
-            elif handler.type:
-                handler_names.append(getNodeName(handler.type))
-
-            if handler.type is None and i < len(node.handlers) - 1:
-                self.report(messages.DefaultExceptNotLast, handler)
-        # Memorize the except handlers and process the body
-        self.exceptHandlers.append(handler_names)
-        for child in node.body:
-            self.handleNode(child, node)
-        self.exceptHandlers.pop()
-        # Process the other nodes: "except:", "else:", "finally:"
-        self.handleChildren(node, omit='body')
-
-    TRYSTAR = TRY
 
     #@+node:ekr.20240702085302.153: *4* Checker.EXCEPTHANDLER
     def EXCEPTHANDLER(self, node):
@@ -2310,32 +1921,179 @@ class Checker:
         if prev_definition:
             self.scope[node.name] = prev_definition
 
-    #@+node:ekr.20240702085302.154: *4* Checker.ANNASSIGN
-    def ANNASSIGN(self, node):
-        self.handleAnnotation(node.annotation, node)
-        # If the assignment has value, handle the *value* now.
-        if node.value:
-            # If the annotation is `TypeAlias`, handle the *value* as an annotation.
-            if _is_typing(node.annotation, 'TypeAlias', self.scopeStack):
-                self.handleAnnotation(node.value, node)
-            else:
-                self.handleNode(node.value, node)
-        self.handleNode(node.target, node)
+    #@+node:ekr.20240702085302.143: *4* Checker.FUNCTIONDEF & ASYNCFUNCTIONDEF
+    def FUNCTIONDEF(self, node):
+        for deco in node.decorator_list:
+            self.handleNode(deco, node)
 
-    #@+node:ekr.20240702085302.155: *4* Checker.COMPARE
-    def COMPARE(self, node):
-        left = node.left
-        for op, right in zip(node.ops, node.comparators):
-            if (
-                    isinstance(op, (ast.Is, ast.IsNot)) and (
-                        _is_const_non_singleton(left) or
-                        _is_const_non_singleton(right)
-                    )
-            ):
-                self.report(messages.IsLiteral, node)
-            left = right
+        with self._type_param_scope(node):
+            self.LAMBDA(node)
 
+        self.addBinding(node, FunctionDefinition(node.name, node))
+        # doctest does not process doctest within a doctest,
+        # or in nested functions.
+        if (self.withDoctest and
+                not self._in_doctest() and
+                not isinstance(self.scope, FunctionScope)):
+            self.deferFunction(lambda: self.handleDoctests(node))
+
+    ASYNCFUNCTIONDEF = FUNCTIONDEF
+
+    #@+node:ekr.20240702085302.138: *4* Checker.GENERATOREXP & *COMP
+    def GENERATOREXP(self, node):
+        with self.in_scope(GeneratorScope):
+            self.handleChildren(node)
+
+    LISTCOMP = DICTCOMP = SETCOMP = GENERATOREXP
+
+    #@+node:ekr.20240702085302.137: *4* Checker.GLOBAL & NONLOCAL
+    def GLOBAL(self, node):
+        """
+        Keep track of globals declarations.
+        """
+        global_scope_index = 1 if self._in_doctest() else 0
+        global_scope = self.scopeStack[global_scope_index]
+
+        # Ignore 'global' statement in global scope.
+        if self.scope is not global_scope:
+
+            # One 'global' statement can bind multiple (comma-delimited) names.
+            for node_name in node.names:
+                node_value = Assignment(node_name, node)
+
+                # Remove UndefinedName messages already reported for this name.
+                # TODO: if the global is not used in this scope, it does not
+                # become a globally defined name.  See test_unused_global.
+                self.messages = [
+                    m for m in self.messages if not
+                    isinstance(m, messages.UndefinedName) or
+                    m.message_args[0] != node_name]
+
+                # Bind name to global scope if it doesn't exist already.
+                global_scope.setdefault(node_name, node_value)
+
+                # Bind name to non-global scopes, but as already "used".
+                node_value.used = (global_scope, node)
+                for scope in self.scopeStack[global_scope_index + 1:]:
+                    scope[node_name] = node_value
+
+    NONLOCAL = GLOBAL
+
+    #@+node:ekr.20240702085302.135: *4* Checker.IF & IFEXPR
+    def IF(self, node):
+        if isinstance(node.test, ast.Tuple) and node.test.elts != []:
+            self.report(messages.IfTuple, node)
         self.handleChildren(node)
+
+    IFEXP = IF
+
+    #@+node:ekr.20240702085302.150: *4* Checker.IMPORT
+    def IMPORT(self, node):
+        for alias in node.names:
+            if '.' in alias.name and not alias.asname:
+                importation = SubmoduleImportation(alias.name, node)
+            else:
+                name = alias.asname or alias.name
+                importation = Importation(name, node, alias.name)
+            self.addBinding(node, importation)
+
+    #@+node:ekr.20240702085302.151: *4* Checker.IMPORTFROM
+    def IMPORTFROM(self, node):
+        if node.module == '__future__':
+            if not self.futuresAllowed:
+                self.report(messages.LateFutureImport, node)
+        else:
+            self.futuresAllowed = False
+
+        module = ('.' * node.level) + (node.module or '')
+
+        for alias in node.names:
+            name = alias.asname or alias.name
+            if node.module == '__future__':
+                importation = FutureImportation(name, node, self.scope)
+                if alias.name not in __future__.all_feature_names:
+                    self.report(messages.FutureFeatureNotDefined,
+                                node, alias.name)
+                if alias.name == 'annotations':
+                    self.annotationsFutureEnabled = True
+            elif alias.name == '*':
+                if not isinstance(self.scope, ModuleScope):
+                    self.report(messages.ImportStarNotPermitted,
+                                node, module)
+                    continue
+
+                self.scope.importStarred = True
+                self.report(messages.ImportStarUsed, node, module)
+                importation = StarImportation(module, node)
+            else:
+                importation = ImportationFrom(name, node,
+                                              module, alias.name)
+            self.addBinding(node, importation)
+
+    #@+node:ekr.20240702085302.133: *4* Checker.JOINEDSTR
+    _in_fstring = False
+
+    def JOINEDSTR(self, node):
+        if (
+                # the conversion / etc. flags are parsed as f-strings without
+                # placeholders
+                not self._in_fstring and
+                not any(isinstance(x, ast.FormattedValue) for x in node.values)
+        ):
+            self.report(messages.FStringMissingPlaceholders, node)
+
+        self._in_fstring, orig = True, self._in_fstring
+        try:
+            self.handleChildren(node)
+        finally:
+            self._in_fstring = orig
+
+    #@+node:ekr.20240702085302.144: *4* Checker.LAMBDA  omit=('decorator_list', 'returns', 'type_params')
+    def LAMBDA(self, node):
+        args = []
+        annotations = []
+
+        for arg in node.args.posonlyargs:
+            args.append(arg.arg)
+            annotations.append(arg.annotation)
+        for arg in node.args.args + node.args.kwonlyargs:
+            args.append(arg.arg)
+            annotations.append(arg.annotation)
+        defaults = node.args.defaults + node.args.kw_defaults
+
+        has_annotations = not isinstance(node, ast.Lambda)
+
+        for arg_name in ('vararg', 'kwarg'):
+            wildcard = getattr(node.args, arg_name)
+            if not wildcard:
+                continue
+            args.append(wildcard.arg)
+            if has_annotations:
+                annotations.append(wildcard.annotation)
+
+        if has_annotations:
+            annotations.append(node.returns)
+
+        if len(set(args)) < len(args):
+            for (idx, arg) in enumerate(args):
+                if arg in args[:idx]:
+                    self.report(messages.DuplicateArgument, node, arg)
+
+        for annotation in annotations:
+            self.handleAnnotation(annotation, node)
+
+        for default in defaults:
+            self.handleNode(default, node)
+
+        def runFunction():
+            with self.in_scope(FunctionScope):
+                ### g.trace(node.__class__.__name__)
+                self.handleChildren(
+                    node,
+                    omit=('decorator_list', 'returns', 'type_params'),
+                )
+
+        self.deferFunction(runFunction)
 
     #@+node:ekr.20240702085302.156: *4* Checker.MATCH* & _match_target
     MATCH = MATCH_CASE = MATCHCLASS = MATCHOR = MATCHSEQUENCE = handleChildren
@@ -2347,16 +2105,147 @@ class Checker:
 
     MATCHAS = MATCHMAPPING = MATCHSTAR = _match_target
 
-    #@+node:ekr.20240702085302.157: *4* Checker._type_param_scope (@contextlib.contextmanager)
-    @contextlib.contextmanager
-    def _type_param_scope(self, node):
-        with contextlib.ExitStack() as ctx:
-            if sys.version_info >= (3, 12):
-                ctx.enter_context(self.in_scope(TypeScope))
-                for param in node.type_params:
-                    self.handleNode(param, node)
-            yield
+    #@+node:ekr.20240702085302.139: *4* Checker.NAME
+    def NAME(self, node):
+        """
+        Handle occurrence of Name (which can be a load/store/delete access.)
+        """
+        # Locate the name in locals / function / globals scopes.
+        if isinstance(node.ctx, ast.Load):
+            self.handleNodeLoad(node, self.getParent(node))
+            if (node.id == 'locals' and isinstance(self.scope, FunctionScope) and
+                    isinstance(node._pyflakes_parent, ast.Call)):
+                # we are doing locals() call in current scope
+                self.scope.usesLocals = True
+        elif isinstance(node.ctx, ast.Store):
+            self.handleNodeStore(node)
+        elif isinstance(node.ctx, ast.Del):
+            self.handleNodeDelete(node)
+        else:
+            # Unknown context
+            raise RuntimeError(f"Got impossible expression context: {node.ctx!r}")
 
+    #@+node:ekr.20240702085302.131: *4* Checker.RAISE
+    def RAISE(self, node):
+        self.handleChildren(node)
+
+        arg = node.exc
+
+        if isinstance(arg, ast.Call):
+            if is_notimplemented_name_node(arg.func):
+                # Handle "raise NotImplemented(...)"
+                self.report(messages.RaiseNotImplemented, node)
+        elif is_notimplemented_name_node(arg):
+            # Handle "raise NotImplemented"
+            self.report(messages.RaiseNotImplemented, node)
+
+    #@+node:ekr.20240702085302.141: *4* Checker.RETURN
+    def RETURN(self, node):
+        if isinstance(self.scope, (ClassScope, ModuleScope)):
+            self.report(messages.ReturnOutsideFunction, node)
+            return
+
+        if (
+            node.value and
+            hasattr(self.scope, 'returnValue') and
+            not self.scope.returnValue
+        ):
+            self.scope.returnValue = node.value
+        self.handleNode(node.value, node)
+
+    #@+node:ekr.20240702085302.125: *4* Checker.SUBSCRIPT
+    def SUBSCRIPT(self, node):
+        if _is_name_or_attr(node.value, 'Literal'):
+            with self._enter_annotation(AnnotationState.NONE):
+                self.handleChildren(node)
+        elif _is_name_or_attr(node.value, 'Annotated'):
+            self.handleNode(node.value, node)
+
+            # py39+
+            if isinstance(node.slice, ast.Tuple):
+                slice_tuple = node.slice
+            # <py39
+            elif (
+                    isinstance(node.slice, ast.Index) and
+                    isinstance(node.slice.value, ast.Tuple)
+            ):
+                slice_tuple = node.slice.value
+            else:
+                slice_tuple = None
+
+            # not a multi-arg `Annotated`
+            if slice_tuple is None or len(slice_tuple.elts) < 2:
+                self.handleNode(node.slice, node)
+            else:
+                # the first argument is the type
+                self.handleNode(slice_tuple.elts[0], node)
+                # the rest of the arguments are not
+                with self._enter_annotation(AnnotationState.NONE):
+                    for arg in slice_tuple.elts[1:]:
+                        self.handleNode(arg, node)
+
+            self.handleNode(node.ctx, node)
+        else:
+            if _is_any_typing_member(node.value, self.scopeStack):
+                with self._enter_annotation():
+                    self.handleChildren(node)
+            else:
+                self.handleChildren(node)
+
+    #@+node:ekr.20240702085302.152: *4* Checker.TRY & TRYSTAR omit='body'
+    def TRY(self, node):
+        handler_names = []
+        # List the exception handlers
+        for i, handler in enumerate(node.handlers):
+            if isinstance(handler.type, ast.Tuple):
+                for exc_type in handler.type.elts:
+                    handler_names.append(getNodeName(exc_type))
+            elif handler.type:
+                handler_names.append(getNodeName(handler.type))
+
+            if handler.type is None and i < len(node.handlers) - 1:
+                self.report(messages.DefaultExceptNotLast, handler)
+        # Memorize the except handlers and process the body
+        self.exceptHandlers.append(handler_names)
+        for child in node.body:
+            self.handleNode(child, node)
+        self.exceptHandlers.pop()
+        # Process the other nodes: "except:", "else:", "finally:"
+        self.handleChildren(node, omit='body')
+
+    TRYSTAR = TRY
+
+    #@+node:ekr.20240702085302.149: *4* Checker.TUPLE & LIST
+    def TUPLE(self, node):
+        if isinstance(node.ctx, ast.Store):
+            # Python 3 advanced tuple unpacking: a, *b, c = d.
+            # Only one starred expression is allowed, and no more than 1<<8
+            # assignments are allowed before a stared expression. There is
+            # also a limit of 1<<24 expressions after the starred expression,
+            # which is impossible to test due to memory restrictions, but we
+            # add it here anyway
+            has_starred = False
+            star_loc = -1
+            for i, n in enumerate(node.elts):
+                if isinstance(n, ast.Starred):
+                    if has_starred:
+                        self.report(messages.TwoStarredExpressions, node)
+                        # The SyntaxError doesn't distinguish two from more
+                        # than two.
+                        break
+                    has_starred = True
+                    star_loc = i
+            if star_loc >= 1 << 8 or len(node.elts) - star_loc - 1 >= 1 << 24:
+                self.report(messages.TooManyExpressionsInStarredAssignment, node)
+        self.handleChildren(node)
+
+    LIST = TUPLE
+
+    #@+node:ekr.20240702085302.159: *4* Checker.TYPEALIAS
+    def TYPEALIAS(self, node):
+        self.handleNode(node.name, node)
+        with self._type_param_scope(node):
+            self.handle_annotation_always_deferred(node.value, node)
     #@+node:ekr.20240702085302.158: *4* Checker.TYPEVAR, PARAMSPEC & TYPEVARTUPLE
     def TYPEVAR(self, node):
         self.handleNodeStore(node)
@@ -2364,11 +2253,130 @@ class Checker:
 
     PARAMSPEC = TYPEVARTUPLE = handleNodeStore
 
-    #@+node:ekr.20240702085302.159: *4* Checker.TYPEALIAS
-    def TYPEALIAS(self, node):
-        self.handleNode(node.name, node)
-        with self._type_param_scope(node):
-            self.handle_annotation_always_deferred(node.value, node)
+    #@+node:ekr.20240702085302.142: *4* Checker.YIELD
+    def YIELD(self, node):
+        if isinstance(self.scope, (ClassScope, ModuleScope)):
+            self.report(messages.YieldOutsideFunction, node)
+            return
+
+        self.handleNode(node.value, node)
+
+    AWAIT = YIELDFROM = YIELD
+
+    #@+node:ekr.20240702085302.132: *4* Checker: COMPREHENSION, KEYWORD, FORMATTEDVALUE
+    # additional node types
+    COMPREHENSION = KEYWORD = FORMATTEDVALUE = handleChildren
+
+    #@+node:ekr.20240702085302.118: *4* Checker: handle*
+    #@+node:ekr.20240702085302.119: *5* Checker.handleNode
+    def handleNode(self, node, parent):
+        if node is None:
+            return
+        if self.offset and getattr(node, 'lineno', None) is not None:
+            node.lineno += self.offset[0]
+            node.col_offset += self.offset[1]
+        if (
+                self.futuresAllowed and
+                self.nodeDepth == 0 and
+                not isinstance(node, ast.ImportFrom) and
+                not self.isDocstring(node)
+        ):
+            self.futuresAllowed = False
+        self.nodeDepth += 1
+        node._pyflakes_depth = self.nodeDepth
+        node._pyflakes_parent = parent
+        try:
+            handler = self.getNodeHandler(node.__class__)
+            handler(node)
+        finally:
+            self.nodeDepth -= 1
+
+    #@+node:ekr.20240702085302.120: *5* Checker.handleDoctests
+    _getDoctestExamples = doctest.DocTestParser().get_examples
+
+    def handleDoctests(self, node):
+        try:
+            (docstring, node_lineno) = self.getDocstring(node.body[0])
+            examples = docstring and self._getDoctestExamples(docstring)
+        except (ValueError, IndexError):
+            # e.g. line 6 of the docstring for <string> has inconsistent
+            # leading whitespace: ...
+            return
+        if not examples:
+            return
+
+        # Place doctest in module scope
+        saved_stack = self.scopeStack
+        self.scopeStack = [self.scopeStack[0]]
+        node_offset = self.offset or (0, 0)
+        with self.in_scope(DoctestScope):
+            if '_' not in self.scopeStack[0]:
+                self.addBinding(None, Builtin('_'))
+            for example in examples:
+                try:
+                    tree = ast.parse(example.source, "<doctest>")
+                except SyntaxError as e:
+                    position = (node_lineno + example.lineno + e.lineno,
+                                example.indent + 4 + (e.offset or 0))
+                    self.report(messages.DoctestSyntaxError, node, position)
+                else:
+                    self.offset = (node_offset[0] + node_lineno + example.lineno,
+                                   node_offset[1] + example.indent + 4)
+                    self.handleChildren(tree)
+                    self.offset = node_offset
+        self.scopeStack = saved_stack
+
+    #@+node:ekr.20240702085302.121: *5* Checker.handleStringAnnotation
+    @in_string_annotation
+    def handleStringAnnotation(self, s, node, ref_lineno, ref_col_offset, err):
+        try:
+            tree = ast.parse(s)
+        except SyntaxError:
+            self.report(err, node, s)
+            return
+
+        body = tree.body
+        if len(body) != 1 or not isinstance(body[0], ast.Expr):
+            self.report(err, node, s)
+            return
+
+        parsed_annotation = tree.body[0].value
+        for descendant in ast.walk(parsed_annotation):
+            if (
+                    'lineno' in descendant._attributes and
+                    'col_offset' in descendant._attributes
+            ):
+                descendant.lineno = ref_lineno
+                descendant.col_offset = ref_col_offset
+
+        self.handleNode(parsed_annotation, node)
+
+    #@+node:ekr.20240702085302.122: *5* Checker.handle_annotation_always_deferred
+    def handle_annotation_always_deferred(self, annotation, parent):
+        fn = in_annotation(Checker.handleNode)
+        self.deferFunction(lambda: fn(self, annotation, parent))
+
+    #@+node:ekr.20240702085302.123: *5* Checker.handleAnnotation
+    @in_annotation
+    def handleAnnotation(self, annotation, node):
+        if (
+                isinstance(annotation, ast.Constant) and
+                isinstance(annotation.value, str)
+        ):
+            # Defer handling forward annotation.
+            self.deferFunction(functools.partial(
+                self.handleStringAnnotation,
+                annotation.value,
+                node,
+                annotation.lineno,
+                annotation.col_offset,
+                messages.ForwardAnnotationSyntaxError,
+            ))
+        elif self.annotationsFutureEnabled:
+            self.handle_annotation_always_deferred(annotation, node)
+        else:
+            self.handleNode(annotation, node)
+
     #@-others
 #@-others
 #@@language python
