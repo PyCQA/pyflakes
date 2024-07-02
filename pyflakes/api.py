@@ -1,3 +1,5 @@
+#@+leo-ver=5-thin
+#@+node:ekr.20240702083935.1: * @file C:\Repos\ekr-fork-pyflakes\pyflakes\api.py
 """
 API for the command-line I{pyflakes} tool.
 """
@@ -15,6 +17,8 @@ __all__ = ['check', 'checkPath', 'checkRecursive', 'iterSourceCode', 'main']
 PYTHON_SHEBANG_REGEX = re.compile(br'^#!.*\bpython(3(\.\d+)?|w)?[dmu]?\s')
 
 
+#@+others
+#@+node:ekr.20240702083935.2: ** function: check
 def check(codeString, filename, reporter=None):
     """
     Check the Python source given by C{codeString} for flakes.
@@ -51,6 +55,7 @@ def check(codeString, filename, reporter=None):
     return len(w.messages)
 
 
+#@+node:ekr.20240702083935.3: ** function: checkPath
 def checkPath(filename, reporter=None):
     """
     Check the given path, printing out any warnings detected.
@@ -71,6 +76,7 @@ def checkPath(filename, reporter=None):
     return check(codestr, filename, reporter)
 
 
+#@+node:ekr.20240702083935.4: ** function: isPythonFile
 def isPythonFile(filename):
     """Return True if filename points to a Python file."""
     if filename.endswith('.py'):
@@ -93,6 +99,7 @@ def isPythonFile(filename):
     return PYTHON_SHEBANG_REGEX.match(text)
 
 
+#@+node:ekr.20240702083935.5: ** function: iterSourceCode
 def iterSourceCode(paths):
     """
     Iterate over all Python source files in C{paths}.
@@ -112,6 +119,7 @@ def iterSourceCode(paths):
             yield path
 
 
+#@+node:ekr.20240702083935.6: ** function: checkRecursive
 def checkRecursive(paths, reporter):
     """
     Recursively check all source files in C{paths}.
@@ -128,6 +136,7 @@ def checkRecursive(paths, reporter):
     return warnings
 
 
+#@+node:ekr.20240702083935.7: ** function: _exitOnSignal
 def _exitOnSignal(sigName, message):
     """Handles a signal with sys.exit.
 
@@ -155,6 +164,7 @@ def _exitOnSignal(sigName, message):
         pass
 
 
+#@+node:ekr.20240702083935.8: ** function: _get_version
 def _get_version():
     """
     Retrieve and format package version along with python version & OS used
@@ -165,6 +175,7 @@ def _get_version():
     )
 
 
+#@+node:ekr.20240702083935.9: ** function: main (ekr-fork-pyflakes:api.py)
 def main(prog=None, args=None):
     """Entry point for the script "pyflakes"."""
     import argparse
@@ -183,7 +194,8 @@ def main(prog=None, args=None):
     args = parser.parse_args(args=args).path
     reporter = modReporter._makeDefaultReporter()
     if args:
-        print('ekr-fork-pyflakes:api.main args', args)
+        # This print causes unit tests to fail.
+        # print('ekr-fork-pyflakes:api.main args', args)
         warnings = checkRecursive(args, reporter)
     else:
         ### warnings = check(sys.stdin.read(), '<stdin>', reporter)
@@ -191,3 +203,7 @@ def main(prog=None, args=None):
         print('EKR: no files given')
 
     raise SystemExit(warnings > 0)
+#@-others
+#@@language python
+#@@tabwidth -4
+#@-leo
