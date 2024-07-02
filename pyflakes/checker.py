@@ -71,6 +71,9 @@ class _FieldsOrder(dict):
 
     def __missing__(self, node_class):
         self[node_class] = fields = self._get_fields(node_class)
+        # Any output here causes unit tests to fail.
+            # g.printObj(fields, tag=node_class)
+        # print(node_class, fields)
         return fields
 
 
@@ -228,7 +231,7 @@ def parse_percent_format(s):
     return tuple(_parse_inner())
 
 
-#@+node:ekr.20240702085302.15: *3* function: iter_child_nodes (Uses _FieldsOrder)
+#@+node:ekr.20240702085302.15: *3* function: ekr_/iter_child_nodes (Uses _FieldsOrder)
 def iter_child_nodes(node, omit=None, _fields_order=_FieldsOrder()):
     """
     Yield all direct child nodes of *node*, that is, all fields that
@@ -243,6 +246,16 @@ def iter_child_nodes(node, omit=None, _fields_order=_FieldsOrder()):
     for name in _fields_order[node.__class__]:
         if omit and name in omit:
             continue
+        field = getattr(node, name, None)
+        if isinstance(field, ast.AST):
+            yield field
+        elif isinstance(field, list):
+            for item in field:
+                if isinstance(item, ast.AST):
+                    yield item
+      
+def ekr_iter_child_nodes(node):
+    for name in node._fields:
         field = getattr(node, name, None)
         if isinstance(field, ast.AST):
             yield field
@@ -1532,9 +1545,21 @@ class Checker:
         self.addBinding(node, Argument(node.arg, self.getScopeNode(node)))
 
     #@+node:ekr.20240702085302.145: *4* Checker.ARGUMENTS   omit=('defaults', 'kw_defaults')
-    def ARGUMENTS(self, node):
-        self.handleChildren(node, omit=('defaults', 'kw_defaults'))
+    # arguments = (
+        # arg* posonlyargs, arg* args, arg? vararg, arg* kwonlyargs,
+        # expr* kw_defaults, arg? kwarg, expr* defaults)
 
+    def ARGUMENTS(self, node):
+        if 1:
+            # g.trace(node)
+            self.handleChildren(node, omit=('defaults', 'kw_defaults'))
+        else:
+            for field_name in (
+                'posonlyargs', 'args', 'vararg', 'kwonlyargs', 'kwarg',
+                # 'kw_defaults', 'defaults',
+            ):
+                child = getattr(node, field_name, None)
+                ekr_iter_child_nodes(child)
     #@+node:ekr.20240702085302.136: *4* Checker.ASSERT
     def ASSERT(self, node):
         if isinstance(node.test, ast.Tuple) and node.test.elts != []:
