@@ -2089,15 +2089,7 @@ class Checker:
     def ignore(self, node):
         pass
 
-    # "stmt" type nodes
-    DELETE = FOR = ASYNCFOR = WHILE = WITH = WITHITEM = ASYNCWITH = \
-        EXPR = ASSIGN = handleChildren
-
     PASS = ignore
-
-    # "expr" type nodes
-    BOOLOP = UNARYOP = SET = ATTRIBUTE = STARRED = NAMECONSTANT = \
-        NAMEDEXPR = handleChildren
 
     # expression contexts are node instances too, though being constants
     LOAD = STORE = DEL = AUGLOAD = AUGSTORE = PARAM = ignore
