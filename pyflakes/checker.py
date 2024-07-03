@@ -6,6 +6,8 @@ Main module.
 Implement the central Checker class.
 Also, it models the Bindings and Scopes.
 """
+#@+<< checker.py: imports and annotations >>
+#@+node:ekr.20240703054405.1: ** << checker.py: imports and annotations >>
 import __future__
 import builtins
 import ast
@@ -17,9 +19,12 @@ import os
 import re
 import string
 import sys
-import warnings
+### import warnings
 
 from pyflakes import messages
+
+Node = ast.AST
+#@-<< checker.py: imports and annotations >>
 
 if 1:
     leo_path = r'C:\Repos\leo-editor'
@@ -30,6 +35,8 @@ if 1:
 
 #@+<< checker.py: globals >>
 #@+node:ekr.20240702085302.2: ** << checker.py: globals >>
+NEW = False  ### True: new visitor code.
+
 PYPY = hasattr(sys, 'pypy_version_info')
 builtin_vars = dir(builtins)
 parse_format_string = string.Formatter().parse
@@ -53,6 +60,42 @@ TYPING_MODULES = frozenset(('typing', 'typing_extensions'))
 
 
 #@+others
+#@+node:ekr.20240703053633.1: ** checker.py: OuterVisitor
+class OuterVisitor(ast.NodeVisitor):
+    
+    #@+others
+    #@+node:ekr.20240703055551.1: *3* OuterVisitor.__init__
+    def __init__(self) -> None:
+        
+        pass  ### Compute fields using _FieldOrder.
+    #@+node:ekr.20240703055658.1: *3* OuterVisitor.visit (to do)
+    def visit(self, node: Node) -> None:
+        """
+        Visit a node. The default implementation calls the method called
+        self.visit_classname where classname is the name of the node class,
+        or generic_visit() if that method doesn’t exist.
+        """
+        if node is not None:
+            pass  ### To do.
+
+    #@+node:ekr.20240703055658.2: *3* OuterVisitor.generic_visit
+    def generic_visit(self, node: Node) -> None:
+        """
+        This visitor calls visit() on all direct children of the node.
+        """
+        for field in self.fields_dict[Node.__class__.__name__]:
+            child = getattr(node, field, None)
+            if child:
+                self.visit(child)
+    #@+node:ekr.20240703055659.1: *3* OuterVisitor.visit_Constant
+    def visit_Constant(self, node: Node) -> None:
+        """
+        Handles all constant nodes.
+        """
+        pass  # There is nothing to do.
+    #@-others
+    
+    
 #@+node:ekr.20240702105119.1: ** checker.py: Utility classes
 #@+node:ekr.20240702085302.14: *3* class _FieldsOrder(dict)
 class _FieldsOrder(dict):
@@ -852,8 +895,8 @@ class Checker:
 
     #@+others
     #@+node:ekr.20240702085302.84: *3* Checker.__init__
-    def __init__(self, tree, filename='(none)', builtins=None,
-                 withDoctest='PYFLAKES_DOCTEST' in os.environ, file_tokens=()):
+    def __init__(self, tree, filename='(none)', builtins=None, withDoctest='PYFLAKES_DOCTEST' in os.environ):
+                     ###, file_tokens=()):
         self._nodeHandlers = {}
         self._deferred = collections.deque()
         self.deadScopes = []
@@ -870,20 +913,27 @@ class Checker:
             scope_tp = Checker._ast_node_scope[type(tree)]
         except KeyError:
             raise RuntimeError('No scope implemented for the node %r' % tree)
+            
+        if NEW:
+            outer_visitor = OuterVisitor()
 
         with self.in_scope(scope_tp):
             for builtin in self.builtIns:
                 self.addBinding(None, Builtin(builtin))
-            self.handleChildren(tree)
+            if NEW:
+                outer_visitor.visit(tree)
+            else:
+                self.handleChildren(tree)
             self._run_deferred()
 
         self.checkDeadScopes()
 
-        if file_tokens:
-            warnings.warn(
-                '`file_tokens` will be removed in a future version',
-                stacklevel=2,
-            )
+        ###
+            # if file_tokens:
+                # warnings.warn(
+                    # '`file_tokens` will be removed in a future version',
+                    # stacklevel=2,
+                # )
 
     #@+node:ekr.20240702085302.85: *3* Checker: Deferred functions
     #@+node:ekr.20240702085302.86: *4* Checker.deferFunction

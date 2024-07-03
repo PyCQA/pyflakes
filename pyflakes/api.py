@@ -18,8 +18,8 @@ PYTHON_SHEBANG_REGEX = re.compile(br'^#!.*\bpython(3(\.\d+)?|w)?[dmu]?\s')
 
 
 #@+others
-#@+node:ekr.20240702083935.2: ** function: check
-def check(codeString, filename, reporter=None):
+#@+node:ekr.20240702083935.2: ** function: check (api.py)
+def check(codeString, filename, reporter=None) -> int:
     """
     Check the Python source given by C{codeString} for flakes.
 
