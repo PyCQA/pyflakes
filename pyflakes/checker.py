@@ -33,10 +33,12 @@ if 1:
     from leo.core import leoGlobals as g
     assert g
 
+#@+<< checker.py: NEW switch >>
+#@+node:ekr.20240704060555.1: ** << checker.py: NEW switch >>
+NEW = False  ### True: new visitor code.
+#@-<< checker.py: NEW switch >>
 #@+<< checker.py: globals >>
 #@+node:ekr.20240702085302.2: ** << checker.py: globals >>
-NEW = False  ### True: new visitor code.
-
 PYPY = hasattr(sys, 'pypy_version_info')
 builtin_vars = dir(builtins)
 parse_format_string = string.Formatter().parse
@@ -60,8 +62,8 @@ TYPING_MODULES = frozenset(('typing', 'typing_extensions'))
 
 
 #@+others
-#@+node:ekr.20240703053633.1: ** checker.py: OuterVisitor
-class OuterVisitor(ast.NodeVisitor):
+#@+node:ekr.20240703053633.1: ** checker.py: Pass1
+class Pass1(ast.NodeVisitor):
     
     #@+others
     #@+node:ekr.20240703055551.1: *3* OuterVisitor.__init__
@@ -115,8 +117,8 @@ class _FieldsOrder(dict):
     def __missing__(self, node_class):
         self[node_class] = fields = self._get_fields(node_class)
         # Any output here causes unit tests to fail.
-            # g.printObj(fields, tag=node_class)
-        # print(node_class, fields)
+        # For now, these tests have been skipped.
+        g.trace(f"{node_class.__name__:>20} {', '.join(fields)}")
         return fields
 
 
@@ -915,13 +917,13 @@ class Checker:
             raise RuntimeError('No scope implemented for the node %r' % tree)
             
         if NEW:
-            outer_visitor = OuterVisitor()
+            pass1 = Pass1()
 
         with self.in_scope(scope_tp):
             for builtin in self.builtIns:
                 self.addBinding(None, Builtin(builtin))
             if NEW:
-                outer_visitor.visit(tree)
+                pass1.visit(tree)
             else:
                 self.handleChildren(tree)
             self._run_deferred()
