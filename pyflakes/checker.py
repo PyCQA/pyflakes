@@ -67,19 +67,24 @@ class _FieldsOrder(dict):
     def _get_fields(self, node_class):
         # handle iter before target, and generators before element
         fields = node_class._fields
-        if 'iter' in fields:
-            key_first = 'iter'.find
-        elif 'generators' in fields:
-            key_first = 'generators'.find
-        else:
+        if 0:
+            return tuple(sorted(fields, reverse=True))
+        if 0:  # Fails
             key_first = 'value'.find
+        else:
+            if 'iter' in fields:
+                key_first = 'iter'.find
+            elif 'generators' in fields:
+                key_first = 'generators'.find
+            else:
+                key_first = 'value'.find
         return tuple(sorted(fields, key=key_first, reverse=True))
 
     def __missing__(self, node_class):
         self[node_class] = fields = self._get_fields(node_class)
         # Any output here causes unit tests to fail.
         # For now, these tests have been skipped.
-        if 'value' in fields:
+        if any(z in fields for z in ('iter', 'generators', 'value')):
             g.trace(f"{node_class.__name__:>20} {', '.join(fields)}")
         return fields
 
@@ -2071,13 +2076,26 @@ class Checker:
     else:
 
         def FOR(self, tree):
-            if 1:  # Works.
+            if 0:  # Works.
                 for node in iter_child_nodes(tree):  ###, omit=omit):
+                    ### g.trace(node.__class__.__name__)
                     self.handleNode(node, tree)
-            else:  # Works.
-                for field in ('iter', 'target', 'body', 'orelse'):  ###, 'type_comment'):
+            elif 1:  # Works.
+                for field in ('iter', 'target', 'type_comment'):
                     node = getattr(tree, field, None)
                     self.handleNode(node, tree)
+                for field in ('body', 'orelse'):
+                    node =  getattr(tree, field, [])
+                    for z in node:
+                        self.handleNode(z, tree)
+            else:  # Works.
+                for field in ('iter', 'target', 'body', 'orelse', 'type_comment'):
+                    node = getattr(tree, field, None)
+                    if isinstance(node, list):
+                        for z in node:
+                            self.handleNode(z, tree)
+                    else:  
+                        self.handleNode(node, tree)
 
     ASYNCFOR = FOR
     #@+node:ekr.20240702085302.143: *4* Checker.FUNCTIONDEF & ASYNCFUNCTIONDEF
