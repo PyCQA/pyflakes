@@ -66,7 +66,10 @@ class _FieldsOrder(dict):
 
     def _get_fields(self, node_class):
         # handle iter before target, and generators before element
-        fields = node_class._fields
+        fields = list(node_class._fields)
+        for delete_field in ('ctx', 'is_async', 'format_spec'):
+            if delete_field in fields:
+                fields.remove(delete_field)
         if 0:
             return tuple(sorted(fields, reverse=True))
         if 0:  # Fails
@@ -84,8 +87,10 @@ class _FieldsOrder(dict):
         self[node_class] = fields = self._get_fields(node_class)
         # Any output here causes unit tests to fail.
         # For now, these tests have been skipped.
-        if any(z in fields for z in ('iter', 'generators', 'value')):
-            g.trace(f"{node_class.__name__:>20} {', '.join(fields)}")
+        if False and node_class.__name__ in ('Constant', 'keyword'):
+            g.trace(g.callers())
+        if len(fields) > 1 and any(z in fields for z in ('iter', 'generators', 'value')):
+            g.trace(f"{node_class.__name__:>20} {', '.join(fields):20} {g.callers()}")
         return fields
 
 
@@ -257,6 +262,7 @@ def iter_child_nodes(node, omit=None, _fields_order=_FieldsOrder()):
     """
     for name in _fields_order[node.__class__]:
         if omit and name in omit:
+            # g.trace('OMIT:', node.__class__.__name__, name, omit)  ###
             continue
         field = getattr(node, name, None)
         if isinstance(field, ast.AST):
@@ -1264,14 +1270,20 @@ class Checker:
 
     #@+node:ekr.20240702085302.112: *4* Checker.handleChildren & synonyms
     def handleChildren(self, tree, omit=None):
+        trace = False and omit
+        if trace:
+            print('')
+            g.trace(repr(omit))
         for node in iter_child_nodes(tree, omit=omit):
+            if trace:
+                g.trace(tree.__class__.__name__)
             self.handleNode(node, tree)
             
     # "stmt" type nodes
     DELETE = WHILE = WITH = WITHITEM = ASYNCWITH = EXPR = handleChildren
 
     # "expr" type nodes
-    BOOLOP = UNARYOP = SET = ATTRIBUTE = STARRED = NAMECONSTANT = handleChildren
+    BOOLOP = UNARYOP = SET = STARRED = NAMECONSTANT = handleChildren
 
     # additional node types
     COMPREHENSION = KEYWORD = FORMATTEDVALUE = handleChildren
@@ -1588,6 +1600,15 @@ class Checker:
                 for target in targets:
                     self.handleNode(target, node)
                 # self.handleNode(type_comment, node)
+    #@+node:ekr.20240704165918.1: *4* Checker.ATTRIBUTE (*new*)
+    if 0:  # Legacy
+        ATTRIBUTE = handleChildren
+    else:
+        
+        def ATTRIBUTE(self, node):
+            # attr is a string.
+            value = getattr(node, 'value', None)
+            self.handleNode(value, node)
     #@+node:ekr.20240702085302.148: *4* Checker.AUGASSIGN
     def AUGASSIGN(self, node):
         self.handleNodeLoad(node.target, node)
@@ -2258,6 +2279,7 @@ class Checker:
                 for child in iter_child_nodes(node):  ###, omit=omit):
                     self.handleNode(child, node)
             else:  # works.
+                # node.arg is a string.
                 child = getattr(node, 'value', None)
                 self.handleNode(child, node)
 
@@ -2319,10 +2341,17 @@ class Checker:
         def runFunction():
             with self.in_scope(FunctionScope):
                 ### g.trace(node.__class__.__name__)
-                self.handleChildren(
-                    node,
-                    omit=('decorator_list', 'returns', 'type_params'),
-                )
+                if 1:  # Legacy.
+                    self.handleChildren(
+                        node,
+                        omit=('decorator_list', 'returns', 'type_params'),
+                    )
+                else:
+                    args = getattr(node, 'args', [])
+                    body = getattr(node, 'body', None)
+                    for arg in args:
+                        self.handleNode(arg, node)
+                    self.handleNode(body, node)
 
         self.deferFunction(runFunction)
 
