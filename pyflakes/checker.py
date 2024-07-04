@@ -79,7 +79,8 @@ class _FieldsOrder(dict):
         self[node_class] = fields = self._get_fields(node_class)
         # Any output here causes unit tests to fail.
         # For now, these tests have been skipped.
-        # g.trace(f"{node_class.__name__:>20} {', '.join(fields)}")
+        if 'value' in fields:
+            g.trace(f"{node_class.__name__:>20} {', '.join(fields)}")
         return fields
 
 
@@ -1260,14 +1261,12 @@ class Checker:
     def handleChildren(self, tree, omit=None):
         for node in iter_child_nodes(tree, omit=omit):
             self.handleNode(node, tree)
-
+            
     # "stmt" type nodes
-    DELETE = FOR = ASYNCFOR = WHILE = WITH = WITHITEM = ASYNCWITH = \
-        EXPR = ASSIGN = handleChildren
+    DELETE = WHILE = WITH = WITHITEM = ASYNCWITH = EXPR = handleChildren
 
     # "expr" type nodes
-    BOOLOP = UNARYOP = SET = ATTRIBUTE = STARRED = NAMECONSTANT = \
-        NAMEDEXPR = handleChildren
+    BOOLOP = UNARYOP = SET = ATTRIBUTE = STARRED = NAMECONSTANT = handleChildren
 
     # additional node types
     COMPREHENSION = KEYWORD = FORMATTEDVALUE = handleChildren
@@ -1566,6 +1565,24 @@ class Checker:
             self.report(messages.AssertTuple, node)
         self.handleChildren(node)
 
+    #@+node:ekr.20240704151835.1: *4* Checker.ASSIGN  (**new**)
+    if 0:  # Legacy.
+        ASSIGN = handleChildren
+    else:
+        
+        def ASSIGN(self, node):
+            
+            if 0:  # Works.
+                for child in iter_child_nodes(node):  ###, omit=omit):
+                    self.handleNode(child, node)
+            else:  # Works.
+                value = getattr(node, 'value', None)
+                targets = getattr(node, 'targets', [])
+                # type_comment = getattr(node, 'type_comment', None)
+                self.handleNode(value, node)  # Value first.
+                for target in targets:
+                    self.handleNode(target, node)
+                # self.handleNode(type_comment, node)
     #@+node:ekr.20240702085302.148: *4* Checker.AUGASSIGN
     def AUGASSIGN(self, node):
         self.handleNodeLoad(node.target, node)
@@ -2048,6 +2065,21 @@ class Checker:
         if prev_definition:
             self.scope[node.name] = prev_definition
 
+    #@+node:ekr.20240704150603.1: *4* Checker.FOR & ASYNCFOR  (**new**) 
+    if 0:  ### Legacy.  Works.
+        FOR = handleChildren
+    else:
+
+        def FOR(self, tree):
+            if 1:  # Works.
+                for node in iter_child_nodes(tree):  ###, omit=omit):
+                    self.handleNode(node, tree)
+            else:  # Works.
+                for field in ('iter', 'target', 'body', 'orelse'):  ###, 'type_comment'):
+                    node = getattr(tree, field, None)
+                    self.handleNode(node, tree)
+
+    ASYNCFOR = FOR
     #@+node:ekr.20240702085302.143: *4* Checker.FUNCTIONDEF & ASYNCFUNCTIONDEF
     def FUNCTIONDEF(self, node):
         for deco in node.decorator_list:
@@ -2082,21 +2114,24 @@ class Checker:
                 self.handleNode(elt, node) 
 
     LISTCOMP = SETCOMP = GENERATOREXP
-    ### DICTCOMP = GENERATOREXP
 
-    def DICTCOMP(self, node):
-        with self.in_scope(GeneratorScope):
-            if 0:  # Works.
-                for child in iter_child_nodes(node):  ###, omit=omit):
-                    self.handleNode(child, node)
-            else:
-                generators = getattr(node, 'generators', [])
-                key = getattr(node, 'key', None)
-                value = getattr(node, 'value', None)
-                for generator in generators:
-                    self.handleNode(generator, node)
-                self.handleNode(key, node)
-                self.handleNode(value, node)
+    if 1:  # Legacy.
+        DICTCOMP = GENERATOREXP
+    else:
+
+        def DICTCOMP(self, node):
+            with self.in_scope(GeneratorScope):
+                if 0:  # Works.
+                    for child in iter_child_nodes(node):  ###, omit=omit):
+                        self.handleNode(child, node)
+                else:
+                    generators = getattr(node, 'generators', [])
+                    key = getattr(node, 'key', None)
+                    value = getattr(node, 'value', None)
+                    for generator in generators:  # generators first.
+                        self.handleNode(generator, node)
+                    self.handleNode(key, node)
+                    self.handleNode(value, node)
     #@+node:ekr.20240702085302.137: *4* Checker.GLOBAL & NONLOCAL
     def GLOBAL(self, node):
         """
@@ -2195,6 +2230,19 @@ class Checker:
                                               module, alias.name)
             self.addBinding(node, importation)
 
+    #@+node:ekr.20240704160233.1: *4* Checker.KEYWORD (**new)
+    if 0:  # Legacy.
+        KEYWORD = handleChildren
+    else:
+        
+        def KEYWORD(self, node):
+            if 0:  # works.
+                for child in iter_child_nodes(node):  ###, omit=omit):
+                    self.handleNode(child, node)
+            else:  # works.
+                child = getattr(node, 'value', None)
+                self.handleNode(child, node)
+
     #@+node:ekr.20240702085302.133: *4* Checker.JOINEDSTR
     _in_fstring = False
 
@@ -2287,6 +2335,21 @@ class Checker:
             # Unknown context
             raise RuntimeError(f"Got impossible expression context: {node.ctx!r}")
 
+    #@+node:ekr.20240704160940.1: *4* Checker.NAMEDEXPR (*new*)
+    if 0:  # Legacy.
+         NAMEDEXPR = handleChildren
+    else:
+        
+        def NAMEDEXPR(self, node):
+            if 0:  # Works.
+                self.handleChildren(node)
+            elif 0:  # Works.
+                for child in iter_child_nodes(node):  ###, omit=omit):
+                    self.handleNode(child, node)
+            else:
+                for field in ('value', 'target'):  # value first.
+                    child = getattr(node, field, None)
+                    self.handleNode(child, node)
     #@+node:ekr.20240702085302.131: *4* Checker.RAISE
     def RAISE(self, node):
         self.handleChildren(node)
