@@ -33,10 +33,7 @@ if 1:
     from leo.core import leoGlobals as g
     assert g
 
-#@+<< checker.py: NEW switch >>
-#@+node:ekr.20240704060555.1: ** << checker.py: NEW switch >>
-NEW = False  ### True: new visitor code.
-#@-<< checker.py: NEW switch >>
+# < < checker.py: NEW switch > >
 #@+<< checker.py: globals >>
 #@+node:ekr.20240702085302.2: ** << checker.py: globals >>
 PYPY = hasattr(sys, 'pypy_version_info')
@@ -62,42 +59,6 @@ TYPING_MODULES = frozenset(('typing', 'typing_extensions'))
 
 
 #@+others
-#@+node:ekr.20240703053633.1: ** checker.py: Pass1
-class Pass1(ast.NodeVisitor):
-    
-    #@+others
-    #@+node:ekr.20240703055551.1: *3* OuterVisitor.__init__
-    def __init__(self) -> None:
-        
-        pass  ### Compute fields using _FieldOrder.
-    #@+node:ekr.20240703055658.1: *3* OuterVisitor.visit (to do)
-    def visit(self, node: Node) -> None:
-        """
-        Visit a node. The default implementation calls the method called
-        self.visit_classname where classname is the name of the node class,
-        or generic_visit() if that method doesn’t exist.
-        """
-        if node is not None:
-            pass  ### To do.
-
-    #@+node:ekr.20240703055658.2: *3* OuterVisitor.generic_visit
-    def generic_visit(self, node: Node) -> None:
-        """
-        This visitor calls visit() on all direct children of the node.
-        """
-        for field in self.fields_dict[Node.__class__.__name__]:
-            child = getattr(node, field, None)
-            if child:
-                self.visit(child)
-    #@+node:ekr.20240703055659.1: *3* OuterVisitor.visit_Constant
-    def visit_Constant(self, node: Node) -> None:
-        """
-        Handles all constant nodes.
-        """
-        pass  # There is nothing to do.
-    #@-others
-    
-    
 #@+node:ekr.20240702105119.1: ** checker.py: Utility classes
 #@+node:ekr.20240702085302.14: *3* class _FieldsOrder(dict)
 class _FieldsOrder(dict):
@@ -118,7 +79,7 @@ class _FieldsOrder(dict):
         self[node_class] = fields = self._get_fields(node_class)
         # Any output here causes unit tests to fail.
         # For now, these tests have been skipped.
-        g.trace(f"{node_class.__name__:>20} {', '.join(fields)}")
+        # g.trace(f"{node_class.__name__:>20} {', '.join(fields)}")
         return fields
 
 
@@ -276,7 +237,7 @@ def parse_percent_format(s):
     return tuple(_parse_inner())
 
 
-#@+node:ekr.20240702085302.15: *3* function: ekr_/iter_child_nodes (Uses _FieldsOrder)
+#@+node:ekr.20240702085302.15: *3* function: iter_child_nodes (Uses _FieldsOrder)
 def iter_child_nodes(node, omit=None, _fields_order=_FieldsOrder()):
     """
     Yield all direct child nodes of *node*, that is, all fields that
@@ -298,18 +259,6 @@ def iter_child_nodes(node, omit=None, _fields_order=_FieldsOrder()):
             for item in field:
                 if isinstance(item, ast.AST):
                     yield item
-      
-def ekr_iter_child_nodes(node):
-    for name in node._fields:
-        field = getattr(node, name, None)
-        if isinstance(field, ast.AST):
-            yield field
-        elif isinstance(field, list):
-            for item in field:
-                if isinstance(item, ast.AST):
-                    yield item
-
-
 #@+node:ekr.20240702085302.16: *3* function: convert_to_value
 def convert_to_value(item):
     if isinstance(item, ast.Constant):
@@ -915,17 +864,11 @@ class Checker:
             scope_tp = Checker._ast_node_scope[type(tree)]
         except KeyError:
             raise RuntimeError('No scope implemented for the node %r' % tree)
-            
-        if NEW:
-            pass1 = Pass1()
 
         with self.in_scope(scope_tp):
             for builtin in self.builtIns:
                 self.addBinding(None, Builtin(builtin))
-            if NEW:
-                pass1.visit(tree)
-            else:
-                self.handleChildren(tree)
+            self.handleChildren(tree)
             self._run_deferred()
 
         self.checkDeadScopes()
@@ -2123,13 +2066,37 @@ class Checker:
 
     ASYNCFUNCTIONDEF = FUNCTIONDEF
 
-    #@+node:ekr.20240702085302.138: *4* Checker.GENERATOREXP & *COMP
+    #@+node:ekr.20240702085302.138: *4* Checker.GENERATOREXP & *COMP (changed)
     def GENERATOREXP(self, node):
         with self.in_scope(GeneratorScope):
-            self.handleChildren(node)
+            if 0:  # Original
+                self.handleChildren(node)
+            elif 0:  # Works.
+                for child in iter_child_nodes(node):  ###, omit=omit):
+                    self.handleNode(child, node)
+            else:  # Works.
+                generators = getattr(node, 'generators', [])
+                elt = getattr(node, 'elt', None)
+                for generator in generators:
+                    self.handleNode(generator, node)
+                self.handleNode(elt, node) 
 
-    LISTCOMP = DICTCOMP = SETCOMP = GENERATOREXP
+    LISTCOMP = SETCOMP = GENERATOREXP
+    ### DICTCOMP = GENERATOREXP
 
+    def DICTCOMP(self, node):
+        with self.in_scope(GeneratorScope):
+            if 0:  # Works.
+                for child in iter_child_nodes(node):  ###, omit=omit):
+                    self.handleNode(child, node)
+            else:
+                generators = getattr(node, 'generators', [])
+                key = getattr(node, 'key', None)
+                value = getattr(node, 'value', None)
+                for generator in generators:
+                    self.handleNode(generator, node)
+                self.handleNode(key, node)
+                self.handleNode(value, node)
     #@+node:ekr.20240702085302.137: *4* Checker.GLOBAL & NONLOCAL
     def GLOBAL(self, node):
         """
