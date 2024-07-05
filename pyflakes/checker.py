@@ -1234,8 +1234,6 @@ class Checker:
     BOOLOP = UNARYOP = SET = STARRED = NAMECONSTANT = handleChildren
 
     # additional node types
-    KEYWORD = handleChildren
-
     MATCH = MATCH_CASE = MATCHCLASS = MATCHOR = MATCHSEQUENCE = handleChildren
     MATCHSINGLETON = MATCHVALUE = handleChildren
 
@@ -2197,14 +2195,12 @@ class Checker:
             self.addBinding(node, importation)
 
     #@+node:ekr.20240704160233.1: *4* Checker.KEYWORD (new)
-    if 0:  # Legacy.
-        KEYWORD = handleChildren
-    else:
+    def KEYWORD(self, node):
         
-        def KEYWORD(self, node):
-            # node.arg is a string.
-            child = getattr(node, 'value', None)
-            self.handleNode(child, node)
+        # Faster than handle_Children.
+        # node.arg is a string.
+        child = getattr(node, 'value', None)
+        self.handleNode(child, node)
 
     #@+node:ekr.20240702085302.133: *4* Checker.JOINEDSTR
     _in_fstring = False
@@ -2224,7 +2220,7 @@ class Checker:
         finally:
             self._in_fstring = orig
 
-    #@+node:ekr.20240702085302.144: *4* Checker.LAMBDA  omit=('decorator_list', 'returns', 'type_params')
+    #@+node:ekr.20240702085302.144: *4* Checker.LAMBDA (unchanged)
     def LAMBDA(self, node):
         args = []
         annotations = []
@@ -2309,14 +2305,12 @@ class Checker:
             raise RuntimeError(f"Got impossible expression context: {node.ctx!r}")
 
     #@+node:ekr.20240704160940.1: *4* Checker.NAMEDEXPR (new)
-    if 0:  # Legacy. Works.
-         NAMEDEXPR = handleChildren
-    else:
+    def NAMEDEXPR(self, node):
         
-        def NAMEDEXPR(self, node):
-            for field in ('value', 'target'):  # value first.
-                child = getattr(node, field, None)
-                self.handleNode(child, node)
+        # Order matters.
+        for field in ('value', 'target'):
+            child = getattr(node, field, None)
+            self.handleNode(child, node)
     #@+node:ekr.20240702085302.131: *4* Checker.RAISE
     def RAISE(self, node):
         self.handleChildren(node)
