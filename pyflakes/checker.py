@@ -1601,25 +1601,21 @@ class Checker:
             self.report(messages.AssertTuple, node)
         self.handleChildren(node)
 
-    #@+node:ekr.20240704151835.1: *4* Checker.ASSIGN  (**new**)
+    #@+node:ekr.20240704151835.1: *4* Checker.ASSIGN  (new)
     if 0:  # Legacy.
         ASSIGN = handleChildren
     else:
         
         def ASSIGN(self, node):
-            
-            if 0:  # Works.
-                for child in iter_child_nodes(node):  ###, omit=omit):
-                    self.handleNode(child, node)
-            else:  # Works.
-                value = getattr(node, 'value', None)
-                targets = getattr(node, 'targets', [])
-                # type_comment = getattr(node, 'type_comment', None)
-                self.handleNode(value, node)  # Value first.
-                for target in targets:
-                    self.handleNode(target, node)
-                # self.handleNode(type_comment, node)
-    #@+node:ekr.20240704165918.1: *4* Checker.ATTRIBUTE (*new*)
+
+            value = getattr(node, 'value', None)
+            targets = getattr(node, 'targets', [])
+            # type_comment = getattr(node, 'type_comment', None)
+            self.handleNode(value, node)  # Value first.
+            for target in targets:
+                self.handleNode(target, node)
+            # self.handleNode(type_comment, node)
+    #@+node:ekr.20240704165918.1: *4* Checker.ATTRIBUTE (new)
     if 0:  # Legacy
         ATTRIBUTE = handleChildren
     else:
@@ -1993,7 +1989,7 @@ class Checker:
 
         self.handleChildren(node)
 
-    #@+node:ekr.20240705064837.1: *4* Checker.COMPREHENSION (*new*)
+    #@+node:ekr.20240705064837.1: *4* Checker.COMPREHENSION (new)
     if 0:  # Legacy.
         COMPREHENSION = handleChildren
         
@@ -2124,7 +2120,7 @@ class Checker:
         if prev_definition:
             self.scope[node.name] = prev_definition
 
-    #@+node:ekr.20240704150603.1: *4* Checker.FOR & ASYNCFOR  (**new**) 
+    #@+node:ekr.20240704150603.1: *4* Checker.FOR & ASYNCFOR  (new) 
     if 0:  ### Legacy.  Works.
         FOR = handleChildren
     else:
@@ -2152,7 +2148,7 @@ class Checker:
                         self.handleNode(node, tree)
 
     ASYNCFOR = FOR
-    #@+node:ekr.20240705070528.1: *4* Checker.FORMATTEDVALUE (**new**)
+    #@+node:ekr.20240705070528.1: *4* Checker.FORMATTEDVALUE (new)
     if 0:  # legacy.
         FORMATTEDVALUE = handleChildren
     else:
@@ -2312,7 +2308,7 @@ class Checker:
                                               module, alias.name)
             self.addBinding(node, importation)
 
-    #@+node:ekr.20240704160233.1: *4* Checker.KEYWORD (**new)
+    #@+node:ekr.20240704160233.1: *4* Checker.KEYWORD (new)
     if 0:  # Legacy.
         KEYWORD = handleChildren
     else:
@@ -2425,7 +2421,7 @@ class Checker:
             # Unknown context
             raise RuntimeError(f"Got impossible expression context: {node.ctx!r}")
 
-    #@+node:ekr.20240704160940.1: *4* Checker.NAMEDEXPR (*new*)
+    #@+node:ekr.20240704160940.1: *4* Checker.NAMEDEXPR (new)
     if 0:  # Legacy.
          NAMEDEXPR = handleChildren
     else:
@@ -2468,7 +2464,7 @@ class Checker:
             self.scope.returnValue = node.value
         self.handleNode(node.value, node)
 
-    #@+node:ekr.20240702085302.125: *4* Checker.SUBSCRIPT (*changed*)
+    #@+node:ekr.20240702085302.125: *4* Checker.SUBSCRIPT (changed)
     def SUBSCRIPT(self, node):
      
         def do_subscript():  ### Temp(?) helper.
