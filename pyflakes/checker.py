@@ -2458,11 +2458,22 @@ class Checker:
             self.scope.returnValue = node.value
         self.handleNode(node.value, node)
 
-    #@+node:ekr.20240702085302.125: *4* Checker.SUBSCRIPT (*revise*)
+    #@+node:ekr.20240702085302.125: *4* Checker.SUBSCRIPT (*changed*)
     def SUBSCRIPT(self, node):
+        
+        def handle_subscript():  ### Temp(?) helper.
+            if 0:  # legacy.
+                self.handleChildren(node)
+            else:
+                for field in ('value', 'slice'):
+                    child = getattr(node, field, None)
+                    self.handleNode(child, node)
+
         if _is_name_or_attr(node.value, 'Literal'):
             with self._enter_annotation(AnnotationState.NONE):
-                self.handleChildren(node)
+                # self.handleChildren(node)
+                handle_subscript()
+
         elif _is_name_or_attr(node.value, 'Annotated'):
             self.handleNode(node.value, node)
 
@@ -2493,9 +2504,11 @@ class Checker:
         else:
             if _is_any_typing_member(node.value, self.scopeStack):
                 with self._enter_annotation():
-                    self.handleChildren(node)
+                    ### self.handleChildren(node)
+                    handle_subscript()
             else:
-                self.handleChildren(node)
+                ### self.handleChildren(node)
+                handle_subscript()
 
     #@+node:ekr.20240702085302.152: *4* Checker.TRY & TRYSTAR omit='body'
     def TRY(self, node):
