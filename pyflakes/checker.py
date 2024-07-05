@@ -1305,7 +1305,7 @@ class Checker:
     BOOLOP = UNARYOP = SET = STARRED = NAMECONSTANT = handleChildren
 
     # additional node types
-    KEYWORD = FORMATTEDVALUE = handleChildren
+    KEYWORD = handleChildren
 
     MATCH = MATCH_CASE = MATCHCLASS = MATCHOR = MATCHSEQUENCE = handleChildren
     MATCHSINGLETON = MATCHVALUE = handleChildren
@@ -2152,6 +2152,16 @@ class Checker:
                         self.handleNode(node, tree)
 
     ASYNCFOR = FOR
+    #@+node:ekr.20240705070528.1: *4* Checker.FORMATTEDVALUE (**new**)
+    if 0:  # legacy.
+        FORMATTEDVALUE = handleChildren
+    else:
+        
+        def FORMATTEDVALUE(self, node):
+            # node.conversion is an int.
+            for field in ('value', 'format_spec'):
+                child = getattr(node, field, None)
+                self.handleNode(child, node)
     #@+node:ekr.20240702085302.143: *4* Checker.FUNCTIONDEF & ASYNCFUNCTIONDEF
     def FUNCTIONDEF(self, node):
         for deco in node.decorator_list:
@@ -2460,11 +2470,11 @@ class Checker:
 
     #@+node:ekr.20240702085302.125: *4* Checker.SUBSCRIPT (*changed*)
     def SUBSCRIPT(self, node):
-        
-        def handle_subscript():  ### Temp(?) helper.
+     
+        def do_subscript():  ### Temp(?) helper.
             if 0:  # legacy.
                 self.handleChildren(node)
-            else:
+            else:  # works.
                 for field in ('value', 'slice'):
                     child = getattr(node, field, None)
                     self.handleNode(child, node)
@@ -2472,7 +2482,7 @@ class Checker:
         if _is_name_or_attr(node.value, 'Literal'):
             with self._enter_annotation(AnnotationState.NONE):
                 # self.handleChildren(node)
-                handle_subscript()
+                do_subscript()
 
         elif _is_name_or_attr(node.value, 'Annotated'):
             self.handleNode(node.value, node)
@@ -2505,10 +2515,10 @@ class Checker:
             if _is_any_typing_member(node.value, self.scopeStack):
                 with self._enter_annotation():
                     ### self.handleChildren(node)
-                    handle_subscript()
+                    do_subscript()
             else:
                 ### self.handleChildren(node)
-                handle_subscript()
+                do_subscript()
 
     #@+node:ekr.20240702085302.152: *4* Checker.TRY & TRYSTAR omit='body'
     def TRY(self, node):
