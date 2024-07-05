@@ -1211,7 +1211,7 @@ class Checker:
         else:
             self.handleNode(annotation, node)
 
-    #@+node:ekr.20240702085302.112: *4* Checker.handleChildren & synonyms ****
+    #@+node:ekr.20240702085302.112: *4* Checker.handleChildren & synonyms
     def handleChildren(self, tree, omit=None):  
         for field in tree.__class__._fields:
             if omit and field in omit:
@@ -1526,14 +1526,12 @@ class Checker:
             self.handleNode(target, node)
         # self.handleNode(type_comment, node)
     #@+node:ekr.20240704165918.1: *4* Checker.ATTRIBUTE (new)
-    if 0:  # Legacy
-        ATTRIBUTE = handleChildren
-    else:
+    def ATTRIBUTE(self, node):
         
-        def ATTRIBUTE(self, node):
-            # attr is a string.
-            value = getattr(node, 'value', None)
-            self.handleNode(value, node)
+        # Faster than handleChildren.
+        # attr is a string.
+        value = getattr(node, 'value', None)
+        self.handleNode(value, node)
     #@+node:ekr.20240702085302.148: *4* Checker.AUGASSIGN
     def AUGASSIGN(self, node):
         self.handleNodeLoad(node.target, node)
