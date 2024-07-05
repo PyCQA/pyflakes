@@ -2156,7 +2156,7 @@ class Checker:
 
     ASYNCFUNCTIONDEF = FUNCTIONDEF
 
-    #@+node:ekr.20240702085302.138: *4* Checker.GENERATOREXP & *COMP (changed)
+    #@+node:ekr.20240702085302.138: *4* Checker.GENERATOREXP, LISTCOMP, SETCOMP(changed)
     def GENERATOREXP(self, node):
         with self.in_scope(GeneratorScope):
             if 0:  # Original
@@ -2173,9 +2173,9 @@ class Checker:
 
     LISTCOMP = SETCOMP = GENERATOREXP
 
-    if 1:  # Legacy.
+    if 0:  # Legacy.
         DICTCOMP = GENERATOREXP
-    else:
+    else:  # Works.
 
         def DICTCOMP(self, node):
             with self.in_scope(GeneratorScope):
@@ -2444,7 +2444,7 @@ class Checker:
             self.scope.returnValue = node.value
         self.handleNode(node.value, node)
 
-    #@+node:ekr.20240702085302.125: *4* Checker.SUBSCRIPT
+    #@+node:ekr.20240702085302.125: *4* Checker.SUBSCRIPT (*revise*)
     def SUBSCRIPT(self, node):
         if _is_name_or_attr(node.value, 'Literal'):
             with self._enter_annotation(AnnotationState.NONE):
