@@ -1507,17 +1507,18 @@ class Checker:
         parent_stmt = self.getParent(node)
         if isinstance(parent_stmt, ast.AnnAssign) and parent_stmt.value is None:
             binding = Annotation(name, node)
-        elif isinstance(parent_stmt, (FOR_TYPES, ast.comprehension)) or (
-                parent_stmt != node._pyflakes_parent and
-                not self.isLiteralTupleUnpacking(parent_stmt)):
+        elif (
+            isinstance(parent_stmt, (FOR_TYPES, ast.comprehension))
+            or (
+                parent_stmt != node._pyflakes_parent
+                and not self.isLiteralTupleUnpacking(parent_stmt)
+            )
+        ):
             binding = Binding(name, node)
         elif (
-                name == '__all__' and
-                isinstance(self.scope, ModuleScope) and
-                isinstance(
-                    node._pyflakes_parent,
-                    (ast.Assign, ast.AugAssign, ast.AnnAssign)
-                )
+            name == '__all__'
+            and isinstance(self.scope, ModuleScope)
+            and isinstance(node._pyflakes_parent, (ast.Assign, ast.AugAssign, ast.AnnAssign))
         ):
             binding = ExportBinding(name, node._pyflakes_parent, self.scope)
         elif isinstance(parent_stmt, ast.NamedExpr):
@@ -1758,9 +1759,13 @@ class Checker:
             self._handle_string_dot_format(node)
             
         def do_call_children(node2, omit=None):
+            # Call(expr func, expr* args, keyword* keywords)
             if 1:  # Legacy.
+                if False and omit:
+                    g.trace(f"{node2.__class__.__name__:12} {omit!r}") #  {g.callers(2)}")
                 self.handleChildren(node2, omit=omit)
-                
+            else:
+                pass
 
         omit = []
         annotated = []
@@ -2416,8 +2421,11 @@ class Checker:
         # Locate the name in locals / function / globals scopes.
         if isinstance(node.ctx, ast.Load):
             self.handleNodeLoad(node, self.getParent(node))
-            if (node.id == 'locals' and isinstance(self.scope, FunctionScope) and
-                    isinstance(node._pyflakes_parent, ast.Call)):
+            if (
+                node.id == 'locals'
+                and isinstance(self.scope, FunctionScope)
+                and isinstance(node._pyflakes_parent, ast.Call)
+            ):
                 # we are doing locals() call in current scope
                 self.scope.usesLocals = True
         elif isinstance(node.ctx, ast.Store):
