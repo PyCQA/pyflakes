@@ -1747,7 +1747,7 @@ class Checker:
                     ', '.join(sorted(missing_keys)),
                 )
 
-    #@+node:ekr.20240702085302.127: *4* Checker.CALL & helper omit=('args', 'elts', 'keywords')
+    #@+node:ekr.20240702085302.127: *4* Checker.CALL & helper (REVISE)
     def CALL(self, node):
         if (
                 isinstance(node.func, ast.Attribute) and
@@ -1756,6 +1756,11 @@ class Checker:
                 node.func.attr == 'format'
         ):
             self._handle_string_dot_format(node)
+            
+        def do_call_children(node2, omit=None):
+            if 1:  # Legacy.
+                self.handleChildren(node2, omit=omit)
+                
 
         omit = []
         annotated = []
@@ -1822,15 +1827,17 @@ class Checker:
         if omit:
             with self._enter_annotation(AnnotationState.NONE):
                 for na_node, na_omit in not_annotated:
-                    self.handleChildren(na_node, omit=na_omit)
-                self.handleChildren(node, omit=omit)
+                    ### self.handleChildren(na_node, omit=na_omit)
+                    do_call_children(na_node, omit=na_omit)
+                ### self.handleChildren(node, omit=omit)
+                do_call_children(node, omit=omit)
 
             with self._enter_annotation():
                 for annotated_node in annotated:
                     self.handleNode(annotated_node, node)
         else:
-            self.handleChildren(node)
-
+            ### self.handleChildren(node)
+            do_call_children(node)
     #@+node:ekr.20240702085302.126: *5* Checker._handle_string_dot_format
     def _handle_string_dot_format(self, node):
         try:
