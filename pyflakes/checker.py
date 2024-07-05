@@ -1915,8 +1915,8 @@ class Checker:
         for field in ('iter', 'target'):  # iter first.
             child = getattr(node, field, None)
             self.handleNode(child, node)
-        ifs = getattr(node, 'ifs', [])
-        for if_statement in ifs:
+        if_statements = getattr(node, 'ifs', [])
+        for if_statement in if_statements:
             self.handleNode(if_statement, node)
     #@+node:ekr.20240702085302.130: *4* Checker.CONSTANT & related operators
     def CONSTANT(self, node):
@@ -2036,18 +2036,16 @@ class Checker:
             self.scope[node.name] = prev_definition
 
     #@+node:ekr.20240704150603.1: *4* Checker.FOR & ASYNCFOR  (new) 
-    if 0:  ### Legacy.  Works.
-        FOR = handleChildren
-    else:
-
-        def FOR(self, tree):
-            for field in ('iter', 'target', 'type_comment'):
-                node = getattr(tree, field, None)
-                self.handleNode(node, tree)
-            for field in ('body', 'orelse'):
-                node =  getattr(tree, field, [])
-                for z in node:
-                    self.handleNode(z, tree)
+    def FOR(self, tree):
+        
+        # Order matters.
+        for field in ('iter', 'target', 'type_comment'):
+            node = getattr(tree, field, None)
+            self.handleNode(node, tree)
+        for field in ('body', 'orelse'):
+            node =  getattr(tree, field, [])
+            for z in node:
+                self.handleNode(z, tree)
 
     ASYNCFOR = FOR
     #@+node:ekr.20240705070528.1: *4* Checker.FORMATTEDVALUE (new)
