@@ -60,40 +60,6 @@ TYPING_MODULES = frozenset(('typing', 'typing_extensions'))
 
 #@+others
 #@+node:ekr.20240702105119.1: ** checker.py: Utility classes
-#@+node:ekr.20240702085302.14: *3* class _FieldsOrder(dict)
-class _FieldsOrder(dict):
-    """Fix order of AST node fields."""
-
-    def _get_fields(self, node_class):
-        # handle iter before target, and generators before element
-        fields = list(node_class._fields)
-        for delete_field in ('ctx', 'is_async', 'format_spec'):
-            if delete_field in fields:
-                fields.remove(delete_field)
-        if 0:
-            return tuple(sorted(fields, reverse=True))
-        if 0:  # Fails
-            key_first = 'value'.find
-        else:
-            if 'iter' in fields:
-                key_first = 'iter'.find
-            elif 'generators' in fields:
-                key_first = 'generators'.find
-            else:
-                key_first = 'value'.find
-        return tuple(sorted(fields, key=key_first, reverse=True))
-
-    def __missing__(self, node_class):
-        self[node_class] = fields = self._get_fields(node_class)
-        # Any output here causes unit tests to fail.
-        # For now, these tests have been skipped.
-        if False and node_class.__name__ in ('Constant', 'keyword'):
-            g.trace(g.callers())
-        if len(fields) > 1 and any(z in fields for z in ('iter', 'generators', 'value')):
-            g.trace(f"{node_class.__name__:>20} {', '.join(fields):20} {g.callers()}")
-        return fields
-
-
 #@+node:ekr.20240702085302.70: *3* class DetectClassScopedMagic
 class DetectClassScopedMagic:
     names = dir()
@@ -248,30 +214,6 @@ def parse_percent_format(s):
     return tuple(_parse_inner())
 
 
-#@+node:ekr.20240702085302.15: *3* function: iter_child_nodes (Uses _FieldsOrder)
-def iter_child_nodes(node, omit=None, _fields_order=_FieldsOrder()):
-    """
-    Yield all direct child nodes of *node*, that is, all fields that
-    are nodes and all items of fields that are lists of nodes.
-
-    :param node:          AST node to be iterated upon
-    :param omit:          String or tuple of strings denoting the
-                          attributes of the node to be omitted from
-                          further parsing
-    :param _fields_order: Order of AST node fields
-    """
-    # g.trace(g.callers()) ###
-    for name in _fields_order[node.__class__]:
-        if omit and name in omit:
-            # g.trace('OMIT:', node.__class__.__name__, name, omit)  ###
-            continue
-        field = getattr(node, name, None)
-        if isinstance(field, ast.AST):
-            yield field
-        elif isinstance(field, list):
-            for item in field:
-                if isinstance(item, ast.AST):
-                    yield item
 #@+node:ekr.20240702085302.16: *3* function: convert_to_value
 def convert_to_value(item):
     if isinstance(item, ast.Constant):
@@ -1270,34 +1212,18 @@ class Checker:
             self.handleNode(annotation, node)
 
     #@+node:ekr.20240702085302.112: *4* Checker.handleChildren & synonyms ****
-    def handleChildren(self, tree, omit=None):
-        trace = False
-        if trace:
-            print('')
-            # g.trace('omit:', repr(omit))
-            fields = tree.__class__._fields
-            g.trace(tree.__class__.__name__, fields, g.callers())
-        if 1:
-            for field in tree.__class__._fields:
-                if omit and field in omit:
-                    continue
-                node = getattr(tree, field, None)
-                if isinstance(node, ast.AST):
-                    if trace:
-                        g.trace(field, repr(node))
-                    self.handleNode(node, tree) 
-                elif isinstance(node, list):
-                    for item in node:
-                        if trace:
-                            g.trace('item', item)
-                        if isinstance(item, ast.AST):
-                            self.handleNode(item, tree) 
-        else:  # Legacy.
-            for node in iter_child_nodes(tree, omit=omit):
-                if trace:
-                    g.trace(node.__class__.__name__)
-                self.handleNode(node, tree)
-                
+    def handleChildren(self, tree, omit=None):  
+        for field in tree.__class__._fields:
+            if omit and field in omit:
+                continue
+            node = getattr(tree, field, None)
+            if isinstance(node, ast.AST):
+                self.handleNode(node, tree) 
+            elif isinstance(node, list):
+                for item in node:
+                    if isinstance(item, ast.AST):
+                        self.handleNode(item, tree) 
+         
     ### New
     MODULE = handleChildren
             
@@ -1579,27 +1505,9 @@ class Checker:
         self.addBinding(node, Argument(node.arg, self.getScopeNode(node)))
 
     #@+node:ekr.20240702085302.145: *4* Checker.ARGUMENTS (Revise)
-    # arguments = (
-        # arg* posonlyargs, arg* args, arg? vararg, arg* kwonlyargs,
-        # expr* kw_defaults, arg? kwarg, expr* defaults)
-
     def ARGUMENTS(self, node):
-        omit=('defaults', 'kw_defaults')
-        if 0:
-            # g.trace(node)
-            # EKR: Unit tests fail w/o these omissions.
-            self.handleChildren(node, omit=omit)
-        elif 1:
-            for node2 in iter_child_nodes(node, omit=omit):
-                self.handleNode(node2, node)
-        else:
-            for field_name in (
-                'posonlyargs', 'args', 'vararg', 'kwonlyargs', 'kwarg',
-                # 'kw_defaults', 'defaults',
-            ):
-                child = getattr(node, field_name, None)
-                iter_child_nodes(child)
-                ### ekr_iter_child_nodes(child)
+        # EKR: Unit tests fail w/o these omissions.
+        self.handleChildren(node, omit=('defaults', 'kw_defaults'))
     #@+node:ekr.20240702085302.136: *4* Checker.ASSERT
     def ASSERT(self, node):
         if isinstance(node.test, ast.Tuple) and node.test.elts != []:
@@ -2414,20 +2322,14 @@ class Checker:
             raise RuntimeError(f"Got impossible expression context: {node.ctx!r}")
 
     #@+node:ekr.20240704160940.1: *4* Checker.NAMEDEXPR (new)
-    if 0:  # Legacy.
+    if 0:  # Legacy. Works.
          NAMEDEXPR = handleChildren
     else:
         
         def NAMEDEXPR(self, node):
-            if 0:  # Works.
-                self.handleChildren(node)
-            elif 0:  # Works.
-                for child in iter_child_nodes(node):  ###, omit=omit):
-                    self.handleNode(child, node)
-            else:
-                for field in ('value', 'target'):  # value first.
-                    child = getattr(node, field, None)
-                    self.handleNode(child, node)
+            for field in ('value', 'target'):  # value first.
+                child = getattr(node, field, None)
+                self.handleNode(child, node)
     #@+node:ekr.20240702085302.131: *4* Checker.RAISE
     def RAISE(self, node):
         self.handleChildren(node)
