@@ -2049,15 +2049,13 @@ class Checker:
 
     ASYNCFOR = FOR
     #@+node:ekr.20240705070528.1: *4* Checker.FORMATTEDVALUE (new)
-    if 0:  # legacy.
-        FORMATTEDVALUE = handleChildren
-    else:
+    def FORMATTEDVALUE(self, node):
         
-        def FORMATTEDVALUE(self, node):
-            # node.conversion is an int.
-            for field in ('value', 'format_spec'):
-                child = getattr(node, field, None)
-                self.handleNode(child, node)
+        # Faster than handleChildren.
+        # node.conversion is an int.
+        for field in ('value', 'format_spec'):
+            child = getattr(node, field, None)
+            self.handleNode(child, node)
     #@+node:ekr.20240702085302.143: *4* Checker.FUNCTIONDEF & ASYNCFUNCTIONDEF
     def FUNCTIONDEF(self, node):
         for deco in node.decorator_list:
