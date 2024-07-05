@@ -2342,13 +2342,11 @@ class Checker:
     #@+node:ekr.20240702085302.125: *4* Checker.SUBSCRIPT (changed)
     def SUBSCRIPT(self, node):
      
-        def do_subscript():  ### Temp(?) helper.
-            if 0:  # legacy.
-                self.handleChildren(node)
-            else:  # works.
-                for field in ('value', 'slice'):
-                    child = getattr(node, field, None)
-                    self.handleNode(child, node)
+        def do_subscript():
+            # Faster than handleChildren.
+            for field in ('value', 'slice'):
+                child = getattr(node, field, None)
+                self.handleNode(child, node)
 
         if _is_name_or_attr(node.value, 'Literal'):
             with self._enter_annotation(AnnotationState.NONE):
