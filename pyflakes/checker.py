@@ -1515,19 +1515,16 @@ class Checker:
         self.handleChildren(node)
 
     #@+node:ekr.20240704151835.1: *4* Checker.ASSIGN  (new)
-    if 0:  # Legacy.
-        ASSIGN = handleChildren
-    else:
-        
-        def ASSIGN(self, node):
+    def ASSIGN(self, node):
 
-            value = getattr(node, 'value', None)
-            targets = getattr(node, 'targets', [])
-            # type_comment = getattr(node, 'type_comment', None)
-            self.handleNode(value, node)  # Value first.
-            for target in targets:
-                self.handleNode(target, node)
-            # self.handleNode(type_comment, node)
+        # Order matters.
+        value = getattr(node, 'value', None)
+        targets = getattr(node, 'targets', [])
+        # type_comment = getattr(node, 'type_comment', None)
+        self.handleNode(value, node)  # Value first.
+        for target in targets:
+            self.handleNode(target, node)
+        # self.handleNode(type_comment, node)
     #@+node:ekr.20240704165918.1: *4* Checker.ATTRIBUTE (new)
     if 0:  # Legacy
         ATTRIBUTE = handleChildren
