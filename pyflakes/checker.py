@@ -260,6 +260,7 @@ def iter_child_nodes(node, omit=None, _fields_order=_FieldsOrder()):
                           further parsing
     :param _fields_order: Order of AST node fields
     """
+    # g.trace(g.callers()) ###
     for name in _fields_order[node.__class__]:
         if omit and name in omit:
             # g.trace('OMIT:', node.__class__.__name__, name, omit)  ###
@@ -1276,8 +1277,10 @@ class Checker:
             # g.trace('omit:', repr(omit))
             fields = tree.__class__._fields
             g.trace(tree.__class__.__name__, fields, g.callers())
-        if 0:
+        if 1:
             for field in tree.__class__._fields:
+                if omit and field in omit:
+                    continue
                 node = getattr(tree, field, None)
                 if isinstance(node, ast.AST):
                     if trace:
@@ -1575,18 +1578,19 @@ class Checker:
     def ARG(self, node):
         self.addBinding(node, Argument(node.arg, self.getScopeNode(node)))
 
-    #@+node:ekr.20240702085302.145: *4* Checker.ARGUMENTS   omit=('defaults', 'kw_defaults')
+    #@+node:ekr.20240702085302.145: *4* Checker.ARGUMENTS (Revise)
     # arguments = (
         # arg* posonlyargs, arg* args, arg? vararg, arg* kwonlyargs,
         # expr* kw_defaults, arg? kwarg, expr* defaults)
 
     def ARGUMENTS(self, node):
+        omit=('defaults', 'kw_defaults')
         if 0:
             # g.trace(node)
             # EKR: Unit tests fail w/o these omissions.
-            self.handleChildren(node, omit=('defaults', 'kw_defaults'))
+            self.handleChildren(node, omit=omit)
         elif 1:
-            for node2 in iter_child_nodes(node, omit=('defaults', 'kw_defaults')):
+            for node2 in iter_child_nodes(node, omit=omit):
                 self.handleNode(node2, node)
         else:
             for field_name in (
@@ -1748,13 +1752,13 @@ class Checker:
                     ', '.join(sorted(missing_keys)),
                 )
 
-    #@+node:ekr.20240702085302.127: *4* Checker.CALL & helper (REVISE)
+    #@+node:ekr.20240702085302.127: *4* Checker.CALL & helper (Changed)
     def CALL(self, node):
         if (
-                isinstance(node.func, ast.Attribute) and
-                isinstance(node.func.value, ast.Constant) and
-                isinstance(node.func.value.value, str) and
-                node.func.attr == 'format'
+            isinstance(node.func, ast.Attribute)
+            and isinstance(node.func.value, ast.Constant)
+            and isinstance(node.func.value.value, str)
+            and node.func.attr == 'format'
         ):
             self._handle_string_dot_format(node)
             
@@ -2138,26 +2142,13 @@ class Checker:
     else:
 
         def FOR(self, tree):
-            if 0:  # Works.
-                for node in iter_child_nodes(tree):  ###, omit=omit):
-                    ### g.trace(node.__class__.__name__)
-                    self.handleNode(node, tree)
-            elif 1:  # Works.
-                for field in ('iter', 'target', 'type_comment'):
-                    node = getattr(tree, field, None)
-                    self.handleNode(node, tree)
-                for field in ('body', 'orelse'):
-                    node =  getattr(tree, field, [])
-                    for z in node:
-                        self.handleNode(z, tree)
-            else:  # Works.
-                for field in ('iter', 'target', 'body', 'orelse', 'type_comment'):
-                    node = getattr(tree, field, None)
-                    if isinstance(node, list):
-                        for z in node:
-                            self.handleNode(z, tree)
-                    else:  
-                        self.handleNode(node, tree)
+            for field in ('iter', 'target', 'type_comment'):
+                node = getattr(tree, field, None)
+                self.handleNode(node, tree)
+            for field in ('body', 'orelse'):
+                node =  getattr(tree, field, [])
+                for z in node:
+                    self.handleNode(z, tree)
 
     ASYNCFOR = FOR
     #@+node:ekr.20240705070528.1: *4* Checker.FORMATTEDVALUE (new)
@@ -2191,17 +2182,11 @@ class Checker:
     #@+node:ekr.20240702085302.138: *4* Checker.GENERATOREXP, DICTCOMP, LISTCOMP, SETCOMP(changed)
     def GENERATOREXP(self, node):
         with self.in_scope(GeneratorScope):
-            if 0:  # Original
-                self.handleChildren(node)
-            elif 0:  # Works.
-                for child in iter_child_nodes(node):  ###, omit=omit):
-                    self.handleNode(child, node)
-            else:  # Works.
-                generators = getattr(node, 'generators', [])
-                elt = getattr(node, 'elt', None)
-                for generator in generators:
-                    self.handleNode(generator, node)
-                self.handleNode(elt, node) 
+            generators = getattr(node, 'generators', [])
+            elt = getattr(node, 'elt', None)
+            for generator in generators:
+                self.handleNode(generator, node)
+            self.handleNode(elt, node) 
 
     LISTCOMP = SETCOMP = GENERATOREXP
 
@@ -2211,17 +2196,13 @@ class Checker:
 
         def DICTCOMP(self, node):
             with self.in_scope(GeneratorScope):
-                if 0:  # Works.
-                    for child in iter_child_nodes(node):  ###, omit=omit):
-                        self.handleNode(child, node)
-                else:
-                    generators = getattr(node, 'generators', [])
-                    key = getattr(node, 'key', None)
-                    value = getattr(node, 'value', None)
-                    for generator in generators:  # generators first.
-                        self.handleNode(generator, node)
-                    self.handleNode(key, node)
-                    self.handleNode(value, node)
+                generators = getattr(node, 'generators', [])
+                key = getattr(node, 'key', None)
+                value = getattr(node, 'value', None)
+                for generator in generators:  # generators first.
+                    self.handleNode(generator, node)
+                self.handleNode(key, node)
+                self.handleNode(value, node)
     #@+node:ekr.20240702085302.137: *4* Checker.GLOBAL & NONLOCAL
     def GLOBAL(self, node):
         """
@@ -2326,13 +2307,9 @@ class Checker:
     else:
         
         def KEYWORD(self, node):
-            if 0:  # works.
-                for child in iter_child_nodes(node):  ###, omit=omit):
-                    self.handleNode(child, node)
-            else:  # works.
-                # node.arg is a string.
-                child = getattr(node, 'value', None)
-                self.handleNode(child, node)
+            # node.arg is a string.
+            child = getattr(node, 'value', None)
+            self.handleNode(child, node)
 
     #@+node:ekr.20240702085302.133: *4* Checker.JOINEDSTR
     _in_fstring = False
