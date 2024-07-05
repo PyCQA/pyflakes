@@ -1268,16 +1268,35 @@ class Checker:
         else:
             self.handleNode(annotation, node)
 
-    #@+node:ekr.20240702085302.112: *4* Checker.handleChildren & synonyms
+    #@+node:ekr.20240702085302.112: *4* Checker.handleChildren & synonyms ****
     def handleChildren(self, tree, omit=None):
-        trace = False and omit
+        trace = False
         if trace:
             print('')
-            g.trace(repr(omit))
-        for node in iter_child_nodes(tree, omit=omit):
-            if trace:
-                g.trace(tree.__class__.__name__)
-            self.handleNode(node, tree)
+            # g.trace('omit:', repr(omit))
+            fields = tree.__class__._fields
+            g.trace(tree.__class__.__name__, fields, g.callers())
+        if 0:
+            for field in tree.__class__._fields:
+                node = getattr(tree, field, None)
+                if isinstance(node, ast.AST):
+                    if trace:
+                        g.trace(field, repr(node))
+                    self.handleNode(node, tree) 
+                elif isinstance(node, list):
+                    for item in node:
+                        if trace:
+                            g.trace('item', item)
+                        if isinstance(item, ast.AST):
+                            self.handleNode(item, tree) 
+        else:  # Legacy.
+            for node in iter_child_nodes(tree, omit=omit):
+                if trace:
+                    g.trace(node.__class__.__name__)
+                self.handleNode(node, tree)
+                
+    ### New
+    MODULE = handleChildren
             
     # "stmt" type nodes
     DELETE = WHILE = WITH = WITHITEM = ASYNCWITH = EXPR = handleChildren
