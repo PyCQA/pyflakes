@@ -1211,7 +1211,7 @@ class Checker:
         else:
             self.handleNode(annotation, node)
 
-    #@+node:ekr.20240702085302.112: *4* Checker.handleChildren & synonyms
+    #@+node:ekr.20240702085302.112: *4* Checker.handleChildren & synonyms (changed)
     def handleChildren(self, tree, omit=None):
         """Do not call handleChildren if the order of visiting fields matters!"""
         for field in tree.__class__._fields:
@@ -1499,7 +1499,7 @@ class Checker:
     def ARG(self, node):
         self.addBinding(node, Argument(node.arg, self.getScopeNode(node)))
 
-    #@+node:ekr.20240702085302.145: *4* Checker.ARGUMENTS (Revise)
+    #@+node:ekr.20240702085302.145: *4* Checker.ARGUMENTS (changed)
     def ARGUMENTS(self, node):
         # EKR: Unit tests fail w/o these omissions.
         self.handleChildren(node, omit=('defaults', 'kw_defaults'))
