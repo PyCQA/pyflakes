@@ -1212,7 +1212,8 @@ class Checker:
             self.handleNode(annotation, node)
 
     #@+node:ekr.20240702085302.112: *4* Checker.handleChildren & synonyms
-    def handleChildren(self, tree, omit=None):  
+    def handleChildren(self, tree, omit=None):
+        """Do not call handleChildren if the order of visiting fields matters!"""
         for field in tree.__class__._fields:
             if omit and field in omit:
                 continue
@@ -1223,24 +1224,20 @@ class Checker:
                 for item in node:
                     if isinstance(item, ast.AST):
                         self.handleNode(item, tree) 
-         
-    ### New
-    MODULE = handleChildren
             
-    # "stmt" type nodes
+    # "stmt" type nodes.
+    MODULE = handleChildren
     DELETE = WHILE = WITH = WITHITEM = ASYNCWITH = EXPR = handleChildren
 
     # "expr" type nodes
     BOOLOP = UNARYOP = SET = STARRED = NAMECONSTANT = handleChildren
 
-    # additional node types
+    # "match" type nodes.
     MATCH = MATCH_CASE = MATCHCLASS = MATCHOR = MATCHSEQUENCE = handleChildren
     MATCHSINGLETON = MATCHVALUE = handleChildren
 
-    # "slice" type nodes
+    # "slice" type nodes.
     SLICE = EXTSLICE = INDEX = handleChildren
-
-
     #@+node:ekr.20240702085302.120: *4* Checker.handleDoctests
     _getDoctestExamples = doctest.DocTestParser().get_examples
 
