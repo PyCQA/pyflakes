@@ -1220,6 +1220,7 @@ class Checker:
         """Do not call handleChildren if the order of visiting fields matters!"""
         for field in tree.__class__._fields:
             if omit and field in omit:
+                ### g.trace(f"{g.callers(1):>14} {field:>12} {omit!r}")
                 continue
             node = getattr(tree, field, None)
             if isinstance(node, ast.AST):
@@ -1506,6 +1507,7 @@ class Checker:
     #@+node:ekr.20240702085302.145: *4* Checker.ARGUMENTS (changed)
     def ARGUMENTS(self, node):
         # EKR: Unit tests fail w/o these omissions.
+        ### g.trace(g.callers(2), node.__class__.__name__)
         self.handleChildren(node, omit=('defaults', 'kw_defaults'))
     #@+node:ekr.20240702085302.136: *4* Checker.ASSERT
     def ASSERT(self, node):
@@ -1666,21 +1668,14 @@ class Checker:
             
         def do_call_children(node2, omit=None):
             # Call(expr func, expr* args, keyword* keywords)
-            if 1:  # Legacy.
-                if False and omit:
-                    g.trace(f"{node2.__class__.__name__:12} {omit!r}") #  {g.callers(2)}")
-                self.handleChildren(node2, omit=omit)
-            else:
-                pass
+            ### g.trace(f"{node2.__class__.__name__:>12} {omit!r}") #  {g.callers(2)}")
+            self.handleChildren(node2, omit=omit)
 
         omit = []
         annotated = []
         not_annotated = []
 
-        if (
-            _is_typing(node.func, 'cast', self.scopeStack) and
-            len(node.args) >= 1
-        ):
+        if len(node.args) >= 1 and _is_typing(node.func, 'cast', self.scopeStack):
             with self._enter_annotation():
                 self.handleNode(node.args[0], node)
 
@@ -2221,7 +2216,7 @@ class Checker:
         finally:
             self._in_fstring = orig
 
-    #@+node:ekr.20240702085302.144: *4* Checker.LAMBDA (unchanged)
+    #@+node:ekr.20240702085302.144: *4* Checker.LAMBDA & runFunction (unchanged)
     def LAMBDA(self, node):
         args = []
         annotations = []
