@@ -1700,8 +1700,7 @@ class Checker:
             if 0:  ### Legacy.
                 self.handleChildren(node2, omit=omit)
             else:
-                if omit is None:
-                    omit = []
+                omit = omit or []
                 fields = [z for z in node2._fields if z not in omit]
                 self.handleFields(node2, fields)
 
