@@ -1508,7 +1508,28 @@ class Checker:
     def ARGUMENTS(self, node):
         # EKR: Unit tests fail w/o these omissions.
         ### g.trace(g.callers(2), node.__class__.__name__)
-        self.handleChildren(node, omit=('defaults', 'kw_defaults'))
+        
+        if 0:  ### Legacy
+            self.handleChildren(node, omit=('defaults', 'kw_defaults'))
+        else:
+            # arguments = (arg* posonlyargs, arg* args, arg? vararg, arg* kwonlyargs,
+            #              expr* kw_defaults, arg? kwarg, expr* defaults)
+            if 1:  # Works.
+                fields = ('posonlyargs', 'args', 'vararg', 'kwonlyargs', 'kwarg')
+            else:  # Works.
+                fields = list(node._fields)
+                for z in ('defaults', 'kw_defaults'):
+                    if z in fields:
+                        fields.remove(z)
+            ### g.trace(fields)
+            for field in fields:
+                child = getattr(node, field, None)
+                if isinstance(child, ast.AST):
+                    self.handleNode(child, node) 
+                elif isinstance(child, list):
+                    for item in child:
+                        if isinstance(item, ast.AST):
+                            self.handleNode(item, node) 
     #@+node:ekr.20240702085302.136: *4* Checker.ASSERT
     def ASSERT(self, node):
         if isinstance(node.test, ast.Tuple) and node.test.elts != []:
@@ -2385,7 +2406,7 @@ class Checker:
                 ### self.handleChildren(node)
                 do_subscript()
 
-    #@+node:ekr.20240702085302.152: *4* Checker.TRY & TRYSTAR omit='body'
+    #@+node:ekr.20240702085302.152: *4* Checker.TRY & TRYSTAR omit='body' (revised)
     def TRY(self, node):
         handler_names = []
         # List the exception handlers
@@ -2406,7 +2427,7 @@ class Checker:
         # Process the other nodes: "except:", "else:", "finally:"
         if 0:  ### Legacy. Works.
             self.handleChildren(node, omit='body')
-        else:
+        else:  ### Works.
             for field in ('handlers', 'orelse', 'finalbody'):
                 statements = getattr(node, field, [])
                 for statement in statements:
