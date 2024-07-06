@@ -1216,9 +1216,9 @@ class Checker:
             self.handleNode(annotation, node)
 
     #@+node:ekr.20240702085302.112: *4* Checker.handleChildren & synonyms (changed)
-    def handleChildren(self, tree, omit=None):
+    def handleChildren(self, tree): ###, omit=None):
         """Do not call handleChildren if the order of visiting fields matters!"""
-        assert not omit, g.callers() ###
+        ### assert not omit, g.callers() ###
         if 1:  ### Legacy.
             for field in tree.__class__._fields:
                 ###
