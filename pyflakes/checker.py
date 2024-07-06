@@ -2404,7 +2404,13 @@ class Checker:
             self.handleNode(child, node)
         self.exceptHandlers.pop()
         # Process the other nodes: "except:", "else:", "finally:"
-        self.handleChildren(node, omit='body')
+        if 0:  ### Legacy. Works.
+            self.handleChildren(node, omit='body')
+        else:
+            for field in ('handlers', 'orelse', 'finalbody'):
+                statements = getattr(node, field, [])
+                for statement in statements:
+                    self.handleNode(statement, node)
 
     TRYSTAR = TRY
 
