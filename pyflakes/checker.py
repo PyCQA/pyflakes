@@ -1218,17 +1218,22 @@ class Checker:
     #@+node:ekr.20240702085302.112: *4* Checker.handleChildren & synonyms (changed)
     def handleChildren(self, tree, omit=None):
         """Do not call handleChildren if the order of visiting fields matters!"""
-        for field in tree.__class__._fields:
-            if omit and field in omit:
-                ### g.trace(f"{g.callers(1):>14} {field:>12} {omit!r}")
-                continue
-            node = getattr(tree, field, None)
-            if isinstance(node, ast.AST):
-                self.handleNode(node, tree) 
-            elif isinstance(node, list):
-                for item in node:
-                    if isinstance(item, ast.AST):
-                        self.handleNode(item, tree) 
+        assert not omit, g.callers() ###
+        if 1:  ### Legacy.
+            for field in tree.__class__._fields:
+                ###
+                # if omit and field in omit:
+                    # ### g.trace(f"{g.callers(1):>14} {field:>12} {omit!r}")
+                    # continue
+                node = getattr(tree, field, None)
+                if isinstance(node, ast.AST):
+                    self.handleNode(node, tree) 
+                elif isinstance(node, list):
+                    for item in node:
+                        if isinstance(item, ast.AST):
+                            self.handleNode(item, tree)
+        else:
+            self.handleFields(tree, node._fields)
             
     # "stmt" type nodes.
     MODULE = handleChildren
@@ -1692,9 +1697,13 @@ class Checker:
             self._handle_string_dot_format(node)
             
         def do_call_children(node2, omit=None):
-            # Call(expr func, expr* args, keyword* keywords)
-            ### g.trace(f"{node2.__class__.__name__:>12} {omit!r}") #  {g.callers(2)}")
-            self.handleChildren(node2, omit=omit)
+            if 0:  ### Legacy.
+                self.handleChildren(node2, omit=omit)
+            else:
+                if omit is None:
+                    omit = []
+                fields = [z for z in node2._fields if z not in omit]
+                self.handleFields(node2, fields)
 
         omit = []
         annotated = []
@@ -2404,7 +2413,7 @@ class Checker:
                 ### self.handleChildren(node)
                 do_subscript()
 
-    #@+node:ekr.20240702085302.152: *4* Checker.TRY & TRYSTAR omit='body' (revised)
+    #@+node:ekr.20240702085302.152: *4* Checker.TRY & TRYSTAR (revised)
     def TRY(self, node):
         handler_names = []
         # List the exception handlers
