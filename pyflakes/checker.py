@@ -810,6 +810,9 @@ class Checker:
         self.filename = filename
         if builtins:
             self.builtIns = self.builtIns.union(builtins)
+        if 0:  ###
+            g.trace(g.callers())
+            # g.printObj(self.builtIns, tag='Checker.builtIns')  ###
         self.withDoctest = withDoctest
         self.exceptHandlers = [()]
         self.root = tree
@@ -1057,6 +1060,7 @@ class Checker:
             if value.name in scope:
                 break
         existing = scope.get(value.name)
+        ### g.trace(node.__class__.__name__, value)
 
         if (existing and not isinstance(existing, Builtin) and
                 not self.differentForks(node, existing.source)):
