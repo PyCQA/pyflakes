@@ -1278,6 +1278,17 @@ class Checker:
                     self.offset = node_offset
         self.scopeStack = saved_stack
 
+    #@+node:ekr.20240706181836.1: *4* Checker.handleFields (NEW)
+    def handleFields(self, node, fields):
+        
+        for field in fields:
+            child = getattr(node, field, None)
+            if isinstance(child, ast.AST):
+                self.handleNode(child, node) 
+            elif isinstance(child, list):
+                for item in child:
+                    if isinstance(item, ast.AST):
+                        self.handleNode(item, node) 
     #@+node:ekr.20240702085302.119: *4* Checker.handleNode & synonyms
     def handleNode(self, node, parent):
         if node is None:
@@ -1521,15 +1532,8 @@ class Checker:
                 for z in ('defaults', 'kw_defaults'):
                     if z in fields:
                         fields.remove(z)
-            ### g.trace(fields)
-            for field in fields:
-                child = getattr(node, field, None)
-                if isinstance(child, ast.AST):
-                    self.handleNode(child, node) 
-                elif isinstance(child, list):
-                    for item in child:
-                        if isinstance(item, ast.AST):
-                            self.handleNode(item, node) 
+            self.handleFields(node, fields)
+            
     #@+node:ekr.20240702085302.136: *4* Checker.ASSERT
     def ASSERT(self, node):
         if isinstance(node.test, ast.Tuple) and node.test.elts != []:
@@ -2237,7 +2241,7 @@ class Checker:
         finally:
             self._in_fstring = orig
 
-    #@+node:ekr.20240702085302.144: *4* Checker.LAMBDA & runFunction (unchanged)
+    #@+node:ekr.20240702085302.144: *4* Checker.LAMBDA & runFunction (changed)
     def LAMBDA(self, node):
         args = []
         annotations = []
@@ -2276,18 +2280,12 @@ class Checker:
 
         def runFunction():
             with self.in_scope(FunctionScope):
-                ### g.trace(node.__class__.__name__)
-                if 1:  # Legacy.
-                    self.handleChildren(
-                        node,
-                        omit=('decorator_list', 'returns', 'type_params'),
-                    )
+                omit = ('decorator_list', 'returns', 'type_params')
+                if 0:  # Legacy.
+                    self.handleChildren(node, omit=omit)
                 else:
-                    args = getattr(node, 'args', [])
-                    body = getattr(node, 'body', None)
-                    for arg in args:
-                        self.handleNode(arg, node)
-                    self.handleNode(body, node)
+                    fields = [z for z in node._fields if z not in omit]
+                    self.handleFields(node, fields)
 
         self.deferFunction(runFunction)
 
