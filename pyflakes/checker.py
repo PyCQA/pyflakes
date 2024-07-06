@@ -1216,24 +1216,21 @@ class Checker:
             self.handleNode(annotation, node)
 
     #@+node:ekr.20240702085302.112: *4* Checker.handleChildren & synonyms (changed)
-    def handleChildren(self, tree): ###, omit=None):
+    def handleChildren(self, tree):  ###, omit=None):
         """Do not call handleChildren if the order of visiting fields matters!"""
-        ### assert not omit, g.callers() ###
-        if 1:  ### Legacy.
-            for field in tree.__class__._fields:
-                ###
+        self.handleFields(tree, tree._fields)
+
+        ### Legacy.
+            # for field in tree.__class__._fields:
                 # if omit and field in omit:
-                    # ### g.trace(f"{g.callers(1):>14} {field:>12} {omit!r}")
                     # continue
-                node = getattr(tree, field, None)
-                if isinstance(node, ast.AST):
-                    self.handleNode(node, tree) 
-                elif isinstance(node, list):
-                    for item in node:
-                        if isinstance(item, ast.AST):
-                            self.handleNode(item, tree)
-        else:
-            self.handleFields(tree, node._fields)
+                # node = getattr(tree, field, None)
+                # if isinstance(node, ast.AST):
+                    # self.handleNode(node, tree) 
+                # elif isinstance(node, list):
+                    # for item in node:
+                        # if isinstance(item, ast.AST):
+                            # self.handleNode(item, tree)
             
     # "stmt" type nodes.
     MODULE = handleChildren
@@ -1525,19 +1522,18 @@ class Checker:
         # EKR: Unit tests fail w/o these omissions.
         ### g.trace(g.callers(2), node.__class__.__name__)
         
-        if 0:  ### Legacy
-            self.handleChildren(node, omit=('defaults', 'kw_defaults'))
-        else:
-            # arguments = (arg* posonlyargs, arg* args, arg? vararg, arg* kwonlyargs,
-            #              expr* kw_defaults, arg? kwarg, expr* defaults)
-            if 1:  # Works.
-                fields = ('posonlyargs', 'args', 'vararg', 'kwonlyargs', 'kwarg')
-            else:  # Works.
-                fields = list(node._fields)
-                for z in ('defaults', 'kw_defaults'):
-                    if z in fields:
-                        fields.remove(z)
-            self.handleFields(node, fields)
+        ### Legacy
+            # self.handleChildren(node, omit=('defaults', 'kw_defaults'))
+       
+        # arguments = (arg* posonlyargs, arg* args, arg? vararg, arg* kwonlyargs,
+        #              expr* kw_defaults, arg? kwarg, expr* defaults)
+        fields = ('posonlyargs', 'args', 'vararg', 'kwonlyargs', 'kwarg')
+        ### Works.
+            # fields = list(node._fields)
+            # for z in ('defaults', 'kw_defaults'):
+                # if z in fields:
+                    # fields.remove(z)
+        self.handleFields(node, fields)
             
     #@+node:ekr.20240702085302.136: *4* Checker.ASSERT
     def ASSERT(self, node):
@@ -1697,12 +1693,11 @@ class Checker:
             self._handle_string_dot_format(node)
             
         def do_call_children(node2, omit=None):
-            if 0:  ### Legacy.
-                self.handleChildren(node2, omit=omit)
-            else:
-                omit = omit or []
-                fields = [z for z in node2._fields if z not in omit]
-                self.handleFields(node2, fields)
+            ### Legacy.
+                # self.handleChildren(node2, omit=omit)
+            omit = omit or []
+            fields = [z for z in node2._fields if z not in omit]
+            self.handleFields(node2, fields)
 
         omit = []
         annotated = []
@@ -2289,11 +2284,10 @@ class Checker:
         def runFunction():
             with self.in_scope(FunctionScope):
                 omit = ('decorator_list', 'returns', 'type_params')
-                if 0:  # Legacy.
-                    self.handleChildren(node, omit=omit)
-                else:
-                    fields = [z for z in node._fields if z not in omit]
-                    self.handleFields(node, fields)
+                fields = [z for z in node._fields if z not in omit]
+                self.handleFields(node, fields)
+                ### Legacy.
+                    # self.handleChildren(node, omit=omit)
 
         self.deferFunction(runFunction)
 
@@ -2430,14 +2424,14 @@ class Checker:
         for child in node.body:
             self.handleNode(child, node)
         self.exceptHandlers.pop()
+
         # Process the other nodes: "except:", "else:", "finally:"
-        if 0:  ### Legacy. Works.
-            self.handleChildren(node, omit='body')
-        else:  ### Works.
-            for field in ('handlers', 'orelse', 'finalbody'):
-                statements = getattr(node, field, [])
-                for statement in statements:
-                    self.handleNode(statement, node)
+        ### Legacy.
+            # self.handleChildren(node, omit='body')
+        for field in ('handlers', 'orelse', 'finalbody'):
+            statements = getattr(node, field, [])
+            for statement in statements:
+                self.handleNode(statement, node)
 
     TRYSTAR = TRY
 
