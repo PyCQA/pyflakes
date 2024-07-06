@@ -19,7 +19,6 @@ import os
 import re
 import string
 import sys
-### import warnings
 
 from pyflakes import messages
 
