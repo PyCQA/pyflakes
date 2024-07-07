@@ -1167,11 +1167,6 @@ class Checker:
         else:
             self.handleChildren(node)
 
-    #@+node:ekr.20240702085302.105: *4* Checker.getNodeHandler
-    def getNodeHandler(self, node_class):
-        
-        name = node_class.__name__.upper()
-        return getattr(self, name, self._unknown_handler)
     #@+node:ekr.20240702085302.122: *4* Checker.handle_annotation_always_deferred
     def handle_annotation_always_deferred(self, annotation, parent):
         fn = in_annotation(Checker.handleNode)
@@ -1284,7 +1279,6 @@ class Checker:
         node._pyflakes_depth = self.nodeDepth
         node._pyflakes_parent = parent
         try:
-            ### handler = self.getNodeHandler(node.__class__)
             name = node.__class__.__name__.upper()
             handler = getattr(self, name, self._unknown_handler)
             handler(node)
