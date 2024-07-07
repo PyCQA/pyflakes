@@ -805,7 +805,6 @@ class Checker:
         builtins=None,
         withDoctest='PYFLAKES_DOCTEST' in os.environ,
     ):
-        self._nodeHandlers = {}
         self._deferred = collections.deque()
         self.deadScopes = []
         self.messages = []
@@ -1170,15 +1169,9 @@ class Checker:
 
     #@+node:ekr.20240702085302.105: *4* Checker.getNodeHandler
     def getNodeHandler(self, node_class):
-        try:
-            return self._nodeHandlers[node_class]
-        except KeyError:
-            nodeType = node_class.__name__.upper()
-        self._nodeHandlers[node_class] = handler = getattr(
-            self, nodeType, self._unknown_handler,
-        )
-        return handler
-
+        
+        name = node_class.__name__.upper()
+        return getattr(self, name, self._unknown_handler)
     #@+node:ekr.20240702085302.122: *4* Checker.handle_annotation_always_deferred
     def handle_annotation_always_deferred(self, annotation, parent):
         fn = in_annotation(Checker.handleNode)
