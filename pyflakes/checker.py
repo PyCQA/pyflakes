@@ -1207,7 +1207,11 @@ class Checker:
 
     #@+node:ekr.20240702085302.112: *4* Checker.handleChildren & synonyms (changed)
     def handleChildren(self, node):
-        """Do not call handleChildren if the order of visiting fields matters!"""
+        """
+        Visit all of node's children in no particular order.
+        
+        Use Checker.visitFields if the order matters.
+        """
         self.handleFields(node, node._fields)
             
     # "stmt" type nodes.
@@ -1260,7 +1264,7 @@ class Checker:
 
     #@+node:ekr.20240706181836.1: *4* Checker.handleFields (NEW)
     def handleFields(self, node, fields):
-        
+        """Visit only the *given* children of node in the given order."""
         for field in fields:
             child = getattr(node, field, None)
             if isinstance(child, ast.AST):
@@ -2378,10 +2382,6 @@ class Checker:
         self.exceptHandlers.pop()
         # Process the other children.
         self.handleFields(node, ('handlers', 'orelse', 'finalbody'))
-        # for field in ('handlers', 'orelse', 'finalbody'):
-            # statements = getattr(node, field, [])
-            # for statement in statements:
-                # self.handleNode(statement, node)
 
     TRYSTAR = TRY
 
