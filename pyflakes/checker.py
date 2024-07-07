@@ -800,8 +800,11 @@ class Checker:
 
     #@+others
     #@+node:ekr.20240702085302.84: *3* Checker.__init__
-    def __init__(self, tree, filename='(none)', builtins=None, withDoctest='PYFLAKES_DOCTEST' in os.environ):
-                     ###, file_tokens=()):
+    def __init__(self, tree,
+        filename='(none)',
+        builtins=None,
+        withDoctest='PYFLAKES_DOCTEST' in os.environ,
+    ):
         self._nodeHandlers = {}
         self._deferred = collections.deque()
         self.deadScopes = []
@@ -826,14 +829,6 @@ class Checker:
             self._run_deferred()
 
         self.checkDeadScopes()
-
-        ###
-            # if file_tokens:
-                # warnings.warn(
-                    # '`file_tokens` will be removed in a future version',
-                    # stacklevel=2,
-                # )
-
     #@+node:ekr.20240702085302.85: *3* Checker: Deferred functions
     #@+node:ekr.20240702085302.86: *4* Checker.deferFunction
     def deferFunction(self, callable):
@@ -1211,18 +1206,13 @@ class Checker:
             self.handleNode(annotation, node)
 
     #@+node:ekr.20240702085302.112: *4* Checker.handleChildren & synonyms (changed)
-    def handleChildren(self, tree, omit=None):
-        """Do not call handleChildren if the order of visiting fields matters!"""
-        for field in tree.__class__._fields:
-            if omit and field in omit:
-                continue
-            node = getattr(tree, field, None)
-            if isinstance(node, ast.AST):
-                self.handleNode(node, tree) 
-            elif isinstance(node, list):
-                for item in node:
-                    if isinstance(item, ast.AST):
-                        self.handleNode(item, tree) 
+    def handleChildren(self, node):
+        """
+        Visit all of node's children in no particular order.
+        
+        Use Checker.visitFields if the order matters.
+        """
+        self.handleFields(node, node._fields)
             
     # "stmt" type nodes.
     MODULE = handleChildren
@@ -1272,6 +1262,17 @@ class Checker:
                     self.offset = node_offset
         self.scopeStack = saved_stack
 
+    #@+node:ekr.20240706181836.1: *4* Checker.handleFields (NEW)
+    def handleFields(self, node, fields):
+        """Visit only the *given* children of node in the given order."""
+        for field in fields:
+            child = getattr(node, field, None)
+            if isinstance(child, ast.AST):
+                self.handleNode(child, node) 
+            elif isinstance(child, list):
+                for item in child:
+                    if isinstance(item, ast.AST):
+                        self.handleNode(item, node) 
     #@+node:ekr.20240702085302.119: *4* Checker.handleNode & synonyms
     def handleNode(self, node, parent):
         if node is None:
@@ -1500,8 +1501,10 @@ class Checker:
 
     #@+node:ekr.20240702085302.145: *4* Checker.ARGUMENTS (changed)
     def ARGUMENTS(self, node):
-        # EKR: Unit tests fail w/o these omissions.
-        self.handleChildren(node, omit=('defaults', 'kw_defaults'))
+        # Visit all fields except 'defaults' and 'kw_defaults'.
+        fields = ('posonlyargs', 'args', 'vararg', 'kwonlyargs', 'kwarg')
+        self.handleFields(node, fields)
+            
     #@+node:ekr.20240702085302.136: *4* Checker.ASSERT
     def ASSERT(self, node):
         if isinstance(node.test, ast.Tuple) and node.test.elts != []:
@@ -1659,23 +1662,16 @@ class Checker:
         ):
             self._handle_string_dot_format(node)
             
-        def do_call_children(node2, omit=None):
-            # Call(expr func, expr* args, keyword* keywords)
-            if 1:  # Legacy.
-                if False and omit:
-                    g.trace(f"{node2.__class__.__name__:12} {omit!r}") #  {g.callers(2)}")
-                self.handleChildren(node2, omit=omit)
-            else:
-                pass
+        def _call_children(node2, omit=None):
+            omit = omit or []
+            fields = [z for z in node2._fields if z not in omit]
+            self.handleFields(node2, fields)
 
         omit = []
         annotated = []
         not_annotated = []
 
-        if (
-            _is_typing(node.func, 'cast', self.scopeStack) and
-            len(node.args) >= 1
-        ):
+        if len(node.args) >= 1 and _is_typing(node.func, 'cast', self.scopeStack):
             with self._enter_annotation():
                 self.handleNode(node.args[0], node)
 
@@ -1733,17 +1729,14 @@ class Checker:
         if omit:
             with self._enter_annotation(AnnotationState.NONE):
                 for na_node, na_omit in not_annotated:
-                    ### self.handleChildren(na_node, omit=na_omit)
-                    do_call_children(na_node, omit=na_omit)
-                ### self.handleChildren(node, omit=omit)
-                do_call_children(node, omit=omit)
+                    _call_children(na_node, omit=na_omit)
+                _call_children(node, omit=omit)
 
             with self._enter_annotation():
                 for annotated_node in annotated:
                     self.handleNode(annotated_node, node)
         else:
-            ### self.handleChildren(node)
-            do_call_children(node)
+            _call_children(node)
     #@+node:ekr.20240702085302.126: *5* Checker._handle_string_dot_format
     def _handle_string_dot_format(self, node):
         try:
@@ -2216,7 +2209,7 @@ class Checker:
         finally:
             self._in_fstring = orig
 
-    #@+node:ekr.20240702085302.144: *4* Checker.LAMBDA (unchanged)
+    #@+node:ekr.20240702085302.144: *4* Checker.LAMBDA & runFunction (changed)
     def LAMBDA(self, node):
         args = []
         annotations = []
@@ -2255,18 +2248,9 @@ class Checker:
 
         def runFunction():
             with self.in_scope(FunctionScope):
-                ### g.trace(node.__class__.__name__)
-                if 1:  # Legacy.
-                    self.handleChildren(
-                        node,
-                        omit=('decorator_list', 'returns', 'type_params'),
-                    )
-                else:
-                    args = getattr(node, 'args', [])
-                    body = getattr(node, 'body', None)
-                    for arg in args:
-                        self.handleNode(arg, node)
-                    self.handleNode(body, node)
+                omit = ('decorator_list', 'returns', 'type_params')
+                fields = [z for z in node._fields if z not in omit]
+                self.handleFields(node, fields)
 
         self.deferFunction(runFunction)
 
@@ -2338,16 +2322,12 @@ class Checker:
     #@+node:ekr.20240702085302.125: *4* Checker.SUBSCRIPT (changed)
     def SUBSCRIPT(self, node):
      
-        def do_subscript():
-            # Faster than handleChildren.
-            for field in ('value', 'slice'):
-                child = getattr(node, field, None)
-                self.handleNode(child, node)
+        def _do_subscript():
+            self.handleFields(node, ('value', 'slice'))
 
         if _is_name_or_attr(node.value, 'Literal'):
             with self._enter_annotation(AnnotationState.NONE):
-                # self.handleChildren(node)
-                do_subscript()
+                _do_subscript()
 
         elif _is_name_or_attr(node.value, 'Annotated'):
             self.handleNode(node.value, node)
@@ -2357,8 +2337,8 @@ class Checker:
                 slice_tuple = node.slice
             # <py39
             elif (
-                    isinstance(node.slice, ast.Index) and
-                    isinstance(node.slice.value, ast.Tuple)
+                isinstance(node.slice, ast.Index) and
+                isinstance(node.slice.value, ast.Tuple)
             ):
                 slice_tuple = node.slice.value
             else:
@@ -2379,13 +2359,10 @@ class Checker:
         else:
             if _is_any_typing_member(node.value, self.scopeStack):
                 with self._enter_annotation():
-                    ### self.handleChildren(node)
-                    do_subscript()
+                    _do_subscript()
             else:
-                ### self.handleChildren(node)
-                do_subscript()
-
-    #@+node:ekr.20240702085302.152: *4* Checker.TRY & TRYSTAR omit='body'
+                _do_subscript()
+    #@+node:ekr.20240702085302.152: *4* Checker.TRY & TRYSTAR (revised)
     def TRY(self, node):
         handler_names = []
         # List the exception handlers
@@ -2403,8 +2380,8 @@ class Checker:
         for child in node.body:
             self.handleNode(child, node)
         self.exceptHandlers.pop()
-        # Process the other nodes: "except:", "else:", "finally:"
-        self.handleChildren(node, omit='body')
+        # Process the other children.
+        self.handleFields(node, ('handlers', 'orelse', 'finalbody'))
 
     TRYSTAR = TRY
 
