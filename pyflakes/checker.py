@@ -2009,16 +2009,10 @@ class Checker:
             self.scope[node.name] = prev_definition
 
     #@+node:ekr.20240704150603.1: *4* Checker.FOR & ASYNCFOR  (new) 
-    def FOR(self, tree):
-        
+    def FOR(self, node):
+
         # Order matters.
-        for field in ('iter', 'target', 'type_comment'):
-            node = getattr(tree, field, None)
-            self.handleNode(node, tree)
-        for field in ('body', 'orelse'):
-            node =  getattr(tree, field, [])
-            for z in node:
-                self.handleNode(z, tree)
+        self.handleFields(node, ('iter', 'target', 'type_comment', 'body', 'orelse'))
 
     ASYNCFOR = FOR
     #@+node:ekr.20240705070528.1: *4* Checker.FORMATTEDVALUE (new)
