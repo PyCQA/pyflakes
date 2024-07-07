@@ -1203,19 +1203,18 @@ class Checker:
         self.handleFields(node, node._fields)
 
     # "stmt" type nodes.
-    ATTRIBUTE = handleChildren
-    MODULE = FORMATTEDVALUE = KEYWORD = handleChildren
-    DELETE = WHILE = WITH = WITHITEM = ASYNCWITH = EXPR = handleChildren
+    ASYNCWITH = DELETE = EXPR = FORMATTEDVALUE = KEYWORD = handleChildren
+    MODULE = WHILE = WITH = WITHITEM = handleChildren
 
     # "expr" type nodes
-    BOOLOP = UNARYOP = SET = STARRED = NAMECONSTANT = handleChildren
+    ATTRIBUTE = BOOLOP = NAMECONSTANT = SET = STARRED = UNARYOP = handleChildren
 
     # "match" type nodes.
-    MATCH = MATCH_CASE = MATCHCLASS = MATCHOR = MATCHSEQUENCE = handleChildren
-    MATCHSINGLETON = MATCHVALUE = handleChildren
+    MATCH = MATCH_CASE = MATCHCLASS = MATCHOR = handleChildren
+    MATCHSEQUENCE = MATCHSINGLETON = MATCHVALUE = handleChildren
 
     # "slice" type nodes.
-    SLICE = EXTSLICE = INDEX = handleChildren
+    EXTSLICE = INDEX = SLICE = handleChildren
     #@+node:ekr.20240702085302.120: *4* Checker.handleDoctests
     _getDoctestExamples = doctest.DocTestParser().get_examples
 
