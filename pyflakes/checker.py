@@ -1488,8 +1488,9 @@ class Checker:
     def ARG(self, node):
         self.addBinding(node, Argument(node.arg, self.getScopeNode(node)))
 
-    #@+node:ekr.20240702085302.145: *4* Checker.ARGUMENTS (changed)
+    #@+node:ekr.20240702085302.145: *4* Checker.ARGUMENTS
     def ARGUMENTS(self, node):
+
         # Visit all fields except 'defaults' and 'kw_defaults'.
         fields = ('posonlyargs', 'args', 'vararg', 'kwonlyargs', 'kwarg')
         self.handleFields(node, fields)
@@ -1500,7 +1501,7 @@ class Checker:
             self.report(messages.AssertTuple, node)
         self.handleChildren(node)
 
-    #@+node:ekr.20240704151835.1: *4* Checker.ASSIGN  (new)
+    #@+node:ekr.20240704151835.1: *4* Checker.ASSIGN
     def ASSIGN(self, node):
 
         # Order matters.
@@ -1628,7 +1629,7 @@ class Checker:
                     ', '.join(sorted(missing_keys)),
                 )
 
-    #@+node:ekr.20240702085302.127: *4* Checker.CALL & helper (Changed)
+    #@+node:ekr.20240702085302.127: *4* Checker.CALL & helper
     def CALL(self, node):
         if (
             isinstance(node.func, ast.Attribute)
@@ -1871,9 +1872,10 @@ class Checker:
 
         self.handleChildren(node)
 
-    #@+node:ekr.20240705064837.1: *4* Checker.COMPREHENSION (new)
+    #@+node:ekr.20240705064837.1: *4* Checker.COMPREHENSION
     def COMPREHENSION(self, node):
 
+        # Order matters.
         self.handleFields(node, ('iter', 'target', 'ifs'))
     #@+node:ekr.20240702085302.130: *4* Checker.CONSTANT & related operators
     def CONSTANT(self, node):
@@ -1992,7 +1994,7 @@ class Checker:
         if prev_definition:
             self.scope[node.name] = prev_definition
 
-    #@+node:ekr.20240704150603.1: *4* Checker.FOR & ASYNCFOR  (new) 
+    #@+node:ekr.20240704150603.1: *4* Checker.FOR & ASYNCFOR
     def FOR(self, node):
 
         # Order matters.
@@ -2017,13 +2019,13 @@ class Checker:
 
     ASYNCFUNCTIONDEF = FUNCTIONDEF
 
-    #@+node:ekr.20240707060447.1: *4* Checker.DICTCOMP (new)
+    #@+node:ekr.20240707060447.1: *4* Checker.DICTCOMP
     def DICTCOMP(self, node):
 
         with self.in_scope(GeneratorScope):
             # Order matters.
             self.handleFields(node, ('generators', 'key', 'value'))
-    #@+node:ekr.20240702085302.138: *4* Checker.GENERATOREXP, LISTCOMP, SETCOMP (changed)
+    #@+node:ekr.20240702085302.138: *4* Checker.GENERATOREXP, LISTCOMP, SETCOMP
     def GENERATOREXP(self, node):
 
         with self.in_scope(GeneratorScope):
@@ -2147,7 +2149,7 @@ class Checker:
         finally:
             self._in_fstring = orig
 
-    #@+node:ekr.20240702085302.144: *4* Checker.LAMBDA & runFunction (changed)
+    #@+node:ekr.20240702085302.144: *4* Checker.LAMBDA & runFunction
     def LAMBDA(self, node):
         args = []
         annotations = []
@@ -2222,7 +2224,7 @@ class Checker:
             # Unknown context
             raise RuntimeError(f"Got impossible expression context: {node.ctx!r}")
 
-    #@+node:ekr.20240704160940.1: *4* Checker.NAMEDEXPR (new)
+    #@+node:ekr.20240704160940.1: *4* Checker.NAMEDEXPR
     def NAMEDEXPR(self, node):
 
         # Order matters.
@@ -2255,7 +2257,7 @@ class Checker:
             self.scope.returnValue = node.value
         self.handleNode(node.value, node)
 
-    #@+node:ekr.20240702085302.125: *4* Checker.SUBSCRIPT (changed)
+    #@+node:ekr.20240702085302.125: *4* Checker.SUBSCRIPT
     def SUBSCRIPT(self, node):
 
         def _do_subscript():
@@ -2298,7 +2300,7 @@ class Checker:
                     _do_subscript()
             else:
                 _do_subscript()
-    #@+node:ekr.20240702085302.152: *4* Checker.TRY & TRYSTAR (revised)
+    #@+node:ekr.20240702085302.152: *4* Checker.TRY & TRYSTAR
     def TRY(self, node):
         handler_names = []
         # List the exception handlers
