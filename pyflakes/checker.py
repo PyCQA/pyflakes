@@ -1215,7 +1215,7 @@ class Checker:
         self.handleFields(node, node._fields)
             
     # "stmt" type nodes.
-    MODULE = handleChildren
+    MODULE = FORMATTEDVALUE = handleChildren
     DELETE = WHILE = WITH = WITHITEM = ASYNCWITH = EXPR = handleChildren
 
     # "expr" type nodes
@@ -2015,14 +2015,6 @@ class Checker:
         self.handleFields(node, ('iter', 'target', 'type_comment', 'body', 'orelse'))
 
     ASYNCFOR = FOR
-    #@+node:ekr.20240705070528.1: *4* Checker.FORMATTEDVALUE (new)
-    def FORMATTEDVALUE(self, node):
-        
-        # Faster than handleChildren.
-        # node.conversion is an int.
-        for field in ('value', 'format_spec'):
-            child = getattr(node, field, None)
-            self.handleNode(child, node)
     #@+node:ekr.20240702085302.143: *4* Checker.FUNCTIONDEF & ASYNCFUNCTIONDEF
     def FUNCTIONDEF(self, node):
         for deco in node.decorator_list:
@@ -2041,30 +2033,21 @@ class Checker:
 
     ASYNCFUNCTIONDEF = FUNCTIONDEF
 
-    #@+node:ekr.20240702085302.138: *4* Checker.GENERATOREXP, DICTCOMP, LISTCOMP, SETCOMP(changed)
-    def GENERATOREXP(self, node):
+    #@+node:ekr.20240707060447.1: *4* Checker.DICTCOMP (new)
+    def DICTCOMP(self, node):
+
         with self.in_scope(GeneratorScope):
-            generators = getattr(node, 'generators', [])
-            elt = getattr(node, 'elt', None)
-            for generator in generators:
-                self.handleNode(generator, node)
-            self.handleNode(elt, node) 
+            # Order matters.
+            self.handleFields(node, ('generators', 'key', 'value'))
+           
+    #@+node:ekr.20240702085302.138: *4* Checker.GENERATOREXP, LISTCOMP, SETCOMP (changed)
+    def GENERATOREXP(self, node):
+
+        with self.in_scope(GeneratorScope):
+            # Order matters.
+            self.handleFields(node, ('generators', 'elt'))
 
     LISTCOMP = SETCOMP = GENERATOREXP
-
-    if 0:  # Legacy.
-        DICTCOMP = GENERATOREXP
-    else:  # Works.
-
-        def DICTCOMP(self, node):
-            with self.in_scope(GeneratorScope):
-                generators = getattr(node, 'generators', [])
-                key = getattr(node, 'key', None)
-                value = getattr(node, 'value', None)
-                for generator in generators:  # generators first.
-                    self.handleNode(generator, node)
-                self.handleNode(key, node)
-                self.handleNode(value, node)
     #@+node:ekr.20240702085302.137: *4* Checker.GLOBAL & NONLOCAL
     def GLOBAL(self, node):
         """
