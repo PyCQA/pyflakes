@@ -1284,7 +1284,9 @@ class Checker:
         node._pyflakes_depth = self.nodeDepth
         node._pyflakes_parent = parent
         try:
-            handler = self.getNodeHandler(node.__class__)
+            ### handler = self.getNodeHandler(node.__class__)
+            name = node.__class__.__name__.upper()
+            handler = getattr(self, name, self._unknown_handler)
             handler(node)
         finally:
             self.nodeDepth -= 1
