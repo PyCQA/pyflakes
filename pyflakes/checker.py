@@ -25,14 +25,13 @@ from pyflakes import messages
 Node = ast.AST
 #@-<< checker.py: imports and annotations >>
 
-if 1:
+if 1:  ### Testing only.
     leo_path = r'C:\Repos\leo-editor'
     if leo_path not in sys.path:
         sys.path.insert(1, leo_path)
     from leo.core import leoGlobals as g
     assert g
 
-# < < checker.py: NEW switch > >
 #@+<< checker.py: globals >>
 #@+node:ekr.20240702085302.2: ** << checker.py: globals >>
 PYPY = hasattr(sys, 'pypy_version_info')
