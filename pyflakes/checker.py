@@ -2376,11 +2376,12 @@ class Checker:
         for child in node.body:
             self.handleNode(child, node)
         self.exceptHandlers.pop()
-        # Process the other nodes.  ### Simplify.
-        for field in ('handlers', 'orelse', 'finalbody'):
-            statements = getattr(node, field, [])
-            for statement in statements:
-                self.handleNode(statement, node)
+        # Process the other children.
+        self.handleFields(node, ('handlers', 'orelse', 'finalbody'))
+        # for field in ('handlers', 'orelse', 'finalbody'):
+            # statements = getattr(node, field, [])
+            # for statement in statements:
+                # self.handleNode(statement, node)
 
     TRYSTAR = TRY
 
