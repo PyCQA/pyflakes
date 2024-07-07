@@ -19,7 +19,6 @@ import os
 import re
 import string
 import sys
-### import warnings
 
 from pyflakes import messages
 
@@ -801,8 +800,11 @@ class Checker:
 
     #@+others
     #@+node:ekr.20240702085302.84: *3* Checker.__init__
-    def __init__(self, tree, filename='(none)', builtins=None, withDoctest='PYFLAKES_DOCTEST' in os.environ):
-                     ###, file_tokens=()):
+    def __init__(self, tree,
+        filename='(none)',
+        builtins=None,
+        withDoctest='PYFLAKES_DOCTEST' in os.environ,
+    ):
         self._nodeHandlers = {}
         self._deferred = collections.deque()
         self.deadScopes = []
@@ -810,9 +812,6 @@ class Checker:
         self.filename = filename
         if builtins:
             self.builtIns = self.builtIns.union(builtins)
-        if 0:  ###
-            g.trace(g.callers())
-            # g.printObj(self.builtIns, tag='Checker.builtIns')  ###
         self.withDoctest = withDoctest
         self.exceptHandlers = [()]
         self.root = tree
@@ -830,14 +829,6 @@ class Checker:
             self._run_deferred()
 
         self.checkDeadScopes()
-
-        ###
-            # if file_tokens:
-                # warnings.warn(
-                    # '`file_tokens` will be removed in a future version',
-                    # stacklevel=2,
-                # )
-
     #@+node:ekr.20240702085302.85: *3* Checker: Deferred functions
     #@+node:ekr.20240702085302.86: *4* Checker.deferFunction
     def deferFunction(self, callable):
@@ -1060,7 +1051,6 @@ class Checker:
             if value.name in scope:
                 break
         existing = scope.get(value.name)
-        ### g.trace(node.__class__.__name__, value)
 
         if (existing and not isinstance(existing, Builtin) and
                 not self.differentForks(node, existing.source)):
@@ -1216,21 +1206,9 @@ class Checker:
             self.handleNode(annotation, node)
 
     #@+node:ekr.20240702085302.112: *4* Checker.handleChildren & synonyms (changed)
-    def handleChildren(self, tree):  ###, omit=None):
+    def handleChildren(self, node):
         """Do not call handleChildren if the order of visiting fields matters!"""
-        self.handleFields(tree, tree._fields)
-
-        ### Legacy.
-            # for field in tree.__class__._fields:
-                # if omit and field in omit:
-                    # continue
-                # node = getattr(tree, field, None)
-                # if isinstance(node, ast.AST):
-                    # self.handleNode(node, tree) 
-                # elif isinstance(node, list):
-                    # for item in node:
-                        # if isinstance(item, ast.AST):
-                            # self.handleNode(item, tree)
+        self.handleFields(node, node._fields)
             
     # "stmt" type nodes.
     MODULE = handleChildren
@@ -1519,20 +1497,8 @@ class Checker:
 
     #@+node:ekr.20240702085302.145: *4* Checker.ARGUMENTS (changed)
     def ARGUMENTS(self, node):
-        # EKR: Unit tests fail w/o these omissions.
-        ### g.trace(g.callers(2), node.__class__.__name__)
-        
-        ### Legacy
-            # self.handleChildren(node, omit=('defaults', 'kw_defaults'))
-       
-        # arguments = (arg* posonlyargs, arg* args, arg? vararg, arg* kwonlyargs,
-        #              expr* kw_defaults, arg? kwarg, expr* defaults)
+        # Visit all fields except 'defaults' and 'kw_defaults'.
         fields = ('posonlyargs', 'args', 'vararg', 'kwonlyargs', 'kwarg')
-        ### Works.
-            # fields = list(node._fields)
-            # for z in ('defaults', 'kw_defaults'):
-                # if z in fields:
-                    # fields.remove(z)
         self.handleFields(node, fields)
             
     #@+node:ekr.20240702085302.136: *4* Checker.ASSERT
@@ -1693,8 +1659,6 @@ class Checker:
             self._handle_string_dot_format(node)
             
         def do_call_children(node2, omit=None):
-            ### Legacy.
-                # self.handleChildren(node2, omit=omit)
             omit = omit or []
             fields = [z for z in node2._fields if z not in omit]
             self.handleFields(node2, fields)
@@ -1761,16 +1725,13 @@ class Checker:
         if omit:
             with self._enter_annotation(AnnotationState.NONE):
                 for na_node, na_omit in not_annotated:
-                    ### self.handleChildren(na_node, omit=na_omit)
                     do_call_children(na_node, omit=na_omit)
-                ### self.handleChildren(node, omit=omit)
                 do_call_children(node, omit=omit)
 
             with self._enter_annotation():
                 for annotated_node in annotated:
                     self.handleNode(annotated_node, node)
         else:
-            ### self.handleChildren(node)
             do_call_children(node)
     #@+node:ekr.20240702085302.126: *5* Checker._handle_string_dot_format
     def _handle_string_dot_format(self, node):
@@ -2286,8 +2247,6 @@ class Checker:
                 omit = ('decorator_list', 'returns', 'type_params')
                 fields = [z for z in node._fields if z not in omit]
                 self.handleFields(node, fields)
-                ### Legacy.
-                    # self.handleChildren(node, omit=omit)
 
         self.deferFunction(runFunction)
 
@@ -2400,10 +2359,8 @@ class Checker:
         else:
             if _is_any_typing_member(node.value, self.scopeStack):
                 with self._enter_annotation():
-                    ### self.handleChildren(node)
                     do_subscript()
             else:
-                ### self.handleChildren(node)
                 do_subscript()
 
     #@+node:ekr.20240702085302.152: *4* Checker.TRY & TRYSTAR (revised)
@@ -2424,10 +2381,7 @@ class Checker:
         for child in node.body:
             self.handleNode(child, node)
         self.exceptHandlers.pop()
-
-        # Process the other nodes: "except:", "else:", "finally:"
-        ### Legacy.
-            # self.handleChildren(node, omit='body')
+        # Process the other nodes.  ### Simplify.
         for field in ('handlers', 'orelse', 'finalbody'):
             statements = getattr(node, field, [])
             for statement in statements:
