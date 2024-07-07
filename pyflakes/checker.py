@@ -6,6 +6,8 @@ Main module.
 Implement the central Checker class.
 Also, it models the Bindings and Scopes.
 """
+# Allow harmless style violations.
+# pylint: disable=no-else-return,raise-missing-from
 #@+<< checker.py: imports and annotations >>
 #@+node:ekr.20240703054405.1: ** << checker.py: imports and annotations >>
 import __future__
@@ -100,11 +102,11 @@ class VariableKey:
 def getAlternatives(n):
     if isinstance(n, ast.If):
         return [n.body]
-    elif isinstance(n, ast.Try):
+    if isinstance(n, ast.Try):
         return [n.body + n.orelse] + [[hdl] for hdl in n.handlers]
-    elif sys.version_info >= (3, 10) and isinstance(n, ast.Match):
+    if sys.version_info >= (3, 10) and isinstance(n, ast.Match):
         return [mc.body for mc in n.cases]
-
+    return []
 
 #@+node:ekr.20240702085302.6: *3* function: _is_singleton
 def _is_singleton(node):  # type: (ast.AST) -> bool
@@ -167,10 +169,9 @@ def parse_percent_format(s):
                 except ValueError:  # no more % fields!
                     yield s[string_start:], None
                     return
-                else:
-                    string_end = i
-                    i += 1
-                    in_fmt = True
+                string_end = i
+                i += 1
+                in_fmt = True
             else:
                 key_match = MAPPING_KEY_RE.match(s, i)
                 if key_match:
@@ -216,13 +217,11 @@ def parse_percent_format(s):
 def convert_to_value(item):
     if isinstance(item, ast.Constant):
         return item.value
-    elif isinstance(item, ast.Tuple):
+    if isinstance(item, ast.Tuple):
         return tuple(convert_to_value(i) for i in item.elts)
-    elif isinstance(item, ast.Name):
+    if isinstance(item, ast.Name):
         return VariableKey(item=item)
-    else:
-        return UnhandledKeyType()
-
+    return UnhandledKeyType()
 
 #@+node:ekr.20240702085302.17: *3* function: is_notimplemented_name_node
 def is_notimplemented_name_node(node):
@@ -238,6 +237,7 @@ def getNodeName(node):
         return node.name
     if hasattr(node, 'rest'):   # a MatchMapping node
         return node.rest
+    return None
 
 
 #@+node:ekr.20240702104745.1: ** checker.py: Binding classes
@@ -1093,11 +1093,12 @@ class Checker:
     #@+node:ekr.20240702085302.113: *4* Checker: is*
     #@+node:ekr.20240702085302.114: *5* Checker.isLiteralTupleUnpacking
     def isLiteralTupleUnpacking(self, node):
-        if isinstance(node, ast.Assign):
-            for child in node.targets + [node.value]:
-                if not hasattr(child, 'elts'):
-                    return False
-            return True
+        if not isinstance(node, ast.Assign):
+            return False
+        for child in node.targets + [node.value]:
+            if not hasattr(child, 'elts'):
+                return False
+        return True
 
     #@+node:ekr.20240702085302.115: *5* Checker.isDocstring
     def isDocstring(self, node):
@@ -1164,8 +1165,7 @@ class Checker:
         # needed).
         if os.environ.get('PYFLAKES_ERROR_UNKNOWN'):
             raise NotImplementedError(f'Unexpected type: {type(node)}')
-        else:
-            self.handleChildren(node)
+        self.handleChildren(node)
 
     #@+node:ekr.20240702085302.122: *4* Checker.handle_annotation_always_deferred
     def handle_annotation_always_deferred(self, annotation, parent):
@@ -1337,7 +1337,7 @@ class Checker:
             if isinstance(scope, ClassScope):
                 if name == '__class__':
                     return
-                elif can_access_class_vars is False:
+                if can_access_class_vars is False:
                     # only generators used in a class scope can access the
                     # names of the class. this is skipped during the first
                     # iteration
@@ -1578,7 +1578,8 @@ class Checker:
                     node,
                 )
                 return
-            elif not positional and name is None:
+            
+            if not positional and name is None:
                 self.report(
                     messages.PercentFormatMixedPositionalAndNamed,
                     node,
@@ -1754,16 +1755,14 @@ class Checker:
                 if auto is True:
                     self.report(messages.StringDotFormatMixingAutomatic, node)
                     return True
-                else:
-                    auto = False
+                auto = False
 
             if fmtkey == '':
                 if auto is False:
                     self.report(messages.StringDotFormatMixingAutomatic, node)
                     return True
-                else:
-                    auto = True
 
+                auto = True
                 fmtkey = next_auto
                 next_auto += 1
 
