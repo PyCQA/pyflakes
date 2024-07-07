@@ -1519,10 +1519,8 @@ class Checker:
     #@+node:ekr.20240704165918.1: *4* Checker.ATTRIBUTE (new)
     def ATTRIBUTE(self, node):
         
-        # Faster than handleChildren.
         # attr is a string.
-        value = getattr(node, 'value', None)
-        self.handleNode(value, node)
+        self.handleFields(node, ('value',))
     #@+node:ekr.20240702085302.148: *4* Checker.AUGASSIGN
     def AUGASSIGN(self, node):
         self.handleNodeLoad(node.target, node)
