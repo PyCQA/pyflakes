@@ -804,6 +804,7 @@ class Checker:
         builtins=None,
         withDoctest='PYFLAKES_DOCTEST' in os.environ,
     ):
+        self._nodeHandlers = {}  # Helps the gc.
         self._deferred = collections.deque()
         self.deadScopes = []
         self.messages = []
@@ -1192,7 +1193,7 @@ class Checker:
         else:
             self.handleNode(annotation, node)
 
-    #@+node:ekr.20240702085302.112: *4* Checker.handleChildren & synonyms (changed)
+    #@+node:ekr.20240702085302.112: *4* Checker.handleChildren & synonyms
     def handleChildren(self, node):
         """
         Visit all of node's children in no particular order.
@@ -1249,7 +1250,7 @@ class Checker:
                     self.offset = node_offset
         self.scopeStack = saved_stack
 
-    #@+node:ekr.20240706181836.1: *4* Checker.handleFields (NEW)
+    #@+node:ekr.20240706181836.1: *4* Checker.handleFields
     def handleFields(self, node, fields):
         """Visit only the *given* children of node in the given order."""
         for field in fields:
@@ -1278,8 +1279,15 @@ class Checker:
         node._pyflakes_depth = self.nodeDepth
         node._pyflakes_parent = parent
         try:
-            name = node.__class__.__name__.upper()
-            handler = getattr(self, name, self._unknown_handler)
+            # Was getNodeHandler().
+            # Reduce calls to string.upper().
+            node_class = node.__class__
+            try:
+                handler = self._nodeHandlers[node_class]
+            except KeyError:
+                name = node_class.__name__.upper()
+                handler = getattr(self, name, self._unknown_handler)
+                self._nodeHandlers[node_class] = handler
             handler(node)
         finally:
             self.nodeDepth -= 1
