@@ -1890,13 +1890,7 @@ class Checker:
     #@+node:ekr.20240705064837.1: *4* Checker.COMPREHENSION (new)
     def COMPREHENSION(self, node):
 
-        # Order matters.
-        for field in ('iter', 'target'):  # iter first.
-            child = getattr(node, field, None)
-            self.handleNode(child, node)
-        if_statements = getattr(node, 'ifs', [])
-        for if_statement in if_statements:
-            self.handleNode(if_statement, node)
+        self.handleFields(node, ('iter', 'target', 'ifs'))
     #@+node:ekr.20240702085302.130: *4* Checker.CONSTANT & related operators
     def CONSTANT(self, node):
         if isinstance(node.value, str) and self._in_annotation:
