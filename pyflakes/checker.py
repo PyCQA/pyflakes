@@ -1658,7 +1658,7 @@ class Checker:
         ):
             self._handle_string_dot_format(node)
             
-        def do_call_children(node2, omit=None):
+        def _call_children(node2, omit=None):
             omit = omit or []
             fields = [z for z in node2._fields if z not in omit]
             self.handleFields(node2, fields)
@@ -1725,14 +1725,14 @@ class Checker:
         if omit:
             with self._enter_annotation(AnnotationState.NONE):
                 for na_node, na_omit in not_annotated:
-                    do_call_children(na_node, omit=na_omit)
-                do_call_children(node, omit=omit)
+                    _call_children(na_node, omit=na_omit)
+                _call_children(node, omit=omit)
 
             with self._enter_annotation():
                 for annotated_node in annotated:
                     self.handleNode(annotated_node, node)
         else:
-            do_call_children(node)
+            _call_children(node)
     #@+node:ekr.20240702085302.126: *5* Checker._handle_string_dot_format
     def _handle_string_dot_format(self, node):
         try:
@@ -2318,16 +2318,12 @@ class Checker:
     #@+node:ekr.20240702085302.125: *4* Checker.SUBSCRIPT (changed)
     def SUBSCRIPT(self, node):
      
-        def do_subscript():
-            # Faster than handleChildren.
-            for field in ('value', 'slice'):
-                child = getattr(node, field, None)
-                self.handleNode(child, node)
+        def _do_subscript():
+            self.handleFields(node, ('value', 'slice'))
 
         if _is_name_or_attr(node.value, 'Literal'):
             with self._enter_annotation(AnnotationState.NONE):
-                # self.handleChildren(node)
-                do_subscript()
+                _do_subscript()
 
         elif _is_name_or_attr(node.value, 'Annotated'):
             self.handleNode(node.value, node)
@@ -2337,8 +2333,8 @@ class Checker:
                 slice_tuple = node.slice
             # <py39
             elif (
-                    isinstance(node.slice, ast.Index) and
-                    isinstance(node.slice.value, ast.Tuple)
+                isinstance(node.slice, ast.Index) and
+                isinstance(node.slice.value, ast.Tuple)
             ):
                 slice_tuple = node.slice.value
             else:
@@ -2359,10 +2355,9 @@ class Checker:
         else:
             if _is_any_typing_member(node.value, self.scopeStack):
                 with self._enter_annotation():
-                    do_subscript()
+                    _do_subscript()
             else:
-                do_subscript()
-
+                _do_subscript()
     #@+node:ekr.20240702085302.152: *4* Checker.TRY & TRYSTAR (revised)
     def TRY(self, node):
         handler_names = []
