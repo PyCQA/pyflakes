@@ -1513,15 +1513,9 @@ class Checker:
 
     #@+node:ekr.20240704151835.1: *4* Checker.ASSIGN  (new)
     def ASSIGN(self, node):
-
+        
         # Order matters.
-        value = getattr(node, 'value', None)
-        targets = getattr(node, 'targets', [])
-        # type_comment = getattr(node, 'type_comment', None)
-        self.handleNode(value, node)  # Value first.
-        for target in targets:
-            self.handleNode(target, node)
-        # self.handleNode(type_comment, node)
+        self.handleFields(node, ('value', 'targets'))
     #@+node:ekr.20240704165918.1: *4* Checker.ATTRIBUTE (new)
     def ATTRIBUTE(self, node):
         
