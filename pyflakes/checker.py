@@ -1215,7 +1215,7 @@ class Checker:
         self.handleFields(node, node._fields)
             
     # "stmt" type nodes.
-    MODULE = FORMATTEDVALUE = handleChildren
+    MODULE = FORMATTEDVALUE = KEYWORD = handleChildren
     DELETE = WHILE = WITH = WITHITEM = ASYNCWITH = EXPR = handleChildren
 
     # "expr" type nodes
@@ -2145,14 +2145,6 @@ class Checker:
                 importation = ImportationFrom(name, node,
                                               module, alias.name)
             self.addBinding(node, importation)
-
-    #@+node:ekr.20240704160233.1: *4* Checker.KEYWORD (new)
-    def KEYWORD(self, node):
-        
-        # Faster than handle_Children.
-        # node.arg is a string.
-        child = getattr(node, 'value', None)
-        self.handleNode(child, node)
 
     #@+node:ekr.20240702085302.133: *4* Checker.JOINEDSTR
     _in_fstring = False
