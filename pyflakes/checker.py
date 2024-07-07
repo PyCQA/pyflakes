@@ -1203,6 +1203,7 @@ class Checker:
         self.handleFields(node, node._fields)
 
     # "stmt" type nodes.
+    ATTRIBUTE = handleChildren
     MODULE = FORMATTEDVALUE = KEYWORD = handleChildren
     DELETE = WHILE = WITH = WITHITEM = ASYNCWITH = EXPR = handleChildren
 
@@ -1505,11 +1506,6 @@ class Checker:
 
         # Order matters.
         self.handleFields(node, ('value', 'targets'))
-    #@+node:ekr.20240704165918.1: *4* Checker.ATTRIBUTE (new)
-    def ATTRIBUTE(self, node):
-
-        # attr is a string.
-        self.handleFields(node, ('value',))
     #@+node:ekr.20240702085302.148: *4* Checker.AUGASSIGN
     def AUGASSIGN(self, node):
         self.handleNodeLoad(node.target, node)
