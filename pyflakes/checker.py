@@ -1209,11 +1209,11 @@ class Checker:
     def handleChildren(self, node):
         """
         Visit all of node's children in no particular order.
-        
+
         Use Checker.visitFields if the order matters.
         """
         self.handleFields(node, node._fields)
-            
+
     # "stmt" type nodes.
     MODULE = FORMATTEDVALUE = KEYWORD = handleChildren
     DELETE = WHILE = WITH = WITHITEM = ASYNCWITH = EXPR = handleChildren
@@ -1268,11 +1268,11 @@ class Checker:
         for field in fields:
             child = getattr(node, field, None)
             if isinstance(child, ast.AST):
-                self.handleNode(child, node) 
+                self.handleNode(child, node)
             elif isinstance(child, list):
                 for item in child:
                     if isinstance(item, ast.AST):
-                        self.handleNode(item, node) 
+                        self.handleNode(item, node)
     #@+node:ekr.20240702085302.119: *4* Checker.handleNode & synonyms
     def handleNode(self, node, parent):
         if node is None:
@@ -1504,7 +1504,7 @@ class Checker:
         # Visit all fields except 'defaults' and 'kw_defaults'.
         fields = ('posonlyargs', 'args', 'vararg', 'kwonlyargs', 'kwarg')
         self.handleFields(node, fields)
-            
+
     #@+node:ekr.20240702085302.136: *4* Checker.ASSERT
     def ASSERT(self, node):
         if isinstance(node.test, ast.Tuple) and node.test.elts != []:
@@ -1513,12 +1513,12 @@ class Checker:
 
     #@+node:ekr.20240704151835.1: *4* Checker.ASSIGN  (new)
     def ASSIGN(self, node):
-        
+
         # Order matters.
         self.handleFields(node, ('value', 'targets'))
     #@+node:ekr.20240704165918.1: *4* Checker.ATTRIBUTE (new)
     def ATTRIBUTE(self, node):
-        
+
         # attr is a string.
         self.handleFields(node, ('value',))
     #@+node:ekr.20240702085302.148: *4* Checker.AUGASSIGN
@@ -1653,7 +1653,7 @@ class Checker:
             and node.func.attr == 'format'
         ):
             self._handle_string_dot_format(node)
-            
+
         def _call_children(node2, omit=None):
             omit = omit or []
             fields = [z for z in node2._fields if z not in omit]
@@ -2039,7 +2039,6 @@ class Checker:
         with self.in_scope(GeneratorScope):
             # Order matters.
             self.handleFields(node, ('generators', 'key', 'value'))
-           
     #@+node:ekr.20240702085302.138: *4* Checker.GENERATOREXP, LISTCOMP, SETCOMP (changed)
     def GENERATOREXP(self, node):
 
@@ -2241,11 +2240,9 @@ class Checker:
 
     #@+node:ekr.20240704160940.1: *4* Checker.NAMEDEXPR (new)
     def NAMEDEXPR(self, node):
-        
+
         # Order matters.
-        for field in ('value', 'target'):
-            child = getattr(node, field, None)
-            self.handleNode(child, node)
+        self.handleFields(node, ('value', 'target'))
     #@+node:ekr.20240702085302.131: *4* Checker.RAISE
     def RAISE(self, node):
         self.handleChildren(node)
@@ -2276,7 +2273,7 @@ class Checker:
 
     #@+node:ekr.20240702085302.125: *4* Checker.SUBSCRIPT (changed)
     def SUBSCRIPT(self, node):
-     
+
         def _do_subscript():
             self.handleFields(node, ('value', 'slice'))
 
