@@ -1479,7 +1479,7 @@ class Checker:
                 self.report(messages.UndefinedName, node, name)
 
     #@+node:ekr.20240702085302.117: *3* Checker: Visitors
-    #@+node:ekr.20240702085302.154: *4* Checker.ANNASSIGN
+    #@+node:ekr.20240702085302.154: *4* Checker.AnnAssign
     def ANNASSIGN(self, node):
         self.handleAnnotation(node.annotation, node)
         # If the assignment has value, handle the *value* now.
@@ -1491,35 +1491,35 @@ class Checker:
                 self.handleNode(node.value, node)
         self.handleNode(node.target, node)
 
-    #@+node:ekr.20240702085302.146: *4* Checker.ARG
+    #@+node:ekr.20240702085302.146: *4* Checker.Arg
     def ARG(self, node):
         self.addBinding(node, Argument(node.arg, self.getScopeNode(node)))
 
-    #@+node:ekr.20240702085302.145: *4* Checker.ARGUMENTS
+    #@+node:ekr.20240702085302.145: *4* Checker.Arguments
     def ARGUMENTS(self, node):
 
         # Visit all fields except 'defaults' and 'kw_defaults'.
         fields = ('posonlyargs', 'args', 'vararg', 'kwonlyargs', 'kwarg')
         self.handleFields(node, fields)
 
-    #@+node:ekr.20240702085302.136: *4* Checker.ASSERT
+    #@+node:ekr.20240702085302.136: *4* Checker.Assert
     def ASSERT(self, node):
         if isinstance(node.test, ast.Tuple) and node.test.elts != []:
             self.report(messages.AssertTuple, node)
         self.handleChildren(node)
 
-    #@+node:ekr.20240704151835.1: *4* Checker.ASSIGN
+    #@+node:ekr.20240704151835.1: *4* Checker.Assign
     def ASSIGN(self, node):
 
         # Order matters.
         self.handleFields(node, ('value', 'targets'))
-    #@+node:ekr.20240702085302.148: *4* Checker.AUGASSIGN
+    #@+node:ekr.20240702085302.148: *4* Checker.AugAssign
     def AUGASSIGN(self, node):
         self.handleNodeLoad(node.target, node)
         self.handleNode(node.value, node)
         self.handleNode(node.target, node)
 
-    #@+node:ekr.20240702085302.129: *4* Checker.BINOP & helper
+    #@+node:ekr.20240702085302.129: *4* Checker.BinOp & helper
     def BINOP(self, node):
         if (
                 isinstance(node.op, ast.Mod) and
@@ -1637,7 +1637,7 @@ class Checker:
                     ', '.join(sorted(missing_keys)),
                 )
 
-    #@+node:ekr.20240702085302.127: *4* Checker.CALL & helper
+    #@+node:ekr.20240702085302.127: *4* Checker.Call & helper
     def CALL(self, node):
         if (
             isinstance(node.func, ast.Attribute)
@@ -1836,7 +1836,7 @@ class Checker:
                 ', '.join(sorted(str(x) for x in missing_arguments)),
             )
 
-    #@+node:ekr.20240702085302.147: *4* Checker.CLASSDEF
+    #@+node:ekr.20240702085302.147: *4* Checker.ClassDef
     def CLASSDEF(self, node):
         """
         Check names used in a class definition, including its decorators, base
@@ -1863,7 +1863,7 @@ class Checker:
 
         self.addBinding(node, ClassDefinition(node.name, node))
 
-    #@+node:ekr.20240702085302.155: *4* Checker.COMPARE
+    #@+node:ekr.20240702085302.155: *4* Checker.Compare
     def COMPARE(self, node):
         left = node.left
         for op, right in zip(node.ops, node.comparators):
@@ -1878,12 +1878,12 @@ class Checker:
 
         self.handleChildren(node)
 
-    #@+node:ekr.20240705064837.1: *4* Checker.COMPREHENSION
+    #@+node:ekr.20240705064837.1: *4* Checker.Comprehension
     def COMPREHENSION(self, node):
 
         # Order matters.
         self.handleFields(node, ('iter', 'target', 'ifs'))
-    #@+node:ekr.20240702085302.130: *4* Checker.CONSTANT & related operators
+    #@+node:ekr.20240702085302.130: *4* Checker.Constant & related operators
     def CONSTANT(self, node):
         if isinstance(node.value, str) and self._in_annotation:
             fn = functools.partial(
@@ -1896,7 +1896,7 @@ class Checker:
             )
             self.deferFunction(fn)
 
-    #@+node:ekr.20240702085302.140: *4* Checker.CONTINUE & BREAK
+    #@+node:ekr.20240702085302.140: *4* Checker.Continue & Break
     def CONTINUE(self, node):
         # Walk the tree up until we see a loop (OK), a function or class
         # definition (not OK), for 'continue', a finally block (not OK), or
@@ -1917,7 +1917,7 @@ class Checker:
 
     BREAK = CONTINUE
 
-    #@+node:ekr.20240702085302.134: *4* Checker.DICT
+    #@+node:ekr.20240702085302.134: *4* Checker.Dict
     def DICT(self, node):
         # Complain if there are duplicate keys with different values
         # If they have the same value it's not going to cause potentially
@@ -1954,7 +1954,7 @@ class Checker:
                         )
         self.handleChildren(node)
 
-    #@+node:ekr.20240702085302.153: *4* Checker.EXCEPTHANDLER
+    #@+node:ekr.20240702085302.153: *4* Checker.ExceptHandler
     def EXCEPTHANDLER(self, node):
         if node.name is None:
             self.handleChildren(node)
@@ -2000,14 +2000,14 @@ class Checker:
         if prev_definition:
             self.scope[node.name] = prev_definition
 
-    #@+node:ekr.20240704150603.1: *4* Checker.FOR & ASYNCFOR
+    #@+node:ekr.20240704150603.1: *4* Checker.For & AsyncFor
     def FOR(self, node):
 
         # Order matters.
         self.handleFields(node, ('iter', 'target', 'type_comment', 'body', 'orelse'))
 
     ASYNCFOR = FOR
-    #@+node:ekr.20240702085302.143: *4* Checker.FUNCTIONDEF & ASYNCFUNCTIONDEF
+    #@+node:ekr.20240702085302.143: *4* Checker.FunctionDef & AsyncFunctionDef
     def FUNCTIONDEF(self, node):
         for deco in node.decorator_list:
             self.handleNode(deco, node)
@@ -2025,13 +2025,13 @@ class Checker:
 
     ASYNCFUNCTIONDEF = FUNCTIONDEF
 
-    #@+node:ekr.20240707060447.1: *4* Checker.DICTCOMP
+    #@+node:ekr.20240707060447.1: *4* Checker.DictComp
     def DICTCOMP(self, node):
 
         with self.in_scope(GeneratorScope):
             # Order matters.
             self.handleFields(node, ('generators', 'key', 'value'))
-    #@+node:ekr.20240702085302.138: *4* Checker.GENERATOREXP, LISTCOMP, SETCOMP
+    #@+node:ekr.20240702085302.138: *4* Checker.GeneratorExpr, ListComp, SetComp
     def GENERATOREXP(self, node):
 
         with self.in_scope(GeneratorScope):
@@ -2039,7 +2039,7 @@ class Checker:
             self.handleFields(node, ('generators', 'elt'))
 
     LISTCOMP = SETCOMP = GENERATOREXP
-    #@+node:ekr.20240702085302.137: *4* Checker.GLOBAL & NONLOCAL
+    #@+node:ekr.20240702085302.137: *4* Checker.Global & NonLocal
     def GLOBAL(self, node):
         """
         Keep track of globals declarations.
@@ -2072,7 +2072,7 @@ class Checker:
 
     NONLOCAL = GLOBAL
 
-    #@+node:ekr.20240702085302.135: *4* Checker.IF & IFEXPR
+    #@+node:ekr.20240702085302.135: *4* Checker.IF & IfExpr
     def IF(self, node):
         if isinstance(node.test, ast.Tuple) and node.test.elts != []:
             self.report(messages.IfTuple, node)
@@ -2094,7 +2094,7 @@ class Checker:
         BITOR = BITXOR = BITAND = FLOORDIV = INVERT = NOT = UADD = USUB = \
         EQ = NOTEQ = LT = LTE = GT = GTE = IS = ISNOT = IN = NOTIN = \
         MATMULT = ignore
-    #@+node:ekr.20240702085302.150: *4* Checker.IMPORT
+    #@+node:ekr.20240702085302.150: *4* Checker.Import
     def IMPORT(self, node):
         for alias in node.names:
             if '.' in alias.name and not alias.asname:
@@ -2104,7 +2104,7 @@ class Checker:
                 importation = Importation(name, node, alias.name)
             self.addBinding(node, importation)
 
-    #@+node:ekr.20240702085302.151: *4* Checker.IMPORTFROM
+    #@+node:ekr.20240702085302.151: *4* Checker.ImportFrom
     def IMPORTFROM(self, node):
         if node.module == '__future__':
             if not self.futuresAllowed:
@@ -2137,7 +2137,7 @@ class Checker:
                                               module, alias.name)
             self.addBinding(node, importation)
 
-    #@+node:ekr.20240702085302.133: *4* Checker.JOINEDSTR
+    #@+node:ekr.20240702085302.133: *4* Checker.JoinedStr
     _in_fstring = False
 
     def JOINEDSTR(self, node):
@@ -2155,7 +2155,7 @@ class Checker:
         finally:
             self._in_fstring = orig
 
-    #@+node:ekr.20240702085302.144: *4* Checker.LAMBDA & runFunction
+    #@+node:ekr.20240702085302.144: *4* Checker.Lambda & runFunction
     def LAMBDA(self, node):
         args = []
         annotations = []
@@ -2200,14 +2200,14 @@ class Checker:
 
         self.deferFunction(runFunction)
 
-    #@+node:ekr.20240702085302.156: *4* Checker.MATCH* & _match_target
+    #@+node:ekr.20240702085302.156: *4* Checker.Match* & _match_target
     def _match_target(self, node):
         self.handleNodeStore(node)
         self.handleChildren(node)
 
     MATCHAS = MATCHMAPPING = MATCHSTAR = _match_target
 
-    #@+node:ekr.20240702085302.139: *4* Checker.NAME
+    #@+node:ekr.20240702085302.139: *4* Checker.Name
     def NAME(self, node):
         """
         Handle occurrence of Name (which can be a load/store/delete access.)
@@ -2230,12 +2230,12 @@ class Checker:
             # Unknown context
             raise RuntimeError(f"Got impossible expression context: {node.ctx!r}")
 
-    #@+node:ekr.20240704160940.1: *4* Checker.NAMEDEXPR
+    #@+node:ekr.20240704160940.1: *4* Checker.NamedExpr
     def NAMEDEXPR(self, node):
 
         # Order matters.
         self.handleFields(node, ('value', 'target'))
-    #@+node:ekr.20240702085302.131: *4* Checker.RAISE
+    #@+node:ekr.20240702085302.131: *4* Checker.Raise
     def RAISE(self, node):
         self.handleChildren(node)
 
@@ -2249,7 +2249,7 @@ class Checker:
             # Handle "raise NotImplemented"
             self.report(messages.RaiseNotImplemented, node)
 
-    #@+node:ekr.20240702085302.141: *4* Checker.RETURN
+    #@+node:ekr.20240702085302.141: *4* Checker.Return
     def RETURN(self, node):
         if isinstance(self.scope, (ClassScope, ModuleScope)):
             self.report(messages.ReturnOutsideFunction, node)
@@ -2263,7 +2263,7 @@ class Checker:
             self.scope.returnValue = node.value
         self.handleNode(node.value, node)
 
-    #@+node:ekr.20240702085302.125: *4* Checker.SUBSCRIPT
+    #@+node:ekr.20240702085302.125: *4* Checker.Subscript
     def SUBSCRIPT(self, node):
 
         def _do_subscript():
@@ -2306,7 +2306,7 @@ class Checker:
                     _do_subscript()
             else:
                 _do_subscript()
-    #@+node:ekr.20240702085302.152: *4* Checker.TRY & TRYSTAR
+    #@+node:ekr.20240702085302.152: *4* Checker.Try & TryStar
     def TRY(self, node):
         handler_names = []
         # List the exception handlers
@@ -2329,7 +2329,7 @@ class Checker:
 
     TRYSTAR = TRY
 
-    #@+node:ekr.20240702085302.149: *4* Checker.TUPLE & LIST
+    #@+node:ekr.20240702085302.149: *4* Checker.Tuple & List
     def TUPLE(self, node):
         if isinstance(node.ctx, ast.Store):
             # Python 3 advanced tuple unpacking: a, *b, c = d.
@@ -2355,19 +2355,19 @@ class Checker:
 
     LIST = TUPLE
 
-    #@+node:ekr.20240702085302.159: *4* Checker.TYPEALIAS
+    #@+node:ekr.20240702085302.159: *4* Checker.TypeAlias
     def TYPEALIAS(self, node):
         self.handleNode(node.name, node)
         with self._type_param_scope(node):
             self.handle_annotation_always_deferred(node.value, node)
-    #@+node:ekr.20240702085302.158: *4* Checker.TYPEVAR, PARAMSPEC & TYPEVARTUPLE
+    #@+node:ekr.20240702085302.158: *4* Checker.TypeVar, ParamSpec & TypeVarTuple
     def TYPEVAR(self, node):
         self.handleNodeStore(node)
         self.handle_annotation_always_deferred(node.bound, node)
 
     PARAMSPEC = TYPEVARTUPLE = handleNodeStore
 
-    #@+node:ekr.20240702085302.142: *4* Checker.YIELD
+    #@+node:ekr.20240702085302.142: *4* Checker.Yield
     def YIELD(self, node):
         if isinstance(self.scope, (ClassScope, ModuleScope)):
             self.report(messages.YieldOutsideFunction, node)
