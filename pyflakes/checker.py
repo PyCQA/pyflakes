@@ -1253,7 +1253,7 @@ class Checker:
     #@+node:ekr.20240706181836.1: *4* Checker.handleFields
     def handleFields(self, node, fields):
         """Visit only the *given* children of node in the given order."""
-        g.trace(node.__class__.__name__)
+        ### g.trace(node.__class__.__name__)
         for field in fields:
             child = getattr(node, field, None)
             if isinstance(child, ast.AST):
@@ -1516,7 +1516,7 @@ class Checker:
         # Order matters.
         self.handleFields(node, ('value', 'targets'))
     #@+node:ekr.20240702085302.148: *4* Checker.AugAssign
-    def AUGAssign(self, node):
+    def AugAssign(self, node):
         self.handleNodeLoad(node.target, node)
         self.handleNode(node.value, node)
         self.handleNode(node.target, node)
