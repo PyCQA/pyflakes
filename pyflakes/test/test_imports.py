@@ -891,6 +891,7 @@ class Test(TestCase):
         self.flakes('import fu; fu = fu')
         self.flakes('import fu; fu, bar = fu')
         self.flakes('import fu; [fu, bar] = fu')
+        breakpoint()  ###
         self.flakes('import fu; fu += fu')
 
     def test_tryingMultipleImports(self):

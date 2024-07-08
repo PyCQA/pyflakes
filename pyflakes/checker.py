@@ -1253,6 +1253,7 @@ class Checker:
     #@+node:ekr.20240706181836.1: *4* Checker.handleFields
     def handleFields(self, node, fields):
         """Visit only the *given* children of node in the given order."""
+        g.trace(node.__class__.__name__)
         for field in fields:
             child = getattr(node, field, None)
             if isinstance(child, ast.AST):
@@ -1280,7 +1281,6 @@ class Checker:
         node._pyflakes_parent = parent
         try:
             # Was getNodeHandler().
-            # Reduce calls to string.upper().
             node_class = node.__class__
             try:
                 handler = self._nodeHandlers[node_class]
