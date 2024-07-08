@@ -804,7 +804,6 @@ class Checker:
         builtins=None,
         withDoctest='PYFLAKES_DOCTEST' in os.environ,
     ):
-        self._nodeHandlers = {}  # Helps the gc.
         self._deferred = collections.deque()
         self.deadScopes = []
         self.messages = []
@@ -1151,7 +1150,7 @@ class Checker:
                     self.handleNode(param, node)
             yield
 
-    #@+node:ekr.20240702085302.104: *4* Checker._unknown_handler
+    #@+node:ekr.20240702085302.104: *4* Checker._unknown_handler (not used)
     def _unknown_handler(self, node):
         # this environment variable configures whether to error on unknown
         # ast types.
@@ -1193,28 +1192,41 @@ class Checker:
         else:
             self.handleNode(annotation, node)
 
-    #@+node:ekr.20240702085302.112: *4* Checker.handleChildren & synonyms
-    def handleChildren(self, node):
+    #@+node:ekr.20240702085302.112: *4* Checker.visit (handleChildren) & synonyms
+    def visit(self, node):
         """
         Visit all of node's children in no particular order.
 
         Use Checker.visitFields if the order matters.
         """
-        self.handleFields(node, node._fields)
+        ### self.handleFields(node, node._fields)
+        for field in node._fields:
+            child = getattr(node, field, None)
+            if isinstance(child, list):
+                for item in child:
+                    if isinstance(item, ast.AST):
+                        self.handleNode(item, node)
+            elif isinstance(child, ast.AST):
+                self.handleNode(child, node)
 
-    # "stmt" type nodes.
-    AsyncWith = Delete = Expr = FormattedValue = keyword = handleChildren
-    Module = While = With = withitem = handleChildren
+    handleChildren = visit
+        
+    # EKR: These would not be necessary except for unit tests.
 
-    # "expr" type nodes
-    Attribute = BoolOp = NameConstant = Set = Starred = UnaryOp = handleChildren
+    if 0:
+        # "stmt" type nodes.
+        AsyncWith = Delete = Expr = FormattedValue = keyword = handleChildren
+        Module = While = With = withitem = handleChildren
 
-    # "match" type nodes.
-    Match = match_case = MatchClass = MatchOr = handleChildren
-    MatchSequence = MatchSingleton = MatchValue = handleChildren
+        # "expr" type nodes
+        Attribute = BoolOp = NameConstant = Set = Starred = UnaryOp = handleChildren
 
-    # "slice" type nodes.
-    ExtSlice = Index = Slice = handleChildren
+        # "match" type nodes.
+        Match = match_case = MatchClass = MatchOr = handleChildren
+        MatchSequence = MatchSingleton = MatchValue = handleChildren
+
+        # "slice" type nodes.
+        ExtSlice = Index = Slice = handleChildren
     #@+node:ekr.20240702085302.120: *4* Checker.handleDoctests
     _getDoctestExamples = doctest.DocTestParser().get_examples
 
@@ -1256,12 +1268,12 @@ class Checker:
         ### g.trace(node.__class__.__name__)
         for field in fields:
             child = getattr(node, field, None)
-            if isinstance(child, ast.AST):
-                self.handleNode(child, node)
-            elif isinstance(child, list):
+            if isinstance(child, list):
                 for item in child:
                     if isinstance(item, ast.AST):
                         self.handleNode(item, node)
+            elif isinstance(child, ast.AST):
+                self.handleNode(child, node)
     #@+node:ekr.20240702085302.119: *4* Checker.handleNode & synonyms
     def handleNode(self, node, parent):
         if node is None:
@@ -1281,15 +1293,7 @@ class Checker:
         node._pyflakes_parent = parent
         try:
             # Was getNodeHandler().
-            node_class = node.__class__
-            try:
-                handler = self._nodeHandlers[node_class]
-            except KeyError:
-                name = node_class.__name__
-                if 0:
-                    name = name.upper()
-                handler = getattr(self, name, self._unknown_handler)
-                self._nodeHandlers[node_class] = handler
+            handler = getattr(self, node.__class__.__name__, self.visit)
             handler(node)
         finally:
             self.nodeDepth -= 1
