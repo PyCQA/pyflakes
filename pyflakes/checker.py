@@ -543,7 +543,6 @@ class FunctionScope(Scope):
         super().__init__()
         # Simplify: manage the special locals as globals
         self.globals = self.alwaysUsed.copy()
-        self.returnValue = None     # First non-empty return
 
     def unused_assignments(self):
         """
@@ -1888,12 +1887,6 @@ class Checker:
             self.report(messages.ReturnOutsideFunction, node)
             return
 
-        if (
-            node.value and
-            hasattr(self.scope, 'returnValue') and
-            not self.scope.returnValue
-        ):
-            self.scope.returnValue = node.value
         self.handleNode(node.value, node)
 
     def YIELD(self, node):
