@@ -774,8 +774,13 @@ class IntegrationTests(TestCase):
         with open(self.tempfilepath, 'wb') as fd:
             fd.write(b"import")
         d = self.runPyflakes([self.tempfilepath])
-        error_msg = '{0}:1:7: invalid syntax{1}import{1}      ^{1}'.format(
-            self.tempfilepath, os.linesep)
+        if sys.version_info >= (3, 13):
+            error_msg = ("{0}:1:7: Expected one or more names after 'import'"
+                         "{1}import{1}      ^{1}").format(
+                                 self.tempfilepath, os.linesep)
+        else:
+            error_msg = '{0}:1:7: invalid syntax{1}import{1}      ^{1}'.format(
+                    self.tempfilepath, os.linesep)
         self.assertEqual(d, ('', error_msg, 1))
 
     def test_readFromStdin(self):
