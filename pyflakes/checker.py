@@ -1001,7 +1001,27 @@ class Checker:
                 # it may be a re-assignment to an already existing name
                 scope.setdefault(value.name, value)
             else:
-                self.scope[value.name] = value
+                if isinstance(value, SubmoduleImportation):
+                    # SubmoduleImportation is used for explicit imports
+                    # of submodule imports. Add the submodule full name to the
+                    # scope.
+                    if value.fullName in scope:
+                        existing = scope[value.fullName]
+                        if (
+                            (not existing.used and value.redefines(existing))
+                            and (value.name != '_' or isinstance(existing, Importation))
+                            and not is_typing_overload(existing, self.scopeStack)
+                        ):
+                            self.report(
+                                messages.RedefinedWhileUnused,
+                                node,
+                                value.name,
+                                existing.source,
+                            )
+
+                    scope[value.fullName] = value
+                else:
+                    self.scope[value.name] = value
 
     def _unknown_handler(self, node):
         # this environment variable configures whether to error on unknown
@@ -1076,6 +1096,25 @@ class Checker:
                     except KeyError:
                         pass
             except KeyError:
+                # if parent is an expression and value is an attribute
+                # this could be a SubImportation so construct the name
+                # and look for that.
+                if not hasattr(node, '_pyflakes_parent'):
+                    pass
+                elif isinstance(node._pyflakes_parent, ast.Attribute):
+                    tmp_name = f'{name}.{node._pyflakes_parent.attr}'
+                    if tmp_name in scope:
+                        try:
+                            scope[tmp_name].used = (self.scope, node)
+                            n = scope[tmp_name]
+                            if isinstance(n, SubmoduleImportation) and n._has_alias():
+                                try:
+                                    scope[n.fullName].used = (self.scope, node)
+                                except KeyError:
+                                    pass
+                        except KeyError:
+                            pass
+                        return
                 pass
             else:
                 return

@@ -846,33 +846,45 @@ class Test(TestCase):
         """
         Usage of package marks submodule imports as used.
         """
-        self.flakes('''
+        checker = self.flakes('''
         import fu
         import fu.bar
         fu.x
-        ''')
+        ''', m.UnusedImport)
+        error = checker.messages[0]
+        assert error.message == '%r imported but unused'
+        assert error.message_args == ('fu.bar', )
 
-        self.flakes('''
+        checker = self.flakes('''
         import fu.bar
         import fu
         fu.x
-        ''')
+        ''', m.UnusedImport)
+        error = checker.messages[0]
+        assert error.message == '%r imported but unused'
+        assert error.message_args == ('fu.bar', )
 
     def test_used_package_with_submodule_import_of_alias(self):
         """
         Usage of package by alias marks submodule imports as used.
         """
-        self.flakes('''
+        checker = self.flakes('''
         import foo as f
         import foo.bar
         f.bar.do_something()
-        ''')
+        ''', m.UnusedImport)
+        error = checker.messages[0]
+        assert error.message == '%r imported but unused'
+        assert error.message_args == ('foo.bar', )
 
-        self.flakes('''
+        checker = self.flakes('''
         import foo as f
         import foo.bar.blah
         f.bar.blah.do_something()
-        ''')
+        ''', m.UnusedImport)
+        error = checker.messages[0]
+        assert error.message == '%r imported but unused'
+        assert error.message_args == ('foo.bar.blah', )
 
     def test_unused_package_with_submodule_import(self):
         """
@@ -881,8 +893,13 @@ class Test(TestCase):
         checker = self.flakes('''
         import fu
         import fu.bar
-        ''', m.UnusedImport)
+        ''', m.UnusedImport, m.UnusedImport)
         error = checker.messages[0]
+        assert error.message == '%r imported but unused'
+        assert error.message_args == ('fu', )
+        assert error.lineno == 4 if self.withDoctest else 2
+
+        error = checker.messages[1]
         assert error.message == '%r imported but unused'
         assert error.message_args == ('fu.bar', )
         assert error.lineno == 5 if self.withDoctest else 3
