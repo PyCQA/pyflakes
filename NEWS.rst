@@ -1,3 +1,10 @@
+3.3.0 (2025-03-29)
+
+- Add ``__debuggerskip__`` as a special local
+- Allow assignment expressions to redefine outer names
+- Drop support for EOL python 3.8
+- Add new error for unused ``global`` / ``nonlocal`` names
+
 3.2.0 (2024-01-04)
 
 - Add support for ``*T`` (TypeVarTuple) and ``**P`` (ParamSpec) in PEP 695
