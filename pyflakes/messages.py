@@ -73,6 +73,14 @@ class UndefinedName(Message):
         self.message_args = (name,)
 
 
+class NoBindingForNonlocal(Message):
+    message = 'no binding for nonlocal %r found'
+
+    def __init__(self, filename, loc, name):
+        Message.__init__(self, filename, loc)
+        self.message_args = (name,)
+
+
 class DoctestSyntaxError(Message):
     message = 'syntax error in doctest'
 

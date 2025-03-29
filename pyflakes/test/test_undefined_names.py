@@ -298,6 +298,62 @@ class Test(TestCase):
         def b(): global bar; bar = 1
         ''')
 
+    def test_unassigned_global_is_undefined(self):
+        """
+        If a "global" is never given a value, it is undefined
+        """
+        self.flakes('''
+        def a():
+            global fu
+            fu
+        ''', m.UndefinedName)
+
+        self.flakes('''
+        global fu
+        fu
+        ''', m.UndefinedName)
+
+    def test_scope_defined_global(self):
+        """
+        If a "global" is defined inside of a function only,
+        outside of the function it is undefined
+        """
+        self.flakes('''
+        global fu
+        def a():
+            fu = 1
+            fu
+        a()
+        fu
+        ''', m.UndefinedName)
+
+    def test_scope_defined_nonlocal(self):
+        """
+        If a "nonlocal" is declared in a previous scope,
+        it is defined
+        """
+        self.flakes('''
+        def a():
+            fu = 1
+            def b():
+                nonlocal fu
+                fu
+        ''')
+
+    def test_scope_undefined_nonlocal(self):
+        """
+        If a "nonlocal" is never given a value, it is undefined
+        """
+        self.flakes('''
+        def a():
+            nonlocal fu
+        ''', m.NoBindingForNonlocal)
+
+        self.flakes('''
+        def a():
+            nonlocal fu, bar
+        ''', m.NoBindingForNonlocal, m.NoBindingForNonlocal)
+
     def test_definedByGlobalMultipleNames(self):
         """
         "global" can accept multiple names.
