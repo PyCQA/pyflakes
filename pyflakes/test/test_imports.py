@@ -654,7 +654,7 @@ class Test(TestCase):
         self.flakes('''
         import fu
         def f(): global fu
-        ''', m.UnusedImport)
+        ''', m.UnusedImport, m.UnusedIndirectAssignment)
 
     def test_usedAndGlobal(self):
         """
@@ -665,7 +665,7 @@ class Test(TestCase):
             import foo
             def f(): global foo
             def g(): foo.is_used()
-        ''')
+        ''', m.UnusedIndirectAssignment)
 
     def test_assignedToGlobal(self):
         """

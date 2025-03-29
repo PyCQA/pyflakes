@@ -327,7 +327,7 @@ class Test(TestCase):
 
         def f2():
             global m
-        ''', m.UndefinedName)
+        ''', m.UndefinedName, m.UnusedIndirectAssignment)
 
     @skip("todo")
     def test_unused_global(self):
@@ -462,7 +462,7 @@ class Test(TestCase):
                     a
                     a = 2
                     return a
-        ''', m.UndefinedLocal)
+        ''', m.UndefinedLocal, m.UnusedIndirectAssignment)
 
     def test_intermediateClassScopeIgnored(self):
         """

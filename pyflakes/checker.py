@@ -543,6 +543,8 @@ class FunctionScope(Scope):
         super().__init__()
         # Simplify: manage the special locals as globals
         self.globals = self.alwaysUsed.copy()
+        # {name: node}
+        self.indirect_assignments = {}
 
     def unused_assignments(self):
         """
@@ -563,6 +565,9 @@ class FunctionScope(Scope):
         for name, binding in self.items():
             if not binding.used and isinstance(binding, Annotation):
                 yield name, binding
+
+    def unused_indirect_assignments(self):
+        return self.indirect_assignments.items()
 
 
 class TypeScope(Scope):
@@ -839,6 +844,8 @@ class Checker:
                     self.report(messages.UnusedVariable, binding.source, name)
                 for name, binding in scope.unused_annotations():
                     self.report(messages.UnusedAnnotation, binding.source, name)
+                for name, node in scope.unused_indirect_assignments():
+                    self.report(messages.UnusedIndirectAssignment, node, name)
 
             all_binding = scope.get('__all__')
             if all_binding and not isinstance(all_binding, ExportBinding):
@@ -980,6 +987,9 @@ class Checker:
                 ):
                     self.report(messages.RedefinedWhileUnused,
                                 node, value.name, existing.source)
+
+                if isinstance(scope, FunctionScope):
+                    scope.indirect_assignments.pop(value.name, None)
 
             elif isinstance(existing, Importation) and value.redefines(existing):
                 existing.redefined.append(node)
@@ -1176,6 +1186,9 @@ class Checker:
             # We cannot predict if this conditional branch is going to
             # be executed.
             return
+
+        if isinstance(self.scope, FunctionScope):
+            self.scope.indirect_assignments.pop(name, None)
 
         if isinstance(self.scope, FunctionScope) and name in self.scope.globals:
             self.scope.globals.remove(name)
@@ -1834,6 +1847,8 @@ class Checker:
                 node_value.used = (global_scope, node)
                 for scope in self.scopeStack[global_scope_index + 1:]:
                     scope[node_name] = node_value
+
+                self.scope.indirect_assignments[node_name] = node
 
     NONLOCAL = GLOBAL
 
