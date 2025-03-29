@@ -168,6 +168,15 @@ class UnusedAnnotation(Message):
         self.message_args = (names,)
 
 
+class UnusedIndirectAssignment(Message):
+    """A `global` or `nonlocal` statement where the name is never reassigned"""
+    message = '`%s %s` is unused: name is never assigned in scope'
+
+    def __init__(self, filename, loc, name):
+        Message.__init__(self, filename, loc)
+        self.message_args = (type(loc).__name__.lower(), name)
+
+
 class ReturnOutsideFunction(Message):
     """
     Indicates a return statement outside of a function/method.

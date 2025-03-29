@@ -1085,7 +1085,41 @@ class Test(TestCase):
         self.flakes('''
         def f(): global foo
         def g(): foo = 'anything'; foo.is_used()
-        ''')
+        ''', m.UnusedIndirectAssignment)
+
+    def test_unused_global_statement(self):
+        self.flakes('''
+        g = 0
+        def f1():
+            global g
+            g = 1
+        def f2():
+            global g  # this is unused!
+            return g
+        ''', m.UnusedIndirectAssignment)
+
+    def test_unused_nonlocal_statement(self):
+        self.flakes('''
+        def f():
+            x = 1
+            def set_x():
+                nonlocal x
+                x = 2
+            def get_x():
+                nonlocal x
+                return x
+            set_x()
+            return get_x()
+        ''', m.UnusedIndirectAssignment)
+
+    def test_unused_global_statement_not_marked_as_used_by_nested_scope(self):
+        self.flakes('''
+        g = 0
+        def f():
+            global g
+            def f2():
+                g = 2
+        ''', m.UnusedIndirectAssignment, m.UnusedVariable)
 
     def test_function_arguments(self):
         """
