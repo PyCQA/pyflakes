@@ -797,3 +797,10 @@ class TestTypeAnnotations(TestCase):
                 return f(*args, **kwargs)
             return g
         """)
+
+    @skipIf(version_info < (3, 13), 'new in Python 3.13')
+    def test_type_parameter_defaults(self):
+        self.flakes("""
+        def f[T = int](u: T) -> T:
+            return u
+        """)
