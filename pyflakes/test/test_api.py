@@ -479,16 +479,12 @@ def foo(bar=baz, bax):
             else:
                 msg = 'non-default argument follows default argument'
 
-            if PYPY and sys.version_info >= (3, 9):
+            if PYPY:
                 column = 18
-            elif PYPY:
-                column = 8
             elif sys.version_info >= (3, 10):
                 column = 18
-            elif sys.version_info >= (3, 9):
-                column = 21
             else:
-                column = 9
+                column = 21
             last_line = ' ' * (column - 1) + '^\n'
             self.assertHasErrors(
                 sourcePath,
@@ -508,23 +504,13 @@ def foo(bar=baz, bax):
 foo(bar=baz, bax)
 """
         with self.makeTempFile(source) as sourcePath:
-            if sys.version_info >= (3, 9):
-                column = 17
-            elif not PYPY:
-                column = 14
-            else:
-                column = 13
-            last_line = ' ' * (column - 1) + '^\n'
-            columnstr = '%d:' % column
-
-            message = 'positional argument follows keyword argument'
-
+            last_line = ' ' * 16 + '^\n'
             self.assertHasErrors(
                 sourcePath,
-                ["""\
-{}:1:{} {}
+                [f"""\
+{sourcePath}:1:17: positional argument follows keyword argument
 foo(bar=baz, bax)
-{}""".format(sourcePath, columnstr, message, last_line)])
+{last_line}"""])
 
     def test_invalidEscape(self):
         """
@@ -533,11 +519,9 @@ foo(bar=baz, bax)
         # ValueError: invalid \x escape
         with self.makeTempFile(r"foo = '\xyz'") as sourcePath:
             position_end = 1
-            if PYPY and sys.version_info >= (3, 9):
+            if PYPY:
                 column = 7
-            elif PYPY:
-                column = 6
-            elif (3, 9) <= sys.version_info < (3, 12):
+            elif sys.version_info < (3, 12):
                 column = 13
             else:
                 column = 7
@@ -669,23 +653,11 @@ x = "%s"
         self.assertEqual(count, 1)
         errlines = err.getvalue().split("\n")[:-1]
 
-        if sys.version_info >= (3, 9):
-            expected_error = [
-                "<stdin>:1:5: Generator expression must be parenthesized",
-                "max(1 for i in range(10), key=lambda x: x+1)",
-                "    ^",
-            ]
-        elif PYPY:
-            expected_error = [
-                "<stdin>:1:4: Generator expression must be parenthesized if not sole argument",  # noqa: E501
-                "max(1 for i in range(10), key=lambda x: x+1)",
-                "   ^",
-            ]
-        else:
-            expected_error = [
-                "<stdin>:1:5: Generator expression must be parenthesized",
-            ]
-
+        expected_error = [
+            "<stdin>:1:5: Generator expression must be parenthesized",
+            "max(1 for i in range(10), key=lambda x: x+1)",
+            "    ^",
+        ]
         self.assertEqual(errlines, expected_error)
 
 
@@ -774,8 +746,14 @@ class IntegrationTests(TestCase):
         with open(self.tempfilepath, 'wb') as fd:
             fd.write(b"import")
         d = self.runPyflakes([self.tempfilepath])
-        error_msg = '{0}:1:7: invalid syntax{1}import{1}      ^{1}'.format(
-            self.tempfilepath, os.linesep)
+
+        if sys.version_info >= (3, 13):
+            message = "Expected one or more names after 'import'"
+        else:
+            message = 'invalid syntax'
+
+        error_msg = '{0}:1:7: {1}{2}import{2}      ^{2}'.format(
+            self.tempfilepath, message, os.linesep)
         self.assertEqual(d, ('', error_msg, 1))
 
     def test_readFromStdin(self):
