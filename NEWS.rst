@@ -1,3 +1,7 @@
+3.3.1 (2025-03-30)
+
+- Allow assignment expressions to redefine annotations (regressed in 3.3.0)
+
 3.3.0 (2025-03-29)
 
 - Add ``__debuggerskip__`` as a special local
