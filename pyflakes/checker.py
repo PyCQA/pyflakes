@@ -1008,8 +1008,12 @@ class Checker:
                     for scope in reversed(self.scopeStack)
                     if not isinstance(scope, GeneratorScope)
                 )
-                # it may be a re-assignment to an already existing name
-                scope.setdefault(value.name, value)
+                if value.name in scope and isinstance(scope[value.name], Annotation):
+                    # re-assignment to name that was previously only an annotation
+                    scope[value.name] = value
+                else:
+                    # it may be a re-assignment to an already existing name
+                    scope.setdefault(value.name, value)
             else:
                 self.scope[value.name] = value
 

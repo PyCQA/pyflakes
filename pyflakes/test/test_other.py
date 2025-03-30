@@ -1744,6 +1744,13 @@ class TestUnusedAssignment(TestCase):
         print(x)
         ''')
 
+    def test_assign_expr_after_annotation(self):
+        self.flakes("""
+        a: int
+        print(a := 3)
+        print(a)
+        """)
+
     def test_assign_expr_generator_scope(self):
         """Test assignment expressions in generator expressions."""
         self.flakes('''
