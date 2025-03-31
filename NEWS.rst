@@ -1,3 +1,7 @@
+3.3.2 (2025-03-31)
+
+- Fix crash with ``global`` / ``nonlocal`` in class bodies (regressed in 3.3.0)
+
 3.3.1 (2025-03-30)
 
 - Allow assignment expressions to redefine annotations (regressed in 3.3.0)
