@@ -526,7 +526,10 @@ class Scope(dict):
 
 
 class ClassScope(Scope):
-    pass
+    def __init__(self):
+        super().__init__()
+        # {name: node}
+        self.indirect_assignments = {}
 
 
 class FunctionScope(Scope):
@@ -565,9 +568,6 @@ class FunctionScope(Scope):
         for name, binding in self.items():
             if not binding.used and isinstance(binding, Annotation):
                 yield name, binding
-
-    def unused_indirect_assignments(self):
-        return self.indirect_assignments.items()
 
 
 class TypeScope(Scope):
@@ -835,6 +835,10 @@ class Checker:
         which were imported but unused.
         """
         for scope in self.deadScopes:
+            if isinstance(scope, (ClassScope, FunctionScope)):
+                for name, node in scope.indirect_assignments.items():
+                    self.report(messages.UnusedIndirectAssignment, node, name)
+
             # imports in classes are public members
             if isinstance(scope, ClassScope):
                 continue
@@ -844,8 +848,6 @@ class Checker:
                     self.report(messages.UnusedVariable, binding.source, name)
                 for name, binding in scope.unused_annotations():
                     self.report(messages.UnusedAnnotation, binding.source, name)
-                for name, node in scope.unused_indirect_assignments():
-                    self.report(messages.UnusedIndirectAssignment, node, name)
 
             all_binding = scope.get('__all__')
             if all_binding and not isinstance(all_binding, ExportBinding):
@@ -988,7 +990,7 @@ class Checker:
                     self.report(messages.RedefinedWhileUnused,
                                 node, value.name, existing.source)
 
-                if isinstance(scope, FunctionScope):
+                if isinstance(scope, (ClassScope, FunctionScope)):
                     scope.indirect_assignments.pop(value.name, None)
 
             elif isinstance(existing, Importation) and value.redefines(existing):
@@ -1191,7 +1193,7 @@ class Checker:
             # be executed.
             return
 
-        if isinstance(self.scope, FunctionScope):
+        if isinstance(self.scope, (ClassScope, FunctionScope)):
             self.scope.indirect_assignments.pop(name, None)
 
         if isinstance(self.scope, FunctionScope) and name in self.scope.globals:
