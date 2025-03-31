@@ -1121,6 +1121,36 @@ class Test(TestCase):
                 g = 2
         ''', m.UnusedIndirectAssignment, m.UnusedVariable)
 
+    def test_global_nonlocal_in_class_bodies(self):
+        self.flakes('''
+        g = 0
+        class C:
+            global g
+            g = 1
+        def f():
+            nl = 0
+            class C:
+                nonlocal nl
+                nl = 1
+        ''')
+
+    def test_unused_global_in_class(self):
+        self.flakes('''
+        g = 0
+        class C:
+            global g
+            u = g
+        ''', m.UnusedIndirectAssignment)
+
+    def test_unused_nonlocal_in_clas(self):
+        self.flakes('''
+        def f():
+            nl = 1
+            class C:
+                nonlocal nl
+                u = nl
+        ''', m.UnusedIndirectAssignment)
+
     def test_function_arguments(self):
         """
         Test to traverse ARG and ARGUMENT handler
