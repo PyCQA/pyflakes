@@ -152,6 +152,9 @@ class TestTypeAnnotations(TestCase):
         """, m.RedefinedWhileUnused)
 
     def test_variable_annotations(self):
+        def undefined_names_before_py314(*, n: int):
+            return (m.UndefinedName,) * n if version_info < (3, 14) else ()
+
         self.flakes('''
         name: str
         age: int
@@ -264,7 +267,8 @@ class TestTypeAnnotations(TestCase):
         self.flakes('''
         def f(a: A) -> A: pass
         class A: pass
-        ''', m.UndefinedName, m.UndefinedName)
+        ''', *undefined_names_before_py314(n=2))
+
         self.flakes('''
         def f(a: 'A') -> 'A': return a
         class A: pass
@@ -272,7 +276,7 @@ class TestTypeAnnotations(TestCase):
         self.flakes('''
         a: A
         class A: pass
-        ''', m.UndefinedName)
+        ''', *undefined_names_before_py314(n=1))
         self.flakes('''
         a: 'A'
         class A: pass
@@ -280,7 +284,7 @@ class TestTypeAnnotations(TestCase):
         self.flakes('''
         T: object
         def f(t: T): pass
-        ''', m.UndefinedName)
+        ''', *undefined_names_before_py314(n=1))
         self.flakes('''
         T: object
         def g(t: 'T'): pass
@@ -408,6 +412,21 @@ class TestTypeAnnotations(TestCase):
         T: object
         def f(t: T): pass
         def g(t: 'T'): pass
+        ''')
+
+    def test_annotations_do_not_define_names_with_future_annotations(self):
+        self.flakes('''
+            from __future__ import annotations
+            def f():
+                x: str
+                print(x)
+        ''', m.UndefinedName)
+
+    @skipIf(version_info < (3, 14), 'new in Python 3.14')
+    def test_postponed_annotations_py314(self):
+        self.flakes('''
+            def f(x: C) -> None: pass
+            class C: pass
         ''')
 
     def test_type_annotation_clobbers_all(self):

@@ -266,6 +266,10 @@ class FStringMissingPlaceholders(Message):
     message = 'f-string is missing placeholders'
 
 
+class TStringMissingPlaceholders(Message):
+    message = 't-string is missing placeholders'
+
+
 class StringDotFormatExtraPositionalArguments(Message):
     message = "'...'.format(...) has unused arguments at position(s): %s"
 

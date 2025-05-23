@@ -1766,6 +1766,13 @@ class TestUnusedAssignment(TestCase):
         print(f'\x7b4*baz\N{RIGHT CURLY BRACKET}')
         ''')
 
+    @skipIf(version_info < (3, 14), 'new in Python 3.14')
+    def test_t_string(self):
+        self.flakes('''
+            baz = 0
+            tmpl = t'hello {baz}'
+        ''')
+
     def test_assign_expr(self):
         """Test PEP 572 assignment expressions are treated as usage / write."""
         self.flakes('''
@@ -1835,6 +1842,15 @@ class TestStringFormatting(TestCase):
         self.flakes('''
             x = y = 5
             print(f'{x:>2} {y:>2}')
+        ''')
+
+    @skipIf(version_info < (3, 14), 'new in Python 3.14')
+    def test_t_string_missing_placeholders(self):
+        self.flakes("t'foo'", m.TStringMissingPlaceholders)
+        # make sure this does not trigger the f-string placeholder error
+        self.flakes('''
+            x = y = 5
+            tmpl = t'{x:0{y}}'
         ''')
 
     def test_invalid_dot_format_calls(self):
