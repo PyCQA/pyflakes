@@ -1,3 +1,5 @@
+from sys import version_info
+
 from pyflakes import messages as m
 from pyflakes.checker import (
     FutureImportation,
@@ -6,7 +8,7 @@ from pyflakes.checker import (
     StarImportation,
     SubmoduleImportation,
 )
-from pyflakes.test.harness import TestCase, skip
+from pyflakes.test.harness import TestCase, skip, skipIf
 
 
 class TestImportationObject(TestCase):
@@ -990,12 +992,14 @@ class Test(TestCase):
         assert print_function is not division
         ''')
 
+    @skipIf(version_info >= (3, 14), 'in 3.14+ this is a SyntaxError')
     def test_futureImportUndefined(self):
         """Importing undefined names from __future__ fails."""
         self.flakes('''
         from __future__ import print_statement
         ''', m.FutureFeatureNotDefined)
 
+    @skipIf(version_info >= (3, 14), 'in 3.14+ this is a SyntaxError')
     def test_futureImportStar(self):
         """Importing '*' from __future__ fails."""
         self.flakes('''

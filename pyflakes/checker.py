@@ -1216,7 +1216,10 @@ class Checker:
     def _in_postponed_annotation(self):
         return (
             self._in_annotation == AnnotationState.STRING or
-            self.annotationsFutureEnabled
+            (
+                self._in_annotation == AnnotationState.BARE and
+                (self.annotationsFutureEnabled or sys.version_info >= (3, 14))
+            )
         )
 
     def handleChildren(self, tree, omit=None):
@@ -1350,7 +1353,7 @@ class Checker:
                 annotation.col_offset,
                 messages.ForwardAnnotationSyntaxError,
             ))
-        elif self.annotationsFutureEnabled:
+        elif self.annotationsFutureEnabled or sys.version_info >= (3, 14):
             self.handle_annotation_always_deferred(annotation, node)
         else:
             self.handleNode(annotation, node)
@@ -1775,6 +1778,20 @@ class Checker:
             self.handleChildren(node)
         finally:
             self._in_fstring = orig
+
+    def TEMPLATESTR(self, node):
+        if not any(isinstance(x, ast.Interpolation) for x in node.values):
+            self.report(messages.TStringMissingPlaceholders, node)
+
+        # similar to f-strings, conversion / etc. flags are parsed as f-strings
+        # without placeholders
+        self._in_fstring, orig = True, self._in_fstring
+        try:
+            self.handleChildren(node)
+        finally:
+            self._in_fstring = orig
+
+    INTERPOLATION = handleChildren
 
     def DICT(self, node):
         # Complain if there are duplicate keys with different values
