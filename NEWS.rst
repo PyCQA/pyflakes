@@ -1,3 +1,11 @@
+3.4.0 (2025-06-20)
+
+- Add support for python 3.14
+- Add "t-string is missing placeholders" error
+- Fix annotation erroneously causing a name to be defined with
+  ``from __future__ import annotations``
+- Add support for always-deferred annotations (PEP 749)
+
 3.3.2 (2025-03-31)
 
 - Fix crash with ``global`` / ``nonlocal`` in class bodies (regressed in 3.3.0)
