@@ -11,6 +11,7 @@ import collections
 import contextlib
 import doctest
 import functools
+import importlib
 import os
 import re
 import string
@@ -744,8 +745,10 @@ class Checker:
         self.withDoctest = withDoctest
         self.exceptHandlers = [()]
         self.root = tree
-
         self.scopeStack = []
+
+        self.load_plugins()
+
         try:
             scope_tp = Checker._ast_node_scope[type(tree)]
         except KeyError:
@@ -764,6 +767,29 @@ class Checker:
                 '`file_tokens` will be removed in a future version',
                 stacklevel=2,
             )
+
+    def load_plugins(self) -> None:
+        """Load all plugins"""
+        plugins_directory = os.path.normpath(os.path.join(os.path.dirname(
+            __file__), 'plugins'))
+        if not os.path.exists(plugins_directory):
+            return
+        for filename in os.listdir(plugins_directory):
+            if filename.startswith('_'):
+                continue
+            path = os.path.join(plugins_directory, filename)
+            base, extension = os.path.splitext(filename)
+            if extension != '.py' :
+                continue
+            try:
+                module_name = f"plugins.{base}"
+                plugin = importlib.import_module(module_name)
+                importlib.reload(plugin)
+                # print(f"Loaded plugin: {module_name}")
+                if hasattr(plugin, "register"):
+                    plugin.register(self)
+            except Exception as e:
+                print(f"Can not import {module_name}: {e}")
 
     def deferFunction(self, callable):
         """
