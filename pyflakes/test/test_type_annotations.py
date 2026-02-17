@@ -598,6 +598,32 @@ class TestTypeAnnotations(TestCase):
             return None
         """)
 
+    def test_annotated_type_typing_alias(self):
+        """Annotated imported under an alias should not produce F821."""
+        self.flakes("""
+        from typing_extensions import Annotated as WithSchema
+
+        def f(x: WithSchema[int, 'hello']) -> None:
+            return None
+        """)
+
+    def test_annotated_type_typing_alias_forward_type(self):
+        self.flakes("""
+        from typing import Annotated as Ann
+
+        def f(x: Ann['integer', 1]) -> None:
+            return None
+        """, m.UndefinedName)
+
+    def test_literal_type_typing_alias(self):
+        """Literal imported under an alias should not produce F821."""
+        self.flakes("""
+        from typing import Literal as Lit
+
+        def f(x: Lit['some string']) -> None:
+            return None
+        """)
+
     def test_deferred_twice_annotation(self):
         self.flakes("""
             from queue import Queue

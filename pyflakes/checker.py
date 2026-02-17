@@ -1372,10 +1372,16 @@ class Checker:
         NAMEDEXPR = handleChildren
 
     def SUBSCRIPT(self, node):
-        if _is_name_or_attr(node.value, 'Literal'):
+        if (
+            _is_typing(node.value, 'Literal', self.scopeStack)
+            or _is_name_or_attr(node.value, 'Literal')
+        ):
             with self._enter_annotation(AnnotationState.NONE):
                 self.handleChildren(node)
-        elif _is_name_or_attr(node.value, 'Annotated'):
+        elif (
+            _is_typing(node.value, 'Annotated', self.scopeStack)
+            or _is_name_or_attr(node.value, 'Annotated')
+        ):
             self.handleNode(node.value, node)
 
             # py39+
