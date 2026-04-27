@@ -1375,7 +1375,7 @@ class Checker:
         if _is_name_or_attr(node.value, 'Literal'):
             with self._enter_annotation(AnnotationState.NONE):
                 self.handleChildren(node)
-        elif _is_name_or_attr(node.value, 'Annotated'):
+        elif _is_typing(node.value, 'Annotated', self.scopeStack):
             self.handleNode(node.value, node)
 
             # py39+

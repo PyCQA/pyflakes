@@ -570,6 +570,14 @@ class TestTypeAnnotations(TestCase):
             return None
         """)
 
+    def test_annotated_type_typing_extensions_with_alias_string_args(self):
+        self.flakes("""
+        from typing_extensions import Annotated as WithSchema
+
+        def f(x: WithSchema[int, 'hello']) -> None:
+            return None
+        """)
+
     def test_annotated_type_typing_with_string_args_in_union(self):
         self.flakes("""
         from typing import Annotated, Union
@@ -577,6 +585,14 @@ class TestTypeAnnotations(TestCase):
         def f(x: Union[Annotated['int', '>0'], 'integer']) -> None:
             return None
         """, m.UndefinedName)
+
+    def test_annotated_type_typing_extensions_alias_with_string_args(self):
+        self.flakes("""
+        from typing_extensions import Annotated as WithSchema
+
+        def f(x: WithSchema[int, 'hello']) -> None:
+            return None
+        """)
 
     def test_literal_type_some_other_module(self):
         """err on the side of false-negatives for types named Literal"""
