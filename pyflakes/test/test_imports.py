@@ -961,6 +961,28 @@ class Test(TestCase):
                 pass
         ''')
 
+    def test_importNotRedefinedByClassMethod(self):
+        """
+        Methods are bound in the class namespace, not the module namespace.
+        """
+        self.flakes('''
+        import bar
+
+        class Foo:
+            def bar(self):
+                pass
+        ''', m.UnusedImport)
+
+        self.flakes('''
+        import bar
+
+        class Foo:
+            def bar(self):
+                pass
+
+        coffee = bar.Espresso()
+        ''')
+
     def test_futureImport(self):
         """__future__ is special."""
         self.flakes('from __future__ import division')
