@@ -1810,6 +1810,38 @@ class TestUnusedAssignment(TestCase):
             print(z)
         ''')
 
+    def test_assign_expr_pep572_partial_sums(self):
+        """Test PEP 572 partial sums example (issue #843)."""
+        self.flakes('''
+        def cumulative_sum(values):
+            total = 0
+            return [total := total + v for v in values]
+        ''')
+
+    def test_assign_expr_set_comprehension(self):
+        """Test walrus operator in set comprehension with outer variable."""
+        self.flakes('''
+        def f(values):
+            total = 0
+            return {total := total + v for v in values}
+        ''')
+
+    def test_assign_expr_generator_expression(self):
+        """Test walrus operator in generator expression with outer variable."""
+        self.flakes('''
+        def f(values):
+            total = 0
+            return list(total := total + v for v in values)
+        ''')
+
+    def test_assign_expr_nested_comprehension(self):
+        """Test walrus operator in nested comprehension with outer variable."""
+        self.flakes('''
+        def f(values):
+            total = 0
+            return [[total := total + v for v in row] for row in values]
+        ''')
+
 
 class TestStringFormatting(TestCase):
 
