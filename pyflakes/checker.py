@@ -993,7 +993,10 @@ class Checker:
                 if isinstance(scope, (ClassScope, FunctionScope)):
                     scope.indirect_assignments.pop(value.name, None)
 
-            elif isinstance(existing, Importation) and value.redefines(existing):
+            elif (isinstance(existing, Importation) and
+                    value.redefines(existing) and
+                    not (isinstance(self.scope, ClassScope) and
+                         scope is not self.scope)):
                 existing.redefined.append(node)
 
         if value.name in self.scope:

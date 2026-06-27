@@ -709,6 +709,31 @@ class Test(TestCase):
                 fu
         ''', m.UndefinedName)
 
+    def test_methodWithSameNameAsImport(self):
+        """A method with the same name as an import should not cause false
+        positive redefinition warnings. The method is in the class scope,
+        while the import is in the module scope - they are separate namespaces.
+        """
+        # Import is unused - should report UnusedImport only
+        self.flakes('''
+        import bar
+
+        class Foo:
+            def bar(self):
+                pass
+        ''', m.UnusedImport)
+
+        # Import is used - no warnings
+        self.flakes('''
+        import bar
+
+        class Foo:
+            def bar(self):
+                pass
+
+        x = bar.Espresso()
+        ''')
+
     def test_nestedFunctionsNestScope(self):
         self.flakes('''
         def a():
