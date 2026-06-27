@@ -1810,6 +1810,47 @@ class TestUnusedAssignment(TestCase):
             print(z)
         ''')
 
+    def test_assign_expr_partial_sums_pep572(self):
+        """Test PEP 572 partial sums example (issue #843)."""
+        self.flakes('''
+        def cumulative_sum(values):
+            total = 0
+            return [total := total + v for v in values]
+        ''')
+
+    def test_assign_expr_partial_sums_used_after(self):
+        """Test walrus-assigned variable used after comprehension."""
+        self.flakes('''
+        def cumulative_sum(values):
+            total = 0
+            result = [total := total + v for v in values]
+            return total, result
+        ''')
+
+    def test_assign_expr_walrus_in_set_comp(self):
+        """Test walrus operator in set comprehension."""
+        self.flakes('''
+        def f():
+            total = 0
+            return {total := total + x for x in range(5)}
+        ''')
+
+    def test_assign_expr_walrus_in_generator(self):
+        """Test walrus operator in generator expression."""
+        self.flakes('''
+        def f():
+            total = 0
+            return list(total := total + x for x in range(5))
+        ''')
+
+    def test_assign_expr_walrus_in_dict_comp(self):
+        """Test walrus operator in dict comprehension."""
+        self.flakes('''
+        def f():
+            total = 0
+            return {x: (total := total + x) for x in range(5)}
+        ''')
+
 
 class TestStringFormatting(TestCase):
 
