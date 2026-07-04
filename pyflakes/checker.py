@@ -1780,9 +1780,11 @@ class Checker:
             self._in_fstring = orig
 
     def TEMPLATESTR(self, node):
-        if not any(isinstance(x, ast.Interpolation) for x in node.values):
-            self.report(messages.TStringMissingPlaceholders, node)
-
+        # Unlike f-strings, t-strings are designed to be used without
+        # placeholders in some cases (e.g., when building SQL queries by
+        # concatenating t-strings). So we don't warn about missing placeholders.
+        # See: https://github.com/PyCQA/pyflakes/issues/845
+        
         # similar to f-strings, conversion / etc. flags are parsed as f-strings
         # without placeholders
         self._in_fstring, orig = True, self._in_fstring

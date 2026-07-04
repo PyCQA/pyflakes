@@ -1846,7 +1846,7 @@ class TestStringFormatting(TestCase):
 
     @skipIf(version_info < (3, 14), 'new in Python 3.14')
     def test_t_string_missing_placeholders(self):
-        self.flakes("t'foo'", m.TStringMissingPlaceholders)
+        self.flakes("t'foo'")  # no warning - t-strings are fine without placeholders
         # make sure this does not trigger the f-string placeholder error
         self.flakes('''
             x = y = 5
