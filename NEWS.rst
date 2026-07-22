@@ -1,3 +1,5 @@
+- Report ``await`` used outside an ``async def`` function (See GH-818)
+
 3.4.0 (2025-06-20)
 
 - Add support for python 3.14

@@ -537,17 +537,19 @@ class FunctionScope(Scope):
     I represent a name scope for a function.
 
     @ivar globals: Names declared 'global' in this function.
+    @ivar is_async: True when this scope belongs to an ``async def``.
     """
     usesLocals = False
     alwaysUsed = {'__tracebackhide__', '__traceback_info__',
                   '__traceback_supplement__', '__debuggerskip__'}
 
-    def __init__(self):
+    def __init__(self, is_async=False):
         super().__init__()
         # Simplify: manage the special locals as globals
         self.globals = self.alwaysUsed.copy()
         # {name: node}
         self.indirect_assignments = {}
+        self.is_async = is_async
 
     def unused_assignments(self):
         """
@@ -1934,14 +1936,30 @@ class Checker:
 
         self.handleNode(node.value, node)
 
-    AWAIT = YIELDFROM = YIELD
+    YIELDFROM = YIELD
+
+    def AWAIT(self, node):
+        # await is only legal inside an async function (including nested
+        # comprehensions therein). See https://github.com/PyCQA/pyflakes/issues/818
+        in_async_function = False
+        for scope in reversed(self.scopeStack):
+            if isinstance(scope, FunctionScope):
+                in_async_function = scope.is_async
+                break
+            if isinstance(scope, (ClassScope, ModuleScope)):
+                break
+        if not in_async_function:
+            self.report(messages.AwaitOutsideAsyncFunction, node)
+            return
+
+        self.handleNode(node.value, node)
 
     def FUNCTIONDEF(self, node):
         for deco in node.decorator_list:
             self.handleNode(deco, node)
 
         with self._type_param_scope(node):
-            self.LAMBDA(node)
+            self.LAMBDA(node, is_async=isinstance(node, ast.AsyncFunctionDef))
 
         self.addBinding(node, FunctionDefinition(node.name, node))
         # doctest does not process doctest within a doctest,
@@ -1953,7 +1971,7 @@ class Checker:
 
     ASYNCFUNCTIONDEF = FUNCTIONDEF
 
-    def LAMBDA(self, node):
+    def LAMBDA(self, node, is_async=False):
         args = []
         annotations = []
 
@@ -1991,6 +2009,7 @@ class Checker:
 
         def runFunction():
             with self.in_scope(FunctionScope):
+                self.scope.is_async = is_async
                 self.handleChildren(
                     node,
                     omit=('decorator_list', 'returns', 'type_params'),

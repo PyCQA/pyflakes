@@ -193,6 +193,13 @@ class YieldOutsideFunction(Message):
 
 # For whatever reason, Python gives different error messages for these two. We
 # match the Python error message exactly.
+class AwaitOutsideAsyncFunction(Message):
+    """
+    Indicates an await expression outside of an async function/method.
+    """
+    message = '\'await\' outside async function'
+
+
 class ContinueOutsideLoop(Message):
     """
     Indicates a continue statement outside of a while or for loop.

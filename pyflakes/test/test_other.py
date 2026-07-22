@@ -1985,6 +1985,41 @@ class TestAsyncStatements(TestCase):
             await db.fetch('SELECT ...')
         ''')
 
+    def test_awaitInNonAsyncFunction(self):
+        """
+        await inside a plain def is invalid; report it (issue #818).
+        """
+        self.flakes('''
+        async def foo():
+            pass
+
+        def bar():
+            await foo()
+        ''', m.AwaitOutsideAsyncFunction)
+
+    def test_awaitAtModuleLevel(self):
+        self.flakes('''
+        await 1
+        ''', m.AwaitOutsideAsyncFunction)
+
+    def test_awaitInClassBody(self):
+        self.flakes('''
+        class C:
+            await 1
+        ''', m.AwaitOutsideAsyncFunction)
+
+    def test_awaitInListCompOutsideAsync(self):
+        self.flakes('''
+        y = []
+        [await x for x in y]
+        ''', m.AwaitOutsideAsyncFunction)
+
+    def test_awaitInListCompInsideAsync(self):
+        self.flakes('''
+        async def f(y):
+            return [await x for x in y]
+        ''')
+
     def test_asyncDefUndefined(self):
         self.flakes('''
         async def bar():
