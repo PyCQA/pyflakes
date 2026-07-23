@@ -824,8 +824,8 @@ class Checker:
         return self.scopeStack[-1]
 
     @contextlib.contextmanager
-    def in_scope(self, cls):
-        self.scopeStack.append(cls())
+    def in_scope(self, cls, *args, **kwargs):
+        self.scopeStack.append(cls(*args, **kwargs))
         try:
             yield
         finally:
@@ -1959,7 +1959,7 @@ class Checker:
             self.handleNode(deco, node)
 
         with self._type_param_scope(node):
-            self.LAMBDA(node, is_async=isinstance(node, ast.AsyncFunctionDef))
+            self.LAMBDA(node)
 
         self.addBinding(node, FunctionDefinition(node.name, node))
         # doctest does not process doctest within a doctest,
@@ -1971,7 +1971,7 @@ class Checker:
 
     ASYNCFUNCTIONDEF = FUNCTIONDEF
 
-    def LAMBDA(self, node, is_async=False):
+    def LAMBDA(self, node):
         args = []
         annotations = []
 
@@ -2007,9 +2007,12 @@ class Checker:
         for default in defaults:
             self.handleNode(default, node)
 
+        # FunctionScope is reused for both `def`/`async def` and lambda.
+        # Only AsyncFunctionDef is async; lambdas never are.
+        is_async = isinstance(node, ast.AsyncFunctionDef)
+
         def runFunction():
-            with self.in_scope(FunctionScope):
-                self.scope.is_async = is_async
+            with self.in_scope(FunctionScope, is_async=is_async):
                 self.handleChildren(
                     node,
                     omit=('decorator_list', 'returns', 'type_params'),
