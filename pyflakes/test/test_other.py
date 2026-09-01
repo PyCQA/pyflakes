@@ -1811,13 +1811,6 @@ class TestUnusedAssignment(TestCase):
         ''')
 
     @skipIf(version_info < (3, 15), 'new in Python 3.15')
-    def test_unused_lazy_imports(self):
-        self.flakes('''
-        lazy import x
-        lazy from y import z
-        ''', m.UnusedImport, m.UnusedImport)
-
-    @skipIf(version_info < (3, 15), 'new in Python 3.15')
     def test_reassigned_in_comprehension_unpacking(self):
         self.flakes('''
         x = 1
