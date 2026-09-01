@@ -291,19 +291,17 @@ class Importation(Definition):
         return not self.fullName.split('.')[-1] == self.name
 
     @property
+    def _alias_s(self) -> str:
+        return f' as {self.name}' if self._has_alias() else ''
+
+    @property
     def source_statement(self):
         """Generate a source statement equivalent to the import."""
-        if self._has_alias():
-            return f'import {self.fullName} as {self.name}'
-        else:
-            return 'import %s' % self.fullName
+        return f'import {self.fullName}{self._alias_s}'
 
     def __str__(self):
         """Return import full name with alias."""
-        if self._has_alias():
-            return self.fullName + ' as ' + self.name
-        else:
-            return self.fullName
+        return f'{self.fullName}{self._alias_s}'
 
 
 class SubmoduleImportation(Importation):
@@ -335,12 +333,12 @@ class SubmoduleImportation(Importation):
             return self.fullName == other.fullName
         return super().redefines(other)
 
-    def __str__(self):
-        return self.fullName
-
     @property
     def source_statement(self):
-        return 'import ' + self.fullName
+        return f'import {self.fullName}'
+
+    def __str__(self):
+        return self.fullName
 
 
 class ImportationFrom(Importation):
@@ -356,19 +354,13 @@ class ImportationFrom(Importation):
 
         super().__init__(name, source, full_name)
 
-    def __str__(self):
-        """Return import full name with alias."""
-        if self.real_name != self.name:
-            return self.fullName + ' as ' + self.name
-        else:
-            return self.fullName
-
     @property
     def source_statement(self):
-        if self.real_name != self.name:
-            return f'from {self.module} import {self.real_name} as {self.name}'
-        else:
-            return f'from {self.module} import {self.name}'
+        return f'from {self.module} import {self.real_name}{self._alias_s}'
+
+    def __str__(self):
+        """Return import full name with alias."""
+        return f'{self.fullName}{self._alias_s}'
 
 
 class StarImportation(Importation):
@@ -383,7 +375,7 @@ class StarImportation(Importation):
 
     @property
     def source_statement(self):
-        return 'from ' + self.fullName + ' import *'
+        return f'from {self.fullName} import *'
 
     def __str__(self):
         # When the module ends with a ., avoid the ambiguous '..*'
