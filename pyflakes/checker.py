@@ -275,9 +275,10 @@ class Importation(Definition):
     @type fullName: C{str}
     """
 
-    def __init__(self, name, source, full_name=None):
+    def __init__(self, name, source, full_name=None, *, is_lazy: int):
         self.fullName = full_name or name
         self.redefined = []
+        self.is_lazy = is_lazy
         super().__init__(name, source)
 
     def redefines(self, other):
@@ -291,13 +292,17 @@ class Importation(Definition):
         return not self.fullName.split('.')[-1] == self.name
 
     @property
+    def _lazy_s(self) -> str:
+        return 'lazy ' if self.is_lazy else ''
+
+    @property
     def _alias_s(self) -> str:
         return f' as {self.name}' if self._has_alias() else ''
 
     @property
     def source_statement(self):
         """Generate a source statement equivalent to the import."""
-        return f'import {self.fullName}{self._alias_s}'
+        return f'{self._lazy_s}import {self.fullName}{self._alias_s}'
 
     def __str__(self):
         """Return import full name with alias."""
@@ -321,11 +326,11 @@ class SubmoduleImportation(Importation):
     name is also the same, to avoid false positives.
     """
 
-    def __init__(self, name, source):
+    def __init__(self, name, source, *, is_lazy: int):
         # A dot should only appear in the name when it is a submodule import
         assert '.' in name and (not source or isinstance(source, ast.Import))
         package_name = name.split('.')[0]
-        super().__init__(package_name, source)
+        super().__init__(package_name, source, is_lazy=is_lazy)
         self.fullName = name
 
     def redefines(self, other):
@@ -335,7 +340,7 @@ class SubmoduleImportation(Importation):
 
     @property
     def source_statement(self):
-        return f'import {self.fullName}'
+        return f'{self._lazy_s}import {self.fullName}'
 
     def __str__(self):
         return self.fullName
@@ -343,7 +348,7 @@ class SubmoduleImportation(Importation):
 
 class ImportationFrom(Importation):
 
-    def __init__(self, name, source, module, real_name=None):
+    def __init__(self, name, source, module, real_name=None, *, is_lazy: int):
         self.module = module
         self.real_name = real_name or name
 
@@ -352,11 +357,11 @@ class ImportationFrom(Importation):
         else:
             full_name = module + '.' + self.real_name
 
-        super().__init__(name, source, full_name)
+        super().__init__(name, source, full_name, is_lazy=is_lazy)
 
     @property
     def source_statement(self):
-        return f'from {self.module} import {self.real_name}{self._alias_s}'
+        return f'{self._lazy_s}from {self.module} import {self.real_name}{self._alias_s}'
 
     def __str__(self):
         """Return import full name with alias."""
@@ -367,7 +372,7 @@ class StarImportation(Importation):
     """A binding created by a 'from x import *' statement."""
 
     def __init__(self, name, source):
-        super().__init__('*', source)
+        super().__init__('*', source, is_lazy=False)
         # Each star importation needs a unique name, and
         # may not be the module name otherwise it will be deemed imported
         self.name = name + '.*'
@@ -393,7 +398,7 @@ class FutureImportation(ImportationFrom):
     """
 
     def __init__(self, name, source, scope):
-        super().__init__(name, source, '__future__')
+        super().__init__(name, source, '__future__', is_lazy=False)
         self.used = (scope, source)
 
 
@@ -547,7 +552,11 @@ class TypeScope(Scope):
     pass
 
 
-class GeneratorScope(Scope):
+class ComprehensionScope(Scope):
+    pass
+
+
+class GeneratorScope(ComprehensionScope):
     pass
 
 
@@ -662,6 +671,7 @@ class AnnotationState:
     NONE = 0
     STRING = 1
     BARE = 2
+    TYPE_ALIAS = 3
 
 
 def in_annotation(func):
@@ -689,10 +699,10 @@ class Checker:
         ast.FunctionDef: FunctionScope,
         ast.AsyncFunctionDef: FunctionScope,
         ast.Lambda: FunctionScope,
-        ast.ListComp: GeneratorScope,
-        ast.SetComp: GeneratorScope,
+        ast.ListComp: ComprehensionScope,
+        ast.SetComp: ComprehensionScope,
         ast.GeneratorExp: GeneratorScope,
-        ast.DictComp: GeneratorScope,
+        ast.DictComp: ComprehensionScope,
     }
 
     nodeDepth = 0
@@ -981,7 +991,7 @@ class Checker:
                 scope = next(
                     scope
                     for scope in reversed(self.scopeStack)
-                    if not isinstance(scope, GeneratorScope)
+                    if not isinstance(scope, ComprehensionScope)
                 )
                 if value.name in scope and isinstance(scope[value.name], Annotation):
                     # re-assignment to name that was previously only an annotation
@@ -1030,9 +1040,13 @@ class Checker:
         # - type annotations (for generics, etc.)
         can_access_class_vars = None
         importStarred = None
+        func_depth = 0
 
         # try enclosing function scopes and global scope
         for scope in reversed(self.scopeStack):
+            if isinstance(scope, (FunctionScope, GeneratorScope)):
+                func_depth += 1
+
             if isinstance(scope, ClassScope):
                 if name == '__class__':
                     return
@@ -1047,10 +1061,19 @@ class Checker:
                 scope[name].used = (self.scope, node)
                 continue
 
-            if name == 'print' and isinstance(binding, Builtin):
+            elif name == 'print' and isinstance(binding, Builtin):
                 if (isinstance(parent, ast.BinOp) and
                         isinstance(parent.op, ast.RShift)):
                     self.report(messages.InvalidPrintSyntax, node)
+            elif (
+                    isinstance(binding, Importation) and
+                    binding.is_lazy and
+                    func_depth == 0 and (
+                        self._in_annotation == AnnotationState.NONE or
+                        self._in_annotation == AnnotationState.TYPE_ALIAS
+                    )
+            ):
+                self.report(messages.EagerUseOfLazyImport, node, name, binding.source)
 
             try:
                 scope[name].used = (self.scope, node)
@@ -1073,7 +1096,7 @@ class Checker:
 
             if can_access_class_vars is not False:
                 can_access_class_vars = isinstance(
-                    scope, (TypeScope, GeneratorScope),
+                    scope, (TypeScope, ComprehensionScope),
                 )
 
         if importStarred:
@@ -1840,9 +1863,17 @@ class Checker:
     NONLOCAL = GLOBAL
 
     def GENERATOREXP(self, node):
-        with self.in_scope(GeneratorScope):
-            # handle generators before the comprehension target
-            for gen in node.generators:
+        # the first generator's iterable is eagerly executed in parent scope
+        self.handleNode(node.generators[0].iter, node.generators[0])
+
+        if isinstance(node, ast.GeneratorExp):
+            scope_tp = GeneratorScope
+        else:
+            scope_tp = ComprehensionScope
+
+        with self.in_scope(scope_tp):
+            self.handleChildren(node.generators[0], omit=('iter',))
+            for gen in node.generators[1:]:
                 self.handleNode(gen, node)
             self.handleChildren(node, omit=('generators',))
 
@@ -2014,7 +2045,8 @@ class Checker:
         if node.value:
             # If the annotation is `TypeAlias`, handle the *value* as an annotation.
             if _is_typing(node.annotation, 'TypeAlias', self.scopeStack):
-                self.handleAnnotation(node.value, node)
+                with self._enter_annotation(AnnotationState.TYPE_ALIAS):
+                    self.handleNode(node.value, node)
             else:
                 self.handleNode(node.value, node)
         self.handleNode(node.target, node)
@@ -2050,12 +2082,20 @@ class Checker:
     LIST = TUPLE
 
     def IMPORT(self, node):
+        lazy = sys.version_info >= (3, 15) and node.is_lazy
+        if lazy and not isinstance(self.scope, ModuleScope):
+            self.report(messages.LazyImportNotAtModuleScope, node)
+            return
+
         for alias in node.names:
             if '.' in alias.name and not alias.asname:
-                importation = SubmoduleImportation(alias.name, node)
+                importation = SubmoduleImportation(
+                    alias.name, node,
+                    is_lazy=lazy,
+                )
             else:
                 name = alias.asname or alias.name
-                importation = Importation(name, node, alias.name)
+                importation = Importation(name, node, alias.name, is_lazy=lazy)
             self.addBinding(node, importation)
 
     def IMPORTFROM(self, node):
@@ -2064,6 +2104,11 @@ class Checker:
                 self.report(messages.LateFutureImport, node)
         else:
             self.futuresAllowed = False
+
+        lazy = sys.version_info >= (3, 15) and node.is_lazy
+        if lazy and not isinstance(self.scope, ModuleScope):
+            self.report(messages.LazyImportNotAtModuleScope, node)
+            return
 
         module = ('.' * node.level) + (node.module or '')
 
@@ -2078,16 +2123,20 @@ class Checker:
                     self.annotationsFutureEnabled = True
             elif alias.name == '*':
                 if not isinstance(self.scope, ModuleScope):
-                    self.report(messages.ImportStarNotPermitted,
-                                node, module)
+                    self.report(messages.ImportStarNotPermitted, node, module)
+                    continue
+                elif sys.version_info >= (3, 15) and node.is_lazy:
+                    self.report(messages.LazyImportStarNotPermitted, node, module)
                     continue
 
                 self.scope.importStarred = True
                 self.report(messages.ImportStarUsed, node, module)
                 importation = StarImportation(module, node)
             else:
-                importation = ImportationFrom(name, node,
-                                              module, alias.name)
+                importation = ImportationFrom(
+                    name, node, module, alias.name,
+                    is_lazy=lazy,
+                )
             self.addBinding(node, importation)
 
     def TRY(self, node):
