@@ -146,26 +146,7 @@ def parse_percent_format(s):
     return tuple(_parse_inner())
 
 
-class _FieldsOrder(dict):
-    """Fix order of AST node fields."""
-
-    def _get_fields(self, node_class):
-        # handle iter before target, and generators before element
-        fields = node_class._fields
-        if 'iter' in fields:
-            key_first = 'iter'.find
-        elif 'generators' in fields:
-            key_first = 'generators'.find
-        else:
-            key_first = 'value'.find
-        return tuple(sorted(fields, key=key_first, reverse=True))
-
-    def __missing__(self, node_class):
-        self[node_class] = fields = self._get_fields(node_class)
-        return fields
-
-
-def iter_child_nodes(node, omit=None, _fields_order=_FieldsOrder()):
+def iter_child_nodes(node, omit=None):
     """
     Yield all direct child nodes of *node*, that is, all fields that
     are nodes and all items of fields that are lists of nodes.
@@ -176,7 +157,7 @@ def iter_child_nodes(node, omit=None, _fields_order=_FieldsOrder()):
                           further parsing
     :param _fields_order: Order of AST node fields
     """
-    for name in _fields_order[node.__class__]:
+    for name in node.__class__._fields:
         if omit and name in omit:
             continue
         field = getattr(node, name, None)
@@ -1362,14 +1343,19 @@ class Checker:
         pass
 
     # "stmt" type nodes
-    DELETE = FOR = ASYNCFOR = WHILE = WITH = WITHITEM = ASYNCWITH = \
-        EXPR = ASSIGN = handleChildren
+    DELETE = WHILE = WITH = WITHITEM = ASYNCWITH = EXPR = handleChildren
 
     PASS = ignore
 
+    def FOR(self, node):
+        self.handleNode(node.iter, node)
+        self.handleChildren(node, omit=('iter',))
+
+    ASYNCFOR = COMPREHENSION = FOR
+
     # "expr" type nodes
     BOOLOP = UNARYOP = SET = ATTRIBUTE = STARRED = NAMECONSTANT = \
-        NAMEDEXPR = handleChildren
+        handleChildren
 
     def SUBSCRIPT(self, node):
         if _is_name_or_attr(node.value, 'Literal'):
@@ -1760,7 +1746,7 @@ class Checker:
             self.report(messages.RaiseNotImplemented, node)
 
     # additional node types
-    COMPREHENSION = KEYWORD = FORMATTEDVALUE = handleChildren
+    KEYWORD = FORMATTEDVALUE = handleChildren
 
     _in_fstring = False
 
@@ -1877,7 +1863,10 @@ class Checker:
 
     def GENERATOREXP(self, node):
         with self.in_scope(GeneratorScope):
-            self.handleChildren(node)
+            # handle generators before the comprehension target
+            for gen in node.generators:
+                self.handleNode(gen, node)
+            self.handleChildren(node, omit=('generators',))
 
     LISTCOMP = DICTCOMP = SETCOMP = GENERATOREXP
 
@@ -2030,10 +2019,32 @@ class Checker:
 
         self.addBinding(node, ClassDefinition(node.name, node))
 
+    def ASSIGN(self, node):
+        self.handleNode(node.value, node)
+        self.handleChildren(node, omit=('value',))
+
+    NAMEDEXPR = ASSIGN
+
     def AUGASSIGN(self, node):
         self.handleNodeLoad(node.target, node)
         self.handleNode(node.value, node)
         self.handleNode(node.target, node)
+
+    def ANNASSIGN(self, node):
+        self.handleAnnotation(node.annotation, node)
+        # If the assignment has value, handle the *value* now.
+        if node.value:
+            # If the annotation is `TypeAlias`, handle the *value* as an annotation.
+            if _is_typing(node.annotation, 'TypeAlias', self.scopeStack):
+                self.handleAnnotation(node.value, node)
+            else:
+                self.handleNode(node.value, node)
+        self.handleNode(node.target, node)
+
+    def TYPEALIAS(self, node):
+        with self._type_param_scope(node):
+            self.handle_annotation_always_deferred(node.value, node)
+        self.handleNode(node.name, node)
 
     def TUPLE(self, node):
         if isinstance(node.ctx, ast.Store):
@@ -2168,17 +2179,6 @@ class Checker:
         if prev_definition:
             self.scope[node.name] = prev_definition
 
-    def ANNASSIGN(self, node):
-        self.handleAnnotation(node.annotation, node)
-        # If the assignment has value, handle the *value* now.
-        if node.value:
-            # If the annotation is `TypeAlias`, handle the *value* as an annotation.
-            if _is_typing(node.annotation, 'TypeAlias', self.scopeStack):
-                self.handleAnnotation(node.value, node)
-            else:
-                self.handleNode(node.value, node)
-        self.handleNode(node.target, node)
-
     def COMPARE(self, node):
         left = node.left
         for op, right in zip(node.ops, node.comparators):
@@ -2216,8 +2216,3 @@ class Checker:
         self.handle_annotation_always_deferred(node.bound, node)
 
     PARAMSPEC = TYPEVARTUPLE = handleNodeStore
-
-    def TYPEALIAS(self, node):
-        self.handleNode(node.name, node)
-        with self._type_param_scope(node):
-            self.handle_annotation_always_deferred(node.value, node)
