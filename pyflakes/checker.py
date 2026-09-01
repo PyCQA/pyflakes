@@ -968,7 +968,7 @@ class Checker:
         - `value` is the new value, a Binding instance
         """
         # assert value.source in (node, node._pyflakes_parent):
-        for scope in self.scopeStack[::-1]:
+        for scope in reversed(self.scopeStack):
             if value.name in scope:
                 break
         existing = scope.get(value.name)
@@ -1059,7 +1059,7 @@ class Checker:
         importStarred = None
 
         # try enclosing function scopes and global scope
-        for scope in self.scopeStack[-1::-1]:
+        for scope in reversed(self.scopeStack):
             if isinstance(scope, ClassScope):
                 if name == '__class__':
                     return
@@ -1106,7 +1106,7 @@ class Checker:
         if importStarred:
             from_list = []
 
-            for scope in self.scopeStack[-1::-1]:
+            for scope in reversed(self.scopeStack):
                 for binding in scope.values():
                     if isinstance(binding, StarImportation):
                         # mark '*' imports as used for each scope
