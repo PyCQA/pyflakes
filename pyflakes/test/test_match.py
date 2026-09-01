@@ -1,9 +1,6 @@
-from sys import version_info
-
-from pyflakes.test.harness import TestCase, skipIf
+from pyflakes.test.harness import TestCase
 
 
-@skipIf(version_info < (3, 10), "Python >= 3.10 only")
 class TestMatch(TestCase):
     def test_match_bindings(self):
         self.flakes('''
