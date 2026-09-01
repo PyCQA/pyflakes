@@ -392,37 +392,14 @@ def baz():
     '''quux'''
 """
 
-        # Sanity check - SyntaxError.text should be multiple lines, if it
-        # isn't, something this test was unprepared for has happened.
-        def evaluate(source):
-            exec(source)
-        try:
-            evaluate(source)
-        except SyntaxError as e:
-            if not PYPY and sys.version_info < (3, 10):
-                self.assertTrue(e.text.count('\n') > 1)
-        else:
-            self.fail()
-
         with self.makeTempFile(source) as sourcePath:
-            if PYPY:
-                message = 'end of file (EOF) while scanning triple-quoted string literal'
-            elif sys.version_info >= (3, 10):
-                message = 'unterminated triple-quoted string literal (detected at line 8)'  # noqa: E501
-            else:
-                message = 'invalid syntax'
-
-            if PYPY or sys.version_info >= (3, 10):
-                column = 12
-            else:
-                column = 8
             self.assertHasErrors(
                 sourcePath,
                 ["""\
-%s:8:%d: %s
+%s:8:12: unterminated triple-quoted string literal (detected at line 8)
     '''quux'''
-%s^
-""" % (sourcePath, column, message, ' ' * (column - 1))])
+           ^
+""" % (sourcePath,)])
 
     def test_eofSyntaxError(self):
         """
@@ -430,21 +407,10 @@ def baz():
         syntax error reflects the cause for the syntax error.
         """
         with self.makeTempFile("def foo(") as sourcePath:
-            if PYPY:
-                msg = 'parenthesis is never closed'
-            elif sys.version_info >= (3, 10):
-                msg = "'(' was never closed"
-            else:
-                msg = 'unexpected EOF while parsing'
-
-            if PYPY or sys.version_info >= (3, 10):
-                column = 8
-            else:
-                column = 9
-
-            spaces = ' ' * (column - 1)
-            expected = '{}:1:{}: {}\ndef foo(\n{}^\n'.format(
-                sourcePath, column, msg, spaces
+            expected = (
+                f"{sourcePath}:1:8: '(' was never closed\n"
+                f'def foo(\n'
+                f'       ^\n'
             )
 
             self.assertHasErrors(sourcePath, [expected])
@@ -479,20 +445,13 @@ def foo(bar=baz, bax):
             else:
                 msg = 'non-default argument follows default argument'
 
-            if PYPY:
-                column = 18
-            elif sys.version_info >= (3, 10):
-                column = 18
-            else:
-                column = 21
-            last_line = ' ' * (column - 1) + '^\n'
             self.assertHasErrors(
                 sourcePath,
                 [f"""\
-{sourcePath}:1:{column}: {msg}
+{sourcePath}:1:18: {msg}
 def foo(bar=baz, bax):
-{last_line}"""]
-            )
+                 ^
+"""])
 
     def test_nonKeywordAfterKeywordSyntaxError(self):
         """
@@ -504,13 +463,13 @@ def foo(bar=baz, bax):
 foo(bar=baz, bax)
 """
         with self.makeTempFile(source) as sourcePath:
-            last_line = ' ' * 16 + '^\n'
             self.assertHasErrors(
                 sourcePath,
                 [f"""\
 {sourcePath}:1:17: positional argument follows keyword argument
 foo(bar=baz, bax)
-{last_line}"""])
+                ^
+"""])
 
     def test_invalidEscape(self):
         """
@@ -589,15 +548,20 @@ x = "%s"
         If a source file contains bytes which cannot be decoded, this is
         reported on stderr.
         """
-        SNOWMAN = chr(0x2603)
-        source = ("""\
+        source = """\
 # coding: ascii
-x = "%s"
-""" % SNOWMAN).encode('utf-8')
+x = "☃"
+""".encode()
         with self.makeTempFile(source) as sourcePath:
+            if PYPY:
+                col = ''
+                src = '# coding: ascii\n'
+            else:
+                col = '1:'
+                src = ''
             self.assertHasErrors(
                 sourcePath,
-                [f"{sourcePath}:1:1: 'ascii' codec can't decode byte 0xe2 in position 21: ordinal not in range(128)\n"])  # noqa: E501
+                [f"{sourcePath}:1:{col} 'ascii' codec can't decode byte 0xe2 in position 21: ordinal not in range(128)\n{src}"])  # noqa: E501
 
     def test_misencodedFileUTF16(self):
         """
