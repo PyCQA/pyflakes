@@ -1313,20 +1313,7 @@ class Checker:
 
     @in_annotation
     def handleAnnotation(self, annotation, node):
-        if (
-                isinstance(annotation, ast.Constant) and
-                isinstance(annotation.value, str)
-        ):
-            # Defer handling forward annotation.
-            self.deferFunction(functools.partial(
-                self.handleStringAnnotation,
-                annotation.value,
-                node,
-                annotation.lineno,
-                annotation.col_offset,
-                messages.ForwardAnnotationSyntaxError,
-            ))
-        elif self.annotationsFutureEnabled or sys.version_info >= (3, 14):
+        if self.annotationsFutureEnabled or sys.version_info >= (3, 14):
             self.handle_annotation_always_deferred(annotation, node)
         else:
             self.handleNode(annotation, node)
