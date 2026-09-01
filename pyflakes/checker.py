@@ -1284,16 +1284,16 @@ class Checker:
         self.scopeStack = saved_stack
 
     @in_string_annotation
-    def handleStringAnnotation(self, s, node, ref_lineno, ref_col_offset, err):
+    def handleStringAnnotation(self, s, node, ref_lineno, ref_col_offset):
         try:
             tree = ast.parse(s)
         except SyntaxError:
-            self.report(err, node, s)
+            self.report(messages.ForwardAnnotationSyntaxError, node, s)
             return
 
         body = tree.body
         if len(body) != 1 or not isinstance(body[0], ast.Expr):
-            self.report(err, node, s)
+            self.report(messages.ForwardAnnotationSyntaxError, node, s)
             return
 
         parsed_annotation = tree.body[0].value
@@ -1695,7 +1695,6 @@ class Checker:
                 node,
                 node.lineno,
                 node.col_offset,
-                messages.ForwardAnnotationSyntaxError,
             )
             self.deferFunction(fn)
 
