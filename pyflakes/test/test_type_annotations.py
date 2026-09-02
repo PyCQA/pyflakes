@@ -498,6 +498,12 @@ class TestTypeAnnotations(TestCase):
         maybe_int = cast('Optional[int]', 42)
         """)
 
+    def test_cast_named_argument(self):
+        self.flakes('''
+        from typing import cast, Optional
+        cast(typ='Optional[int]', val=42)
+        ''')
+
     def test_type_cast_literal_str_to_str(self):
         # Checks that our handling of quoted type annotations in the first
         # argument to `cast` doesn't cause issues when (only) the _second_
@@ -515,6 +521,12 @@ class TestTypeAnnotations(TestCase):
         maybe_int = tsac('Maybe[int]', 42)
         """)
 
+    def test_cast_only_one_undefined(self):
+        self.flakes('''
+        from typing import cast
+        cast(undefined, 0)
+        ''', m.UndefinedName)
+
     def test_quoted_TypeVar_constraints(self):
         self.flakes("""
         from typing import TypeVar, Optional
@@ -529,6 +541,19 @@ class TestTypeAnnotations(TestCase):
         T = TypeVar('T', bound='Optional[int]')
         S = TypeVar('S', int, bound='List[int]')
         """)
+
+    def test_quoted_TypeVar_default(self):
+        self.flakes('''
+        from typing import TypeVar, Optional
+        T = TypeVar('T', default='Optional[int]')
+        ''')
+
+    def test_typevar_undefined_arg0(self):
+        self.flakes("""
+        from typing import TypeVar
+
+        T = TypeVar(T, int)
+        """, m.UndefinedName)
 
     def test_literal_type_typing(self):
         self.flakes("""
@@ -691,13 +716,11 @@ class TestTypeAnnotations(TestCase):
             from typing import TypedDict, List, NamedTuple, TypeVar
 
             List[TypedDict("x", {"x": "Y"})]
-            List[TypedDict("x", x="Y")]
             List[NamedTuple("a", [("a", "Y")])]
-            List[NamedTuple("a", a="Y")]
             List[TypedDict("x", {"x": List["a"]})]
             List[TypeVar("A", bound="C")]
             List[TypeVar("A", List["C"])]
-        """, *[m.UndefinedName]*7)
+        """, *[m.UndefinedName]*5)
         self.flakes("""
             from typing import NamedTuple, TypeVar, cast
             from t import A, B, C, D, E
@@ -707,6 +730,34 @@ class TestTypeAnnotations(TestCase):
             TypeVar("A", A["D"])
             cast(A["E"], [])
         """)
+
+    def test_namedtuple_kwargs(self):
+        if version_info >= (3, 15):
+            self.flakes('''
+            from typing import NamedTuple
+            from foo import T
+            NamedTuple("U", x="T")
+            ''', m.UnusedImport)
+        else:
+            self.flakes('''
+            from typing import NamedTuple
+            from foo import T
+            NamedTuple("U", x="T")
+            ''')
+
+    def test_typeddict_kwargs(self):
+        if version_info >= (3, 13):
+            self.flakes('''
+            from typing import TypedDict
+            from foo import T
+            TypedDict("U", x="T")
+            ''', m.UnusedImport)
+        else:
+            self.flakes('''
+            from typing import TypedDict
+            from foo import T
+            TypedDict("U", x="T")
+            ''')
 
     def test_namedtypes_classes(self):
         self.flakes("""
