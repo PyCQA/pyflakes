@@ -671,7 +671,7 @@ class AnnotationState:
     NONE = 0
     STRING = 1
     BARE = 2
-    TYPE_ALIAS = 3
+    STR_AS_TYPE = 3
 
 
 def in_annotation(func):
@@ -1070,7 +1070,7 @@ class Checker:
                     binding.is_lazy and
                     func_depth == 0 and (
                         self._in_annotation == AnnotationState.NONE or
-                        self._in_annotation == AnnotationState.TYPE_ALIAS
+                        self._in_annotation == AnnotationState.STR_AS_TYPE
                     )
             ):
                 self.report(messages.EagerUseOfLazyImport, node, name, binding.source)
@@ -1522,7 +1522,7 @@ class Checker:
             self._handle_string_dot_format(node)
 
         def _annotation(n: ast.AST) -> None:
-            with self._enter_annotation():
+            with self._enter_annotation(AnnotationState.STR_AS_TYPE):
                 self.handleNode(n, node)
 
         def _annotations(nodes: list[ast.AST]) -> None:
@@ -2056,7 +2056,7 @@ class Checker:
         if node.value:
             # If the annotation is `TypeAlias`, handle the *value* as an annotation.
             if _is_typing(node.annotation, 'TypeAlias', self.scopeStack):
-                with self._enter_annotation(AnnotationState.TYPE_ALIAS):
+                with self._enter_annotation(AnnotationState.STR_AS_TYPE):
                     self.handleNode(node.value, node)
             else:
                 self.handleNode(node.value, node)
