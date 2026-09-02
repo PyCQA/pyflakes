@@ -61,3 +61,10 @@ class Test(TestCase):
         lazy from x import y
         alias: TypeAlias = y      # evaluated eagerly
         ''', m.EagerUseOfLazyImport)
+
+    def test_eager_use_in_TypeVar(self):
+        self.flakes('''
+        from typing import TypeVar
+        lazy from x import y
+        T = TypeVar("T", y)
+        ''', m.EagerUseOfLazyImport)
