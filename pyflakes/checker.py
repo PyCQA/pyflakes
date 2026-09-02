@@ -1551,6 +1551,14 @@ class Checker:
                 else:
                     _non_annotation(kwd)
 
+        elif _is_typing(node.func, 'assert_type', self.scopeStack):
+            _non_annotation(node.func)
+
+            # assert_type(val, "tp")
+            _non_annotations(node.args[:1])
+            _annotations(node.args[1:])
+            _non_annotations(node.keywords)
+
         elif _is_typing(node.func, 'TypeVar', self.scopeStack):
             _non_annotation(node.func)
             _non_annotations(node.args[:1])
@@ -1561,6 +1569,34 @@ class Checker:
             # TypeVar("T", bound="str")
             for kwd in node.keywords:
                 if kwd.arg in ('bound', 'default'):
+                    _annotation(kwd)
+                else:
+                    _non_annotation(kwd)
+
+        elif (
+                _is_typing(node.func, 'ParamSpec', self.scopeStack) or
+                _is_typing(node.func, 'TypeVarTuple', self.scopeStack)
+        ):
+            _non_annotation(node.func)
+            _non_annotations(node.args)
+
+            # ParamSpec("P", default=..., bound=...)
+            # TypeVarTuple("Ts", default=..., bound=...)
+            for kwd in node.keywords:
+                if kwd.arg in ('bound', 'default'):
+                    _annotation(kwd)
+                else:
+                    _non_annotation(kwd)
+
+        elif _is_typing(node.func, 'NewType', self.scopeStack):
+            _non_annotation(node.func)
+            _non_annotations(node.args[:1])
+
+            # NewType("NT", "C")
+            _annotations(node.args[1:])
+
+            for kwd in node.keywords:
+                if kwd.arg == 'tp':
                     _annotation(kwd)
                 else:
                     _non_annotation(kwd)

@@ -555,6 +555,35 @@ class TestTypeAnnotations(TestCase):
         T = TypeVar(T, int)
         """, m.UndefinedName)
 
+    def test_newtype_quoted_types(self):
+        self.flakes("""
+        from typing import NewType
+        from u import C, D
+        NT1 = NewType("NT1", "C")
+        NT2 = NewType("NT2", tp="D")
+        """)
+
+    def test_typevartuple_quoted_types(self):
+        self.flakes("""
+        from typing import TypeVarTuple
+        from u import C, D
+        Ts = TypeVarTuple("Ts", default="C", bound="D")
+        """)
+
+    def test_paramspec_quoted_types(self):
+        self.flakes("""
+        from typing import ParamSpec
+        from u import C, D
+        P = ParamSpec("P", default="C", bound="D")
+        """)
+
+    def test_assert_type_quoted_types(self):
+        self.flakes("""
+        from typing import assert_type
+        from u import C
+        assert_type(1, "C")
+        """)
+
     def test_literal_type_typing(self):
         self.flakes("""
         from typing import Literal
