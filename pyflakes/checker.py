@@ -16,6 +16,7 @@ import re
 import string
 import sys
 import warnings
+from collections.abc import Iterable
 
 from pyflakes import messages
 
@@ -167,6 +168,10 @@ def iter_child_nodes(node, omit=None):
             for item in field:
                 if isinstance(item, ast.AST):
                     yield item
+
+
+def iter_dict_children(node: ast.Dict) -> Iterable[tuple[ast.AST, ast.AST]]:
+    return zip(node.keys, node.values)
 
 
 def convert_to_value(item):
@@ -1607,8 +1612,9 @@ class Checker:
 
             # TypedDict("a", {"a": int})
             if len(node.args) > 1 and isinstance(node.args[1], ast.Dict):
-                _non_annotations(node.args[1].keys)
-                _annotations(node.args[1].values)
+                for k, v in iter_dict_children(node.args[1]):
+                    _non_annotation(k)
+                    _annotation(v)
             _non_annotations(node.args[2:])
 
             # TypedDict("a", a=int)
@@ -1861,7 +1867,10 @@ class Checker:
                             key_node,
                             key,
                         )
-        self.handleChildren(node)
+
+        for k, v in iter_dict_children(node):
+            self.handleNode(k, node)
+            self.handleNode(v, node)
 
     def IF(self, node):
         if isinstance(node.test, ast.Tuple) and node.test.elts != []:

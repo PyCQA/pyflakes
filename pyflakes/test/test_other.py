@@ -1810,6 +1810,15 @@ class TestUnusedAssignment(TestCase):
             print(z)
         ''')
 
+    def test_dict_key_value_ordering_assignment_expressions(self):
+        # https://docs.python.org/3/reference/expressions.html#dictionary-displays
+        self.flakes('''
+        {
+            '1': (y := 2),
+            y: '3',
+        }
+        ''')
+
     @skipIf(version_info < (3, 15), 'new in Python 3.15')
     def test_reassigned_in_comprehension_unpacking(self):
         self.flakes('''
