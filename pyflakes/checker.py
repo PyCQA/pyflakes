@@ -1521,77 +1521,88 @@ class Checker:
         ):
             self._handle_string_dot_format(node)
 
-        omit = []
-        annotated = []
-        not_annotated = []
-
-        if (
-            _is_typing(node.func, 'cast', self.scopeStack) and
-            len(node.args) >= 1
-        ):
+        def _annotation(n: ast.AST) -> None:
             with self._enter_annotation():
-                self.handleNode(node.args[0], node)
+                self.handleNode(n, node)
+
+        def _annotations(nodes: list[ast.AST]) -> None:
+            for n in nodes:
+                _annotation(n)
+
+        def _non_annotation(n: ast.AST) -> None:
+            with self._enter_annotation(AnnotationState.NONE):
+                self.handleNode(n, node)
+
+        def _non_annotations(nodes: list[ast.AST]) -> None:
+            for n in nodes:
+                _non_annotation(n)
+
+        if _is_typing(node.func, 'cast', self.scopeStack):
+            _non_annotation(node.func)
+
+            # cast("tp", val)
+            _annotations(node.args[:1])
+            _non_annotations(node.args[1:])
+
+            # cast(typ="tp", val=val)
+            for kwd in node.keywords:
+                if kwd.arg == 'typ':
+                    _annotation(kwd)
+                else:
+                    _non_annotation(kwd)
 
         elif _is_typing(node.func, 'TypeVar', self.scopeStack):
+            _non_annotation(node.func)
+            _non_annotations(node.args[:1])
 
             # TypeVar("T", "int", "str")
-            omit += ["args"]
-            annotated += [arg for arg in node.args[1:]]
+            _annotations(node.args[1:])
 
             # TypeVar("T", bound="str")
-            omit += ["keywords"]
-            annotated += [k.value for k in node.keywords if k.arg == "bound"]
-            not_annotated += [
-                (k, ["value"] if k.arg == "bound" else None)
-                for k in node.keywords
-            ]
+            for kwd in node.keywords:
+                if kwd.arg in ('bound', 'default'):
+                    _annotation(kwd)
+                else:
+                    _non_annotation(kwd)
 
         elif _is_typing(node.func, "TypedDict", self.scopeStack):
+            _non_annotation(node.func)
+            _non_annotations(node.args[:1])
+
             # TypedDict("a", {"a": int})
             if len(node.args) > 1 and isinstance(node.args[1], ast.Dict):
-                omit += ["args"]
-                annotated += node.args[1].values
-                not_annotated += [
-                    (arg, ["values"] if i == 1 else None)
-                    for i, arg in enumerate(node.args)
-                ]
+                _non_annotations(node.args[1].keys)
+                _annotations(node.args[1].values)
+            _non_annotations(node.args[2:])
 
             # TypedDict("a", a=int)
-            omit += ["keywords"]
-            annotated += [k.value for k in node.keywords]
-            not_annotated += [(k, ["value"]) for k in node.keywords]
+            if sys.version_info >= (3, 13):
+                _non_annotations(node.keywords)
+            else:
+                _annotations(node.keywords)
 
         elif _is_typing(node.func, "NamedTuple", self.scopeStack):
+            _non_annotation(node.func)
+            _non_annotations(node.args[:1])
+
             # NamedTuple("a", [("a", int)])
             if (
-                len(node.args) > 1 and
-                isinstance(node.args[1], (ast.Tuple, ast.List)) and
-                all(isinstance(x, (ast.Tuple, ast.List)) and
-                    len(x.elts) == 2 for x in node.args[1].elts)
+                    len(node.args) > 1 and
+                    isinstance(node.args[1], (ast.Tuple, ast.List))
             ):
-                omit += ["args"]
-                annotated += [elt.elts[1] for elt in node.args[1].elts]
-                not_annotated += [(elt.elts[0], None) for elt in node.args[1].elts]
-                not_annotated += [
-                    (arg, ["elts"] if i == 1 else None)
-                    for i, arg in enumerate(node.args)
-                ]
-                not_annotated += [(elt, "elts") for elt in node.args[1].elts]
+                for elt in node.args[1].elts:
+                    if isinstance(elt, (ast.Tuple, ast.List)):
+                        _non_annotations(elt.elts[:1])
+                        _annotations(elt.elts[1:])
+                    else:
+                        _non_annotation(elt)
+            _non_annotations(node.args[2:])
 
             # NamedTuple("a", a=int)
-            omit += ["keywords"]
-            annotated += [k.value for k in node.keywords]
-            not_annotated += [(k, ["value"]) for k in node.keywords]
-
-        if omit:
-            with self._enter_annotation(AnnotationState.NONE):
-                for na_node, na_omit in not_annotated:
-                    self.handleChildren(na_node, omit=na_omit)
-                self.handleChildren(node, omit=omit)
-
-            with self._enter_annotation():
-                for annotated_node in annotated:
-                    self.handleNode(annotated_node, node)
+            if sys.version_info >= (3, 15):
+                _non_annotations(node.keywords)
+            else:
+                _annotations(node.keywords)
         else:
             self.handleChildren(node)
 
