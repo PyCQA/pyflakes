@@ -788,6 +788,13 @@ class TestTypeAnnotations(TestCase):
             TypedDict("U", x="T")
             ''')
 
+    def test_typeddict_key_value_ordering(self):
+        self.flakes("""
+        from typing import TypedDict
+        from u import V
+        TypedDict("TD", {"k": (y := "V"), y: "V"})
+        """)
+
     def test_namedtypes_classes(self):
         self.flakes("""
             from typing import TypedDict, NamedTuple
