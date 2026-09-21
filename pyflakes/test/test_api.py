@@ -50,7 +50,7 @@ class SysStreamCapturing:
     """
 
     def __init__(self, stdin):
-        self._stdin = io.StringIO(stdin or '', newline=os.linesep)
+        self._stdin = io.StringIO(stdin or '')
 
     def __enter__(self):
         self._orig_stdin = sys.stdin
@@ -58,8 +58,8 @@ class SysStreamCapturing:
         self._orig_stderr = sys.stderr
 
         sys.stdin = self._stdin
-        sys.stdout = self._stdout_stringio = io.StringIO(newline=os.linesep)
-        sys.stderr = self._stderr_stringio = io.StringIO(newline=os.linesep)
+        sys.stdout = self._stdout_stringio = io.StringIO()
+        sys.stderr = self._stderr_stringio = io.StringIO()
 
         return self
 
@@ -636,14 +636,6 @@ class IntegrationTests(TestCase):
     def tearDown(self):
         shutil.rmtree(self.tempdir)
 
-    def getPyflakesBinary(self):
-        """
-        Return the path to the pyflakes binary.
-        """
-        import pyflakes
-        package_dir = os.path.dirname(pyflakes.__file__)
-        return os.path.join(package_dir, '..', 'bin', 'pyflakes')
-
     def runPyflakes(self, paths, stdin=None):
         """
         Launch a subprocess running C{pyflakes}.
@@ -653,22 +645,9 @@ class IntegrationTests(TestCase):
         @return: C{(returncode, stdout, stderr)} of the completed pyflakes
             process.
         """
-        env = dict(os.environ)
-        env['PYTHONPATH'] = os.pathsep.join(sys.path)
-        command = [sys.executable, self.getPyflakesBinary()]
-        command.extend(paths)
-        if stdin:
-            p = subprocess.Popen(command, env=env, stdin=subprocess.PIPE,
-                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            (stdout, stderr) = p.communicate(stdin.encode('ascii'))
-        else:
-            p = subprocess.Popen(command, env=env,
-                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            (stdout, stderr) = p.communicate()
-        rv = p.wait()
-        stdout = stdout.decode('utf-8')
-        stderr = stderr.decode('utf-8')
-        return (stdout, stderr, rv)
+        command = [sys.executable, '-mpyflakes', *paths]
+        p = subprocess.run(command, capture_output=True, text=True, input=stdin)
+        return (p.stdout, p.stderr, p.returncode)
 
     def test_goodFile(self):
         """
@@ -688,7 +667,7 @@ class IntegrationTests(TestCase):
             fd.write(b"import contraband\n")
         d = self.runPyflakes([self.tempfilepath])
         expected = UnusedImport(self.tempfilepath, Node(1), 'contraband')
-        self.assertEqual(d, (f"{expected}{os.linesep}", '', 1))
+        self.assertEqual(d, (f"{expected}\n", '', 1))
 
     def test_errors_io(self):
         """
@@ -697,8 +676,7 @@ class IntegrationTests(TestCase):
         printed to stderr.
         """
         d = self.runPyflakes([self.tempfilepath])
-        error_msg = '{}: No such file or directory{}'.format(self.tempfilepath,
-                                                             os.linesep)
+        error_msg = f'{self.tempfilepath}: No such file or directory\n'
         self.assertEqual(d, ('', error_msg, 1))
 
     def test_errors_syntax(self):
@@ -716,8 +694,7 @@ class IntegrationTests(TestCase):
         else:  # pragma: <3.13 cover
             message = 'invalid syntax'
 
-        error_msg = '{0}:1:7: {1}{2}import{2}      ^{2}'.format(
-            self.tempfilepath, message, os.linesep)
+        error_msg = f'{self.tempfilepath}:1:7: {message}\nimport\n      ^\n'
         self.assertEqual(d, ('', error_msg, 1))
 
     def test_readFromStdin(self):
@@ -726,7 +703,7 @@ class IntegrationTests(TestCase):
         """
         d = self.runPyflakes([], stdin='import contraband')
         expected = UnusedImport('<stdin>', Node(1), 'contraband')
-        self.assertEqual(d, (f"{expected}{os.linesep}", '', 1))
+        self.assertEqual(d, (f"{expected}\n", '', 1))
 
 
 class TestMain(IntegrationTests):
