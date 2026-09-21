@@ -1371,15 +1371,8 @@ class Checker:
         elif _is_name_or_attr(node.value, 'Annotated'):
             self.handleNode(node.value, node)
 
-            # py39+
             if isinstance(node.slice, ast.Tuple):
                 slice_tuple = node.slice
-            # <py39
-            elif (
-                    isinstance(node.slice, ast.Index) and
-                    isinstance(node.slice.value, ast.Tuple)
-            ):
-                slice_tuple = node.slice.value
             else:
                 slice_tuple = None
 
