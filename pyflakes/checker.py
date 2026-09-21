@@ -1988,25 +1988,23 @@ class Checker:
         args = []
         annotations = []
 
-        for arg in node.args.posonlyargs:
-            args.append(arg.arg)
-            annotations.append(arg.annotation)
-        for arg in node.args.args + node.args.kwonlyargs:
-            args.append(arg.arg)
-            annotations.append(arg.annotation)
+        for arglist in (
+                node.args.posonlyargs,
+                node.args.args,
+                node.args.kwonlyargs,
+        ):
+            for arg in arglist:
+                args.append(arg.arg)
+                annotations.append(arg.annotation)
         defaults = node.args.defaults + node.args.kw_defaults
 
-        has_annotations = not isinstance(node, ast.Lambda)
-
-        for arg_name in ('vararg', 'kwarg'):
-            wildcard = getattr(node.args, arg_name)
+        for wildcard in (node.args.vararg, node.args.kwarg):
             if not wildcard:
                 continue
             args.append(wildcard.arg)
-            if has_annotations:
-                annotations.append(wildcard.annotation)
+            annotations.append(wildcard.annotation)
 
-        if has_annotations:
+        if not isinstance(node, ast.Lambda):
             annotations.append(node.returns)
 
         if len(set(args)) < len(args):
