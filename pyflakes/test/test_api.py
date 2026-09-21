@@ -92,7 +92,7 @@ class LoggingReporter:
         self.log.append(('unexpectedError', filename, message))
 
     def syntaxError(self, filename, msg, lineno, offset, line):
-        self.log.append(('syntaxError', filename, msg, lineno, offset, line))
+        raise AssertionError('unreachable')
 
 
 class TestIterSourceCode(TestCase):
@@ -734,12 +734,12 @@ class TestMain(IntegrationTests):
     Tests of the pyflakes main function.
     """
     def runPyflakes(self, paths, stdin=None):
-        try:
-            with SysStreamCapturing(stdin) as capture:
-                main(args=paths)
-        except SystemExit as e:
-            self.assertIsInstance(e.code, bool)
-            rv = int(e.code)
-            return (capture.output, capture.error, rv)
-        else:
-            raise RuntimeError('SystemExit not raised')
+        with (
+                self.assertRaises(SystemExit) as excinfo,
+                SysStreamCapturing(stdin) as capture,
+        ):
+            main(args=paths)
+
+        self.assertIsInstance(excinfo.exception.code, bool)
+        rv = int(excinfo.exception.code)
+        return (capture.output, capture.error, rv)
