@@ -1173,25 +1173,21 @@ class Checker:
                 current = getattr(current, '_pyflakes_parent', None)
             return False
 
-        name = getNodeName(node)
-        if not name:
-            return
-
         if on_conditional_branch():
             # We cannot predict if this conditional branch is going to
             # be executed.
             return
 
         if isinstance(self.scope, (ClassScope, FunctionScope)):
-            self.scope.indirect_assignments.pop(name, None)
+            self.scope.indirect_assignments.pop(node.id, None)
 
-        if isinstance(self.scope, FunctionScope) and name in self.scope.globals:
-            self.scope.globals.remove(name)
+        if isinstance(self.scope, FunctionScope) and node.id in self.scope.globals:
+            self.scope.globals.remove(node.id)
         else:
             try:
-                del self.scope[name]
+                del self.scope[node.id]
             except KeyError:
-                self.report(messages.UndefinedName, node, name)
+                self.report(messages.UndefinedName, node, node.id)
 
     @contextlib.contextmanager
     def _enter_annotation(self, ann_type=AnnotationState.BARE):
