@@ -1665,7 +1665,7 @@ class TestUnusedAssignment(TestCase):
         ''', m.UnusedVariable)
 
     @skipIf(version_info < (3, 11), 'new in Python 3.11')
-    def test_exception_unused_in_except_star(self):
+    def test_exception_unused_in_except_star(self):  # pragma: >=3.11 cover
         self.flakes('''
             try:
                 pass
@@ -1767,7 +1767,7 @@ class TestUnusedAssignment(TestCase):
         ''')
 
     @skipIf(version_info < (3, 14), 'new in Python 3.14')
-    def test_t_string(self):
+    def test_t_string(self):  # pragma: >=3.14 cover
         self.flakes('''
             baz = 0
             tmpl = t'hello {baz}'
@@ -1820,7 +1820,7 @@ class TestUnusedAssignment(TestCase):
         ''')
 
     @skipIf(version_info < (3, 15), 'new in Python 3.15')
-    def test_reassigned_in_comprehension_unpacking(self):
+    def test_reassigned_in_comprehension_unpacking(self):  # pragma: >=3.15 cover
         self.flakes('''
         x = 1
         y = {*x for x in []}
@@ -1862,7 +1862,7 @@ class TestStringFormatting(TestCase):
         ''')
 
     @skipIf(version_info < (3, 14), 'new in Python 3.14')
-    def test_t_string_missing_placeholders(self):
+    def test_t_string_missing_placeholders(self):  # pragma: >=3.14 cover
         self.flakes("t'foo'", m.TStringMissingPlaceholders)
         # make sure this does not trigger the f-string placeholder error
         self.flakes('''

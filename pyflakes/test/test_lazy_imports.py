@@ -5,7 +5,7 @@ from pyflakes.test.harness import TestCase, skipIf
 
 
 @skipIf(version_info < (3, 15), 'new in Python 3.15')
-class Test(TestCase):
+class Test(TestCase):  # pragma: >=3.15 cover
     def test_unused_lazy_imports(self):
         self.flakes('''
         lazy import x

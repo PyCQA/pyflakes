@@ -139,7 +139,7 @@ class FutureFeatureNotDefined(Message):
     """An undefined __future__ feature name was imported."""
     message = 'future feature %s is not defined'
 
-    def __init__(self, filename, loc, name):
+    def __init__(self, filename, loc, name):  # pragma: <3.14 cover
         Message.__init__(self, filename, loc)
         self.message_args = (name,)
 
@@ -365,7 +365,7 @@ class PercentFormatStarRequiresSequence(Message):
 class EagerUseOfLazyImport(Message):
     message = 'eager use of lazily imported %r from line %r'
 
-    def __init__(self, filename, loc, name, orig_loc):
+    def __init__(self, filename, loc, name, orig_loc):  # pragma: >=3.15 cover
         Message.__init__(self, filename, loc)
         self.message_args = (name, orig_loc.lineno)
 
@@ -373,7 +373,7 @@ class EagerUseOfLazyImport(Message):
 class LazyImportStarNotPermitted(Message):
     message = "'lazy from %s import *' is not allowed"
 
-    def __init__(self, filename, loc, modname):
+    def __init__(self, filename, loc, modname):  # pragma: >=3.15 cover
         Message.__init__(self, filename, loc)
         self.message_args = (modname,)
 

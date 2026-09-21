@@ -1007,7 +1007,7 @@ class Checker:
             else:
                 self.scope[value.name] = value
 
-    def _unknown_handler(self, node):
+    def _unknown_handler(self, node):  # pragma: no cover
         # this environment variable configures whether to error on unknown
         # ast types.
         #
@@ -1077,7 +1077,7 @@ class Checker:
                         self._in_annotation == AnnotationState.NONE or
                         self._in_annotation == AnnotationState.STR_AS_TYPE
                     )
-            ):
+            ):  # pragma: >=3.15 cover
                 self.report(messages.EagerUseOfLazyImport, node, name, binding.source)
 
             try:
@@ -1343,7 +1343,7 @@ class Checker:
     def handleAnnotation(self, annotation, node):
         if self.annotationsFutureEnabled or sys.version_info >= (3, 14):
             self.handle_annotation_always_deferred(annotation, node)
-        else:
+        else:  # pragma: <3.14 cover
             self.handleNode(annotation, node)
 
     def ignore(self, node):
@@ -1611,9 +1611,9 @@ class Checker:
             _non_annotations(node.args[2:])
 
             # TypedDict("a", a=int)
-            if sys.version_info >= (3, 13):
+            if sys.version_info >= (3, 13):  # pragma: >=3.13 cover
                 _non_annotations(node.keywords)
-            else:
+            else:  # pragma: <3.13 cover
                 _annotations(node.keywords)
 
         elif _is_typing(node.func, "NamedTuple", self.scopeStack):
@@ -1634,9 +1634,9 @@ class Checker:
             _non_annotations(node.args[2:])
 
             # NamedTuple("a", a=int)
-            if sys.version_info >= (3, 15):
+            if sys.version_info >= (3, 15):  # pragma: >=3.15 cover
                 _non_annotations(node.keywords)
-            else:
+            else:  # pragma: <3.15 cover
                 _annotations(node.keywords)
         else:
             self.handleChildren(node)
@@ -1812,7 +1812,7 @@ class Checker:
         finally:
             self._in_fstring = orig
 
-    def TEMPLATESTR(self, node):
+    def TEMPLATESTR(self, node):  # pragma: >=3.14 cover
         if not any(isinstance(x, ast.Interpolation) for x in node.values):
             self.report(messages.TStringMissingPlaceholders, node)
 
@@ -2100,7 +2100,7 @@ class Checker:
                 self.handleNode(node.value, node)
         self.handleNode(node.target, node)
 
-    def TYPEALIAS(self, node):
+    def TYPEALIAS(self, node):  # pragma: >=3.12 cover
         with self._type_param_scope(node):
             self.handle_annotation_always_deferred(node.value, node)
         self.handleNode(node.name, node)
@@ -2132,7 +2132,7 @@ class Checker:
 
     def IMPORT(self, node):
         lazy = sys.version_info >= (3, 15) and node.is_lazy
-        if lazy and not isinstance(self.scope, ModuleScope):
+        if lazy and not isinstance(self.scope, ModuleScope):  # pragma: >=3.15 cover
             self.report(messages.LazyImportNotAtModuleScope, node)
             return
 
@@ -2155,7 +2155,7 @@ class Checker:
             self.futuresAllowed = False
 
         lazy = sys.version_info >= (3, 15) and node.is_lazy
-        if lazy and not isinstance(self.scope, ModuleScope):
+        if lazy and not isinstance(self.scope, ModuleScope):  # pragma: >=3.15 cover
             self.report(messages.LazyImportNotAtModuleScope, node)
             return
 
@@ -2165,7 +2165,7 @@ class Checker:
             name = alias.asname or alias.name
             if node.module == '__future__':
                 importation = FutureImportation(name, node, self.scope)
-                if alias.name not in __future__.all_feature_names:
+                if alias.name not in __future__.all_feature_names:  # pragma: <3.14 cover
                     self.report(messages.FutureFeatureNotDefined,
                                 node, alias.name)
                 if alias.name == 'annotations':
@@ -2174,7 +2174,7 @@ class Checker:
                 if not isinstance(self.scope, ModuleScope):
                     self.report(messages.ImportStarNotPermitted, node, module)
                     continue
-                elif sys.version_info >= (3, 15) and node.is_lazy:
+                elif lazy:  # pragma: >=3.15 cover
                     self.report(messages.LazyImportStarNotPermitted, node, module)
                     continue
 
@@ -2281,13 +2281,13 @@ class Checker:
     @contextlib.contextmanager
     def _type_param_scope(self, node):
         with contextlib.ExitStack() as ctx:
-            if sys.version_info >= (3, 12):
+            if sys.version_info >= (3, 12):  # pragma: >=3.12 cover
                 ctx.enter_context(self.in_scope(TypeScope))
                 for param in node.type_params:
                     self.handleNode(param, node)
             yield
 
-    def TYPEVAR(self, node):
+    def TYPEVAR(self, node):  # pragma: >=3.12 cover
         self.handleNodeStore(node)
         self.handle_annotation_always_deferred(node.bound, node)
 
