@@ -491,6 +491,13 @@ class TestTypeAnnotations(TestCase):
         Func = Callable[['Queue[str]'], None]
         """)
 
+    def test_pep_585_quoted_type_assignment(self):
+        self.flakes("""
+        from u import C
+
+        ListOfC = list["C"]
+        """)
+
     def test_quoted_type_cast(self):
         self.flakes("""
         from typing import cast, Optional
