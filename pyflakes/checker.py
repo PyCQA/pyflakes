@@ -874,18 +874,13 @@ class Checker:
             # Look for imported names that aren't used.
             for value in scope.values():
                 if isinstance(value, Importation):
-                    used = value.used or value.name in all_names
-                    if not used:
-                        messg = messages.UnusedImport
-                        self.report(messg, value.source, str(value))
-                    for node in value.redefined:
-                        if isinstance(self.getParent(node), FOR_TYPES):
-                            messg = messages.ImportShadowedByLoopVar
-                        elif used:
-                            continue
-                        else:
-                            messg = messages.RedefinedWhileUnused
-                        self.report(messg, node, value.name, value.source)
+                    if not value.used and value.name not in all_names:
+                        self.report(messages.UnusedImport, value.source, str(value))
+                        for node in value.redefined:
+                            self.report(
+                                messages.RedefinedWhileUnused,
+                                node, value.name, value.source,
+                            )
 
     def report(self, messageClass, *args, **kwargs):
         self.messages.append(messageClass(self.filename, *args, **kwargs))
