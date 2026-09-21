@@ -15,7 +15,6 @@ import os
 import re
 import string
 import sys
-import warnings
 from collections.abc import Iterable
 
 from pyflakes import messages
@@ -721,7 +720,7 @@ class Checker:
     del _customBuiltIns
 
     def __init__(self, tree, filename='(none)', builtins=None,
-                 withDoctest='PYFLAKES_DOCTEST' in os.environ, file_tokens=()):
+                 withDoctest='PYFLAKES_DOCTEST' in os.environ):
         self._nodeHandlers = {}
         self._deferred = collections.deque()
         self.deadScopes = []
@@ -746,12 +745,6 @@ class Checker:
             self._run_deferred()
 
         self.checkDeadScopes()
-
-        if file_tokens:
-            warnings.warn(
-                '`file_tokens` will be removed in a future version',
-                stacklevel=2,
-            )
 
     def deferFunction(self, callable):
         """
