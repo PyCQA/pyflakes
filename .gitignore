@@ -3,6 +3,7 @@
 *.pyc
 .tox
 /.cache/
+/.coverage
 /dist/
 /build/
 docs/_build

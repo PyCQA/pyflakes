@@ -1005,14 +1005,14 @@ class Test(TestCase):
         ''')
 
     @skipIf(version_info >= (3, 14), 'in 3.14+ this is a SyntaxError')
-    def test_futureImportUndefined(self):
+    def test_futureImportUndefined(self):  # pragma: <3.14 cover
         """Importing undefined names from __future__ fails."""
         self.flakes('''
         from __future__ import print_statement
         ''', m.FutureFeatureNotDefined)
 
     @skipIf(version_info >= (3, 14), 'in 3.14+ this is a SyntaxError')
-    def test_futureImportStar(self):
+    def test_futureImportStar(self):  # pragma: <3.14 cover
         """Importing '*' from __future__ fails."""
         self.flakes('''
         from __future__ import *

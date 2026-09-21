@@ -440,9 +440,9 @@ def foo(bar=baz, bax):
     pass
 """
         with self.makeTempFile(source) as sourcePath:
-            if sys.version_info >= (3, 12):
+            if sys.version_info >= (3, 12):  # pragma: >=3.12 cover
                 msg = 'parameter without a default follows parameter with a default'  # noqa: E501
-            else:
+            else:  # pragma: <3.12 cover
                 msg = 'non-default argument follows default argument'
 
             self.assertHasErrors(
@@ -478,11 +478,11 @@ foo(bar=baz, bax)
         # ValueError: invalid \x escape
         with self.makeTempFile(r"foo = '\xyz'") as sourcePath:
             position_end = 1
-            if PYPY:
+            if PYPY:  # pragma: pypy cover
                 column = 7
-            elif sys.version_info < (3, 12):
+            elif sys.version_info < (3, 12):  # pragma: <3.12 cover  # pragma: pypy no cover  # noqa: E501
                 column = 13
-            else:
+            else:  # pragma: >=3.12 cover  # pragma: pypy no cover
                 column = 7
 
             last_line = '%s^\n' % (' ' * (column - 1))
@@ -497,12 +497,12 @@ foo = '\\xyz'
                 sourcePath, [decoding_error])
 
     @skipIf(sys.platform == 'win32', 'unsupported on Windows')
-    def test_permissionDenied(self):
+    def test_permissionDenied(self):  # pragma: win32 no cover
         """
         If the source file is not readable, this is reported on standard
         error.
         """
-        if os.getuid() == 0:
+        if os.getuid() == 0:  # pragma: no cover
             self.skipTest('root user can access all files regardless of '
                           'permissions')
         with self.makeTempFile('') as sourcePath:
@@ -553,10 +553,10 @@ x = "%s"
 x = "☃"
 """.encode()
         with self.makeTempFile(source) as sourcePath:
-            if PYPY:
+            if PYPY:  # pragma: pypy cover
                 col = ''
                 src = '# coding: ascii\n'
-            else:
+            else:  # pragma: pypy no cover
                 col = '1:'
                 src = ''
             self.assertHasErrors(
@@ -574,9 +574,9 @@ x = "☃"
 x = "%s"
 """ % SNOWMAN).encode('utf-16')
         with self.makeTempFile(source) as sourcePath:
-            if sys.version_info < (3, 11, 4):
+            if sys.version_info < (3, 11, 4):  # pragma: <3.11 cover
                 expected = f"{sourcePath}: problem decoding source\n"
-            else:
+            else:  # pragma: >=3.11 cover
                 expected = f"{sourcePath}:1: source code string cannot contain null bytes\n"  # noqa: E501
 
             self.assertHasErrors(sourcePath, [expected])
@@ -711,9 +711,9 @@ class IntegrationTests(TestCase):
             fd.write(b"import")
         d = self.runPyflakes([self.tempfilepath])
 
-        if sys.version_info >= (3, 13):
+        if sys.version_info >= (3, 13):  # pragma: >=3.13 cover
             message = "Expected one or more names after 'import'"
-        else:
+        else:  # pragma: <3.13 cover
             message = 'invalid syntax'
 
         error_msg = '{0}:1:7: {1}{2}import{2}      ^{2}'.format(

@@ -423,7 +423,7 @@ class TestTypeAnnotations(TestCase):
         ''', m.UndefinedName)
 
     @skipIf(version_info < (3, 14), 'new in Python 3.14')
-    def test_postponed_annotations_py314(self):
+    def test_postponed_annotations_py314(self):  # pragma: >=3.14 cover
         self.flakes('''
             def f(x: C) -> None: pass
             class C: pass
@@ -761,13 +761,13 @@ class TestTypeAnnotations(TestCase):
         """)
 
     def test_namedtuple_kwargs(self):
-        if version_info >= (3, 15):
+        if version_info >= (3, 15):  # pragma: >=3.15 cover
             self.flakes('''
             from typing import NamedTuple
             from foo import T
             NamedTuple("U", x="T")
             ''', m.UnusedImport)
-        else:
+        else:  # pragma: <3.15 cover
             self.flakes('''
             from typing import NamedTuple
             from foo import T
@@ -775,13 +775,13 @@ class TestTypeAnnotations(TestCase):
             ''')
 
     def test_typeddict_kwargs(self):
-        if version_info >= (3, 13):
+        if version_info >= (3, 13):  # pragma: >=3.13 cover
             self.flakes('''
             from typing import TypedDict
             from foo import T
             TypedDict("U", x="T")
             ''', m.UnusedImport)
-        else:
+        else:  # pragma: <3.13 cover
             self.flakes('''
             from typing import TypedDict
             from foo import T
@@ -806,7 +806,7 @@ class TestTypeAnnotations(TestCase):
         """)
 
     @skipIf(version_info < (3, 11), 'new in Python 3.11')
-    def test_variadic_generics(self):
+    def test_variadic_generics(self):  # pragma: >=3.11 cover
         self.flakes("""
             from typing import Generic
             from typing import TypeVarTuple
@@ -821,7 +821,7 @@ class TestTypeAnnotations(TestCase):
         """)
 
     @skipIf(version_info < (3, 12), 'new in Python 3.12')
-    def test_type_statements(self):
+    def test_type_statements(self):  # pragma: >=3.12 cover
         self.flakes("""
             type ListOrSet[T] = list[T] | set[T]
 
@@ -837,7 +837,7 @@ class TestTypeAnnotations(TestCase):
         """)
 
     @skipIf(version_info < (3, 12), 'new in Python 3.12')
-    def test_type_parameters_functions(self):
+    def test_type_parameters_functions(self):  # pragma: >=3.12 cover
         self.flakes("""
             def f[T](t: T) -> T: return t
 
@@ -853,7 +853,7 @@ class TestTypeAnnotations(TestCase):
         """)
 
     @skipIf(version_info < (3, 12), 'new in Python 3.12')
-    def test_type_parameters_do_not_escape_function_scopes(self):
+    def test_type_parameters_do_not_escape_function_scopes(self):  # pragma: >=3.12 cover
         self.flakes("""
             from x import g
 
@@ -864,7 +864,7 @@ class TestTypeAnnotations(TestCase):
         """, m.UndefinedName, m.UndefinedName)
 
     @skipIf(version_info < (3, 12), 'new in Python 3.12')
-    def test_type_parameters_classes(self):
+    def test_type_parameters_classes(self):  # pragma: >=3.12 cover
         self.flakes("""
             class C[T](list[T]): pass
 
@@ -877,7 +877,7 @@ class TestTypeAnnotations(TestCase):
         """)
 
     @skipIf(version_info < (3, 12), 'new in Python 3.12')
-    def test_type_parameters_do_not_escape_class_scopes(self):
+    def test_type_parameters_do_not_escape_class_scopes(self):  # pragma: >=3.12 cover
         self.flakes("""
             from x import g
 
@@ -888,13 +888,13 @@ class TestTypeAnnotations(TestCase):
         """, m.UndefinedName, m.UndefinedName)
 
     @skipIf(version_info < (3, 12), 'new in Python 3.12')
-    def test_type_parameters_TypeVarTuple(self):
+    def test_type_parameters_TypeVarTuple(self):  # pragma: >=3.12 cover
         self.flakes("""
         def f[*T](*args: *T) -> None: ...
         """)
 
     @skipIf(version_info < (3, 12), 'new in Python 3.12')
-    def test_type_parameters_ParamSpec(self):
+    def test_type_parameters_ParamSpec(self):  # pragma: >=3.12 cover
         self.flakes("""
         from typing import Callable
 
@@ -905,7 +905,7 @@ class TestTypeAnnotations(TestCase):
         """)
 
     @skipIf(version_info < (3, 13), 'new in Python 3.13')
-    def test_type_parameter_defaults(self):
+    def test_type_parameter_defaults(self):  # pragma: >=3.13 cover
         self.flakes("""
         def f[T = int](u: T) -> T:
             return u

@@ -322,9 +322,9 @@ class Test(TestCase):
             m.DoctestSyntaxError).messages
         exc = exceptions[0]
         self.assertEqual(exc.lineno, 4)
-        if not PYPY:
+        if not PYPY:  # pragma: pypy no cover
             self.assertEqual(exc.col, 18)
-        else:
+        else:  # pragma: pypy cover
             self.assertEqual(exc.col, 26)
 
         # PyPy error column offset is 0,
@@ -332,9 +332,9 @@ class Test(TestCase):
         # i.e. at the beginning of the line
         exc = exceptions[1]
         self.assertEqual(exc.lineno, 5)
-        if PYPY:
+        if PYPY:  # pragma: pypy cover
             self.assertEqual(exc.col, 13)
-        else:
+        else:  # pragma: pypy no cover
             self.assertEqual(exc.col, 16)
         exc = exceptions[2]
         self.assertEqual(exc.lineno, 6)
