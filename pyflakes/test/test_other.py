@@ -49,6 +49,10 @@ class Test(TestCase):
             pass
         (1 for a, b in [(1, 2)])
         ''')
+        self.flakes('''
+            a = 1
+            (1 for b in range(5) for a in range(5))
+        ''')
 
     def test_redefinedInSetComprehension(self):
         """

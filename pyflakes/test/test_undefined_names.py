@@ -11,6 +11,10 @@ class Test(TestCase):
     def test_definedInListComp(self):
         self.flakes('[a for a in range(10) if a]')
 
+    def test_multi_generator(self):
+        self.flakes('[a for a in range(10) for b in range(a)]')
+        self.flakes('[1 for a in range(10) for b in z]', m.UndefinedName)
+
     def test_undefinedInListComp(self):
         self.flakes('''
         [a for a in range(10)]
