@@ -531,7 +531,7 @@ class TestTypeAnnotations(TestCase):
         self.flakes("""
         from typing import TypeVar, Optional
 
-        T = TypeVar('T', 'str', 'Optional[int]', bytes)
+        T = TypeVar('T', 'str', 'Optional[int]', bytes, infer_variance=True)
         """)
 
     def test_quoted_TypeVar_bound(self):
@@ -558,23 +558,25 @@ class TestTypeAnnotations(TestCase):
     def test_newtype_quoted_types(self):
         self.flakes("""
         from typing import NewType
-        from u import C, D
+        from u import C, D, E
         NT1 = NewType("NT1", "C")
         NT2 = NewType("NT2", tp="D")
+        # `invalid` isn't correct but we still parse it as non-annotation
+        NT3 = NewType("NT3", "E", invalid="F")
         """)
 
     def test_typevartuple_quoted_types(self):
         self.flakes("""
         from typing import TypeVarTuple
         from u import C, D
-        Ts = TypeVarTuple("Ts", default="C", bound="D")
+        Ts = TypeVarTuple("Ts", default="C", bound="D", infer_variance=True)
         """)
 
     def test_paramspec_quoted_types(self):
         self.flakes("""
         from typing import ParamSpec
         from u import C, D
-        P = ParamSpec("P", default="C", bound="D")
+        P = ParamSpec("P", default="C", bound="D", infer_variance=True)
         """)
 
     def test_assert_type_quoted_types(self):
@@ -803,6 +805,14 @@ class TestTypeAnnotations(TestCase):
 
             class Y(NamedTuple):
                 y: NamedTuple("v", [("vv", int)])
+        """)
+
+    def test_namedtuple_non_tuple_args(self):
+        self.flakes("""
+        from typing import NamedTuple
+        x = ("a", int)
+        # x isn't unpacked or treated as a type
+        NT = NamedTuple("NT", [x])
         """)
 
     @skipIf(version_info < (3, 11), 'new in Python 3.11')
