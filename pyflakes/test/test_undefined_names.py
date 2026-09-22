@@ -426,6 +426,12 @@ class Test(TestCase):
                 o = False
         ''')
 
+    def test_del_special_variable(self):
+        self.flakes('''
+        def f():
+            del __tracebackhide__
+        ''', m.UndefinedName)
+
     def test_globalFromNestedScope(self):
         """Global names are available from nested scopes."""
         self.flakes('''

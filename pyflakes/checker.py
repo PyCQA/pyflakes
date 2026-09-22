@@ -521,13 +521,13 @@ class FunctionScope(Scope):
     @ivar globals: Names declared 'global' in this function.
     """
     usesLocals = False
-    alwaysUsed = {'__tracebackhide__', '__traceback_info__',
-                  '__traceback_supplement__', '__debuggerskip__'}
+    always_used = frozenset((
+        '__tracebackhide__', '__traceback_info__',
+        '__traceback_supplement__', '__debuggerskip__',
+    ))
 
     def __init__(self):
         super().__init__()
-        # Simplify: manage the special locals as globals
-        self.globals = self.alwaysUsed.copy()
         # {name: node}
         self.indirect_assignments = {}
 
@@ -538,7 +538,7 @@ class FunctionScope(Scope):
         for name, binding in self.items():
             if (not binding.used and
                     name != '_' and  # see issue #202
-                    name not in self.globals and
+                    name not in self.always_used and
                     not self.usesLocals and
                     isinstance(binding, Assignment)):
                 yield name, binding
@@ -1132,7 +1132,7 @@ class Checker:
                 # been accessed already in the current scope, and hasn't
                 # been declared global
                 used = name in scope and scope[name].used
-                if used and used[0] is self.scope and name not in self.scope.globals:
+                if used and used[0] is self.scope:
                     # then it's probably a mistake
                     self.report(messages.UndefinedLocal,
                                 scope[name].used[1], name, scope[name].source)
@@ -1181,13 +1181,10 @@ class Checker:
         if isinstance(self.scope, (ClassScope, FunctionScope)):
             self.scope.indirect_assignments.pop(node.id, None)
 
-        if isinstance(self.scope, FunctionScope) and node.id in self.scope.globals:
-            self.scope.globals.remove(node.id)
-        else:
-            try:
-                del self.scope[node.id]
-            except KeyError:
-                self.report(messages.UndefinedName, node, node.id)
+        try:
+            del self.scope[node.id]
+        except KeyError:
+            self.report(messages.UndefinedName, node, node.id)
 
     @contextlib.contextmanager
     def _enter_annotation(self, ann_type=AnnotationState.BARE):
