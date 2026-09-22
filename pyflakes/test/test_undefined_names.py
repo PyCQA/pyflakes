@@ -8,6 +8,9 @@ class Test(TestCase):
     def test_undefined(self):
         self.flakes('bar', m.UndefinedName)
 
+    def test_call_of_attribute_of_undefined_name(self):
+        self.flakes('bar.baz()', m.UndefinedName)
+
     def test_definedInListComp(self):
         self.flakes('[a for a in range(10) if a]')
 
