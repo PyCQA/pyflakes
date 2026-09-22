@@ -178,9 +178,9 @@ class TestIterSourceCode(TestCase):
         with open(python3d, 'w') as fd:
             fd.write('#!/usr/local/bin/python3d\n')
 
-        python38m = os.path.join(self.tempdir, 'j')
-        with open(python38m, 'w') as fd:
-            fd.write('#! /usr/bin/env python3.8m\n')
+        python312t = os.path.join(self.tempdir, 'j')
+        with open(python312t, 'w') as fd:
+            fd.write('#! /usr/bin/env python3.12t\n')
 
         # Should NOT be treated as Python source
         notfirst = os.path.join(self.tempdir, 'l')
@@ -191,7 +191,7 @@ class TestIterSourceCode(TestCase):
             sorted(iterSourceCode([self.tempdir])),
             sorted([
                 python, python3, pythonw, python3args, python3d,
-                python38m,
+                python312t,
             ]))
 
     def test_multipleDirectories(self):
