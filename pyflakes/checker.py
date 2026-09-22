@@ -21,7 +21,21 @@ from pyflakes import messages
 
 PYPY = hasattr(sys, 'pypy_version_info')
 
-builtin_vars = dir(builtins)
+builtin_vars = frozenset(dir(builtins)) | {
+    # Globally defined names which are not attributes of the builtins module, or
+    # are only present on some platforms.
+    '__file__', '__builtins__', '__annotations__', 'WindowsError'
+}
+
+
+@functools.cache
+def _custom_builtins() -> frozenset[str]:
+    var = os.environ.get('PYFLAKES_BUILTINS')
+    if var is not None:
+        return frozenset(var.split(','))
+    else:
+        return frozenset()
+
 
 parse_format_string = string.Formatter().parse
 
@@ -579,11 +593,6 @@ class DetectClassScopedMagic:
     names = dir()
 
 
-# Globally defined names which are not attributes of the builtins module, or
-# are only present on some platforms.
-_MAGIC_GLOBALS = ['__file__', '__builtins__', '__annotations__', 'WindowsError']
-
-
 def getNodeName(node):
     # Returns node.id, or node.name, or None
     if hasattr(node, 'id'):     # One of the many nodes with an id
@@ -714,12 +723,6 @@ class Checker:
     offset = None
     _in_annotation = AnnotationState.NONE
 
-    builtIns = set(builtin_vars).union(_MAGIC_GLOBALS)
-    _customBuiltIns = os.environ.get('PYFLAKES_BUILTINS')
-    if _customBuiltIns:
-        builtIns.update(_customBuiltIns.split(','))
-    del _customBuiltIns
-
     def __init__(self, tree, filename='(none)', builtins=None,
                  withDoctest='PYFLAKES_DOCTEST' in os.environ):
         self._nodeHandlers = {}
@@ -727,6 +730,7 @@ class Checker:
         self.deadScopes = []
         self.messages = []
         self.filename = filename
+        self.builtIns = builtin_vars | _custom_builtins()
         if builtins:
             self.builtIns = self.builtIns.union(builtins)
         self.withDoctest = withDoctest
