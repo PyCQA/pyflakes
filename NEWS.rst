@@ -1,3 +1,29 @@
+4.0.0 (2026-09-22)
+
+- Add support for python 3.15
+- Drop support for EOL python 3.9
+- Add new errors for ``lazy`` imports:
+    - lazy import is eagerly used at module scope
+    - ``lazy from ... import *`` is invalid syntax
+    - ``lazy from __future__ import ...`` is invalid syntax
+    - lazy import must be at module scope
+- Improve typing specialization:
+    - Handle ``cast(...)`` with named arguments
+    - Fix duplicate errors in first argument of ``cast(...)``
+    - Handle ``TypeVar(... default='...')``
+    - Fix missing error for first argument of ``TypeVar(...)`` call
+    - Update handling of ``NamedTuple(...)`` for python 3.15 changes
+    - Update handling of ``TypedDict(...)`` for python 3.13 changes
+    - Add handling of ``assert_type(...)``
+    - Add handling of ``NewType(...)``
+    - Add handling of ``TypeVarTuple(...)``
+    - Add handling of ``ParamSpec(...)``
+- Fix assignment expressions in dictionary literals
+- Remove ``file_tokens`` parameter to ``Checker``.  Unused since 3.0.0
+- Fix false-negative for deleting special variables such as ``del __tracebackhide__``
+- Add support for ``python3t`` shebangs
+- Remove support for obsolete ``python3m`` and ``pythonu`` shebangs
+
 3.4.0 (2025-06-20)
 
 - Add support for python 3.14
