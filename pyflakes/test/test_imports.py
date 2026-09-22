@@ -1095,6 +1095,25 @@ class TestSpecialAll(TestCase):
         __all__ = ('a',) + ('b',) + ('c',)
         ''', m.UndefinedExport, m.UndefinedExport, m.UndefinedExport, m.UnusedImport)
 
+    def test_ignores_concatenated_assignment_with_var(self):
+        self.flakes('''
+        x = ['this_is_not_visible']
+        __all__ = x + ['a']
+        ''', m.UndefinedExport)
+
+    def test_ignores_multi_concatenated_assignment_with_var(self):
+        self.flakes('''
+        x = ['this_is_not_visible']
+        __all__ = ['this_is_also_not_visible'] + x + ['b']
+        ''', m.UndefinedExport)
+
+    def test_ignores_all_with_unknown_value(self):
+        self.flakes('''
+        import export
+        x = ('export',)
+        __all__ = x
+        ''', m.UnusedImport)
+
     def test_all_with_attributes(self):
         self.flakes('''
         from foo import bar
