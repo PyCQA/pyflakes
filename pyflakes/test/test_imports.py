@@ -841,6 +841,13 @@ class Test(TestCase):
         fu.bar
         ''', m.RedefinedWhileUnused)
 
+    def test_submodule_import_redefines_name(self):
+        self.flakes('''
+        def f(): pass
+        import f.x
+        f.x
+        ''', m.RedefinedWhileUnused)
+
     def test_differentSubmoduleImport(self):
         """
         If two different submodules of a package are imported, no duplicate
