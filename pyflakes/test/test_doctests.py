@@ -7,9 +7,9 @@ from pyflakes.checker import (
     FunctionScope,
     ModuleScope,
 )
-from pyflakes.test.test_other import Test as TestOther
-from pyflakes.test.test_imports import Test as TestImports
-from pyflakes.test.test_undefined_names import Test as TestUndefinedNames
+from pyflakes.test.test_other import Test as _TestOther
+from pyflakes.test.test_imports import Test as _TestImports
+from pyflakes.test.test_undefined_names import Test as _TestUndefinedNames
 from pyflakes.test.harness import TestCase, skip
 
 
@@ -18,7 +18,7 @@ class _DoctestMixin:
     withDoctest = True
 
     def doctestify(self, input):
-        lines = []
+        lines: list[str] = []
         for line in textwrap.dedent(input).splitlines():
             if line.strip() == '':
                 pass
@@ -444,13 +444,13 @@ class Test(TestCase):
         """)
 
 
-class TestOther(_DoctestMixin, TestOther):
+class TestOther(_DoctestMixin, _TestOther):
     """Run TestOther with each test wrapped in a doctest."""
 
 
-class TestImports(_DoctestMixin, TestImports):
+class TestImports(_DoctestMixin, _TestImports):
     """Run TestImports with each test wrapped in a doctest."""
 
 
-class TestUndefinedNames(_DoctestMixin, TestUndefinedNames):
+class TestUndefinedNames(_DoctestMixin, _TestUndefinedNames):
     """Run TestUndefinedNames with each test wrapped in a doctest."""

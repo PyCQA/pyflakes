@@ -15,6 +15,7 @@ import os
 import re
 import string
 import sys
+from collections.abc import Callable
 from collections.abc import Iterable
 
 from pyflakes import messages
@@ -183,7 +184,7 @@ def iter_child_nodes(node, omit=None):
                     yield item
 
 
-def iter_dict_children(node: ast.Dict) -> Iterable[tuple[ast.AST, ast.AST]]:
+def iter_dict_children(node: ast.Dict) -> Iterable[tuple[ast.AST | None, ast.AST]]:
     return zip(node.keys, node.values)
 
 
@@ -217,7 +218,7 @@ class Binding:
     def __init__(self, name, source):
         self.name = name
         self.source = source
-        self.used = False
+        self.used: tuple[Scope, ast.AST] | None = None
 
     def __repr__(self):  # pragma: no cover
         return '<{} object {!r} from line {!r} at 0x{:x}>'.format(
@@ -292,7 +293,7 @@ class Importation(Definition):
 
     def __init__(self, name, source, full_name=None, *, is_lazy: int):
         self.fullName = full_name or name
-        self.redefined = []
+        self.redefined: list[ast.AST] = []
         self.is_lazy = is_lazy
         super().__init__(name, source)
 
@@ -726,6 +727,9 @@ class Checker:
     def __init__(self, tree, filename='(none)', builtins=None,
                  withDoctest='PYFLAKES_DOCTEST' in os.environ):
         self._nodeHandlers = {}
+        self._deferred: collections.deque[
+            tuple[Callable[[], None], list[Scope], tuple[int, int] | None]
+        ]
         self._deferred = collections.deque()
         self.deadScopes = []
         self.messages = []
@@ -843,7 +847,8 @@ class Checker:
                     if name not in scope
                 ]
             else:
-                all_names = undefined = []
+                all_names = set()
+                undefined = []
 
             if undefined:
                 if not scope.importStarred and \
@@ -861,10 +866,10 @@ class Checker:
                             binding.used = all_binding
                             from_list.append(binding.fullName)
                     # report * usage, with a list of possible sources
-                    from_list = ', '.join(sorted(from_list))
+                    from_list_s = ', '.join(sorted(from_list))
                     for name in undefined:
                         self.report(messages.ImportStarUsage,
-                                    scope['__all__'].source, name, from_list)
+                                    scope['__all__'].source, name, from_list_s)
 
             # Look for imported names that aren't used.
             for value in scope.values():

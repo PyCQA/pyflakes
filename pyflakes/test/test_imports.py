@@ -588,14 +588,12 @@ class Test(TestCase):
         ''')
 
     def test_redefinedByExcept(self):
-        expected = [m.RedefinedWhileUnused]
         # The exc variable is unused inside the exception handler.
-        expected.append(m.UnusedVariable)
         self.flakes('''
         import fu
         try: pass
         except Exception as fu: pass
-        ''', *expected)
+        ''', m.RedefinedWhileUnused, m.UnusedVariable)
 
     def test_usedInRaise(self):
         self.flakes('''

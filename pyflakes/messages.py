@@ -5,7 +5,7 @@ Provide the class Message and its subclasses.
 
 class Message:
     message = ''
-    message_args = ()
+    message_args: tuple[str, ...] = ()
 
     def __init__(self, filename, loc):
         self.filename = filename

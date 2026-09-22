@@ -352,7 +352,7 @@ class CheckTests(TestCase):
             errors generated, and log is a list of those warnings, presented
             as structured data.  See L{LoggingReporter} for more details.
         """
-        log = []
+        log: list[str] = []
         reporter = LoggingReporter(log)
         count = checkPath(path, reporter)
         return count, log
@@ -600,7 +600,7 @@ x = "%s"
             file2 = os.path.join(tempdir, 'baz.py')
             with open(file2, 'wb') as fd:
                 fd.write(b"import contraband")
-            log = []
+            log: list[str] = []
             reporter = LoggingReporter(log)
             warnings = checkRecursive([tempdir], reporter)
             self.assertEqual(warnings, 2)
@@ -729,6 +729,6 @@ class TestMain(IntegrationTests):
         ):
             main(args=paths)
 
-        self.assertIsInstance(excinfo.exception.code, bool)
+        assert isinstance(excinfo.exception.code, bool)
         rv = int(excinfo.exception.code)
         return (capture.output, capture.error, rv)
