@@ -208,7 +208,7 @@ class Binding:
     def __str__(self):
         return self.name
 
-    def __repr__(self):
+    def __repr__(self):  # pragma: no cover
         return '<{} object {!r} from line {!r} at 0x{:x}>'.format(
             self.__class__.__name__,
             self.name,
@@ -237,7 +237,7 @@ class Builtin(Definition):
     def __init__(self, name):
         super().__init__(name, None)
 
-    def __repr__(self):
+    def __repr__(self):  # pragma: no cover
         return '<{} object {!r} at 0x{:x}>'.format(
             self.__class__.__name__,
             self.name,
@@ -502,7 +502,7 @@ class ExportBinding(Binding):
 class Scope(dict):
     importStarred = False       # set to True when import * is found
 
-    def __repr__(self):
+    def __repr__(self):  # pragma: no cover
         scope_cls = self.__class__.__name__
         return f'<{scope_cls} at 0x{id(self):x} {dict.__repr__(self)}>'
 
