@@ -76,10 +76,9 @@ class UndefinedName(Message):
 class DoctestSyntaxError(Message):
     message = 'syntax error in doctest'
 
-    def __init__(self, filename, loc, position=None):
+    def __init__(self, filename, loc, position):
         Message.__init__(self, filename, loc)
-        if position:
-            (self.lineno, self.col) = position
+        self.lineno, self.col = position
         self.message_args = ()
 
 
