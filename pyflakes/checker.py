@@ -205,9 +205,6 @@ class Binding:
         self.source = source
         self.used = False
 
-    def __str__(self):
-        return self.name
-
     def __repr__(self):  # pragma: no cover
         return '<{} object {!r} from line {!r} at 0x{:x}>'.format(
             self.__class__.__name__,
@@ -308,7 +305,8 @@ class Importation(Definition):
         """Generate a source statement equivalent to the import."""
         return f'{self._lazy_s}import {self.fullName}{self._alias_s}'
 
-    def __str__(self):
+    @property
+    def imported_name(self):
         """Return import full name with alias."""
         return f'{self.fullName}{self._alias_s}'
 
@@ -346,7 +344,8 @@ class SubmoduleImportation(Importation):
     def source_statement(self):
         return f'{self._lazy_s}import {self.fullName}'
 
-    def __str__(self):
+    @property
+    def imported_name(self):
         return self.fullName
 
 
@@ -367,7 +366,8 @@ class ImportationFrom(Importation):
     def source_statement(self):
         return f'{self._lazy_s}from {self.module} import {self.real_name}{self._alias_s}'
 
-    def __str__(self):
+    @property
+    def imported_name(self):
         """Return import full name with alias."""
         return f'{self.fullName}{self._alias_s}'
 
@@ -386,7 +386,8 @@ class StarImportation(Importation):
     def source_statement(self):
         return f'from {self.fullName} import *'
 
-    def __str__(self):
+    @property
+    def imported_name(self):
         # When the module ends with a ., avoid the ambiguous '..*'
         if self.fullName.endswith('.'):
             return self.source_statement
@@ -868,7 +869,10 @@ class Checker:
             for value in scope.values():
                 if isinstance(value, Importation):
                     if not value.used and value.name not in all_names:
-                        self.report(messages.UnusedImport, value.source, str(value))
+                        self.report(
+                            messages.UnusedImport,
+                            value.source, value.imported_name
+                        )
                         for node in value.redefined:
                             self.report(
                                 messages.RedefinedWhileUnused,
