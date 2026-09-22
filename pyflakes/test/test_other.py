@@ -1879,13 +1879,22 @@ class TestStringFormatting(TestCase):
             '{'.format(1)
         ''', m.StringDotFormatInvalidFormat)
         self.flakes('''
+            '{0:{a[x}}'.format(1)
+        ''', m.StringDotFormatInvalidFormat)
+        self.flakes('''
             '{} {1}'.format(1, 2)
         ''', m.StringDotFormatMixingAutomatic)
         self.flakes('''
             '{0} {}'.format(1, 2)
         ''', m.StringDotFormatMixingAutomatic)
         self.flakes('''
+            '{:{0}}'.format(1, 2)
+        ''', m.StringDotFormatMixingAutomatic)
+        self.flakes('''
             '{}'.format(1, 2)
+        ''', m.StringDotFormatExtraPositionalArguments)
+        self.flakes('''
+            'contents'.format(1)
         ''', m.StringDotFormatExtraPositionalArguments)
         self.flakes('''
             '{}'.format(1, bar=2)
