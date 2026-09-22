@@ -431,6 +431,18 @@ class Test(TestCase):
             '''
         """, m.UnusedImport)
 
+    def test_malformed_doctest_ignored(self):
+        self.flakes("""
+        def f():
+            '''my docstring
+
+            >>> hello
+             ...
+              ...
+               >>> world
+            '''
+        """)
+
 
 class TestOther(_DoctestMixin, TestOther):
     """Run TestOther with each test wrapped in a doctest."""
