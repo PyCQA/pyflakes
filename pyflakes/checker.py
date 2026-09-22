@@ -913,18 +913,6 @@ class Checker:
                 return True
         return False
 
-    def _getAncestor(self, node, ancestor_type):
-        parent = node
-        while True:
-            if parent is self.root:
-                return None
-            parent = self.getParent(parent)
-            if isinstance(parent, ancestor_type):
-                return parent
-
-    def getScopeNode(self, node):
-        return self._getAncestor(node, tuple(Checker._ast_node_scope.keys()))
-
     def differentForks(self, lnode, rnode):
         """True, if lnode and rnode are located on different forks of IF/TRY"""
         ancestor = self.getCommonAncestor(lnode, rnode, self.root)
@@ -2028,7 +2016,7 @@ class Checker:
         self.handleChildren(node, omit=('defaults', 'kw_defaults'))
 
     def ARG(self, node):
-        self.addBinding(node, Argument(node.arg, self.getScopeNode(node)))
+        self.addBinding(node, Argument(node.arg, node))
 
     def CLASSDEF(self, node):
         """
