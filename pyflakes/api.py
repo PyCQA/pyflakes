@@ -128,7 +128,7 @@ def checkRecursive(paths, reporter):
     return warnings
 
 
-def _exitOnSignal(sigName, message):
+def _exitOnSignal(sigName, message):  # pragma: no cover  # platform specific
     """Handles a signal with sys.exit.
 
     Some of these signals (SIGPIPE, for example) don't exist or are invalid on
