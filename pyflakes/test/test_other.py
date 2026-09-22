@@ -1929,6 +1929,9 @@ class TestStringFormatting(TestCase):
             '%(foo)' % {'foo': 'bar'}
         ''', m.PercentFormatInvalidFormat)
         self.flakes('''
+            '%' % (1,)
+        ''', m.PercentFormatInvalidFormat)
+        self.flakes('''
             '%s %(foo)s' % {'foo': 'bar'}
         ''', m.PercentFormatMixedPositionalAndNamed)
         self.flakes('''
@@ -1985,6 +1988,12 @@ class TestStringFormatting(TestCase):
         self.flakes('''
             k = {}
             '%(k)s' % {**k}
+        ''')
+
+    def test_percent_format_additional_text(self):
+        self.flakes('''
+            x = 1
+            '%s after' % (x,)
         ''')
 
 
