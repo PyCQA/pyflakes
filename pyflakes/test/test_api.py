@@ -624,6 +624,13 @@ x = "%s"
         ]
         self.assertEqual(errlines, expected_error)
 
+    def test_check_unknown_error(self):
+        err = io.StringIO()
+        count = withStderrTo(err, check, None, '<stdin>')
+        self.assertEqual(count, 1)
+        # XXX: this hides the actual error -- probably should just let it raise?
+        self.assertEqual(err.getvalue(), '<stdin>: problem decoding source\n')
+
 
 class IntegrationTests(TestCase):
     """
