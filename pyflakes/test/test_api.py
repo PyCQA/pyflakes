@@ -218,6 +218,11 @@ class TestIterSourceCode(TestCase):
         self.assertEqual(list(iterSourceCode([epath])),
                          [epath])
 
+    def test_skips_dead_symlink(self):
+        os.symlink('dead', os.path.join(self.tempdir, 'symlink'))
+        tpath = self.makeEmptyFile('t.py')
+        self.assertEqual(list(iterSourceCode([self.tempdir])), [tpath])
+
 
 class TestReporter(TestCase):
     """
