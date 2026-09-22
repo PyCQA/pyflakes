@@ -734,10 +734,7 @@ class Checker:
         self.root = tree
 
         self.scopeStack = []
-        try:
-            scope_tp = Checker._ast_node_scope[type(tree)]
-        except KeyError:
-            raise RuntimeError('No scope implemented for the node %r' % tree)
+        scope_tp = Checker._ast_node_scope[type(tree)]
 
         with self.in_scope(scope_tp):
             for builtin in self.builtIns:
