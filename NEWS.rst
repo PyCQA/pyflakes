@@ -1,3 +1,7 @@
+4.0.1 (2026-09-30)
+
+- Fix for ``lazy`` imports inside ``try:`` (not at module scope)
+
 4.0.0 (2026-09-22)
 
 - Add support for python 3.15
