@@ -25,6 +25,33 @@ class Test(TestCase):  # pragma: >=3.15 cover
             lazy from y import z
         ''', m.LazyImportNotAtModuleScope, m.LazyImportNotAtModuleScope)
 
+    def test_lazy_import_not_at_module_scope_try(self):
+        self.flakes('''
+        try: lazy import x
+        except AssertionError: lazy import x
+        else: lazy import x
+        finally: lazy import x
+
+        try: lazy import x
+        except* AssertionError: ...
+
+        try:
+            if True:
+                lazy import x
+        except AssertionError: ...
+
+        try: lazy from x import y
+        except AssertionError: ...
+        ''', *(7 * [m.LazyImportNotAtModuleScope]))
+
+        self.flakes('''
+        # allowed
+        if True:
+            lazy import x
+
+        def f(): print(x)
+        ''')
+
     def test_lazy_imports_eager_use_ok(self):
         self.flakes('''
         lazy from x import y

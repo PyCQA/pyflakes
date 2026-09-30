@@ -2102,9 +2102,20 @@ class Checker:
 
     LIST = TUPLE
 
+    def _in_try(self, node):  # pragma: >=3.15 cover
+        while True:
+            node = self.getParent(node)
+            if isinstance(node, (ast.Try, ast.TryStar, ast.ExceptHandler)):
+                return True
+            elif isinstance(node, ast.Module):
+                return False
+
     def IMPORT(self, node):
         lazy = sys.version_info >= (3, 15) and node.is_lazy
         if lazy and not isinstance(self.scope, ModuleScope):  # pragma: >=3.15 cover
+            self.report(messages.LazyImportNotAtModuleScope, node)
+            return
+        elif lazy and self._in_try(node):  # pragma: >=3.15 cover
             self.report(messages.LazyImportNotAtModuleScope, node)
             return
 
@@ -2128,6 +2139,9 @@ class Checker:
 
         lazy = sys.version_info >= (3, 15) and node.is_lazy
         if lazy and not isinstance(self.scope, ModuleScope):  # pragma: >=3.15 cover
+            self.report(messages.LazyImportNotAtModuleScope, node)
+            return
+        elif lazy and self._in_try(node):  # pragma: >=3.15 cover
             self.report(messages.LazyImportNotAtModuleScope, node)
             return
 
