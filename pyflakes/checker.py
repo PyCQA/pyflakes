@@ -1340,8 +1340,9 @@ class Checker:
 
     def SUBSCRIPT(self, node):
         if _is_name_or_attr(node.value, 'Literal'):
+            self.handleNode(node.value, node)
             with self._enter_annotation(AnnotationState.NONE):
-                self.handleChildren(node)
+                self.handleNode(node.slice, node)
         elif _is_name_or_attr(node.value, 'Annotated'):
             self.handleNode(node.value, node)
 

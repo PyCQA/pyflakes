@@ -95,3 +95,10 @@ class Test(TestCase):  # pragma: >=3.15 cover
         lazy from x import y
         T = TypeVar("T", y)
         ''', m.EagerUseOfLazyImport)
+
+    def test_literal_in_type_statements_is_deferred(self):
+        self.flakes('''
+        lazy from typing import Literal
+
+        type A = Literal[int]
+        ''')
