@@ -1,3 +1,7 @@
+4.0.2 (2026-10-03)
+
+- Fix for ``lazy`` import of ``Literal`` considered eager
+
 4.0.1 (2026-09-30)
 
 - Fix for ``lazy`` imports inside ``try:`` (not at module scope)
