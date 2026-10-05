@@ -9,7 +9,6 @@ import builtins
 import ast
 import collections
 import contextlib
-import doctest
 import functools
 import os
 import re
@@ -38,6 +37,12 @@ def _custom_builtins() -> frozenset[str]:
 
 
 parse_format_string = string.Formatter().parse
+
+
+@functools.cache
+def _doctest_parser():
+    import doctest
+    return doctest.DocTestParser().get_examples
 
 
 def getAlternatives(n):
@@ -1251,12 +1256,10 @@ class Checker:
         finally:
             self.nodeDepth -= 1
 
-    _getDoctestExamples = doctest.DocTestParser().get_examples
-
     def handleDoctests(self, node):
         try:
             (docstring, node_lineno) = self.getDocstring(node.body[0])
-            examples = docstring and self._getDoctestExamples(docstring)
+            examples = docstring and _doctest_parser()(docstring)
         except (ValueError, IndexError):
             # e.g. line 6 of the docstring for <string> has inconsistent
             # leading whitespace: ...
