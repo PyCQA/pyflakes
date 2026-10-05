@@ -780,11 +780,10 @@ class Checker:
 
     @property
     def futuresAllowed(self):
-        if not all(isinstance(scope, ModuleScope)
-                   for scope in self.scopeStack):
-            return False
-
-        return self.scope._futures_allowed
+        return (
+            isinstance(self.scope, ModuleScope) and
+            self.scope._futures_allowed
+        )
 
     @futuresAllowed.setter
     def futuresAllowed(self, value):
