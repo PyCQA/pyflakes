@@ -1585,7 +1585,9 @@ class Checker:
                 for k, v in iter_dict_children(node.args[1]):
                     _non_annotation(k)
                     _annotation(v)
-            _non_annotations(node.args[2:])
+                _non_annotations(node.args[2:])
+            else:
+                _non_annotations(node.args[1:])
 
             # TypedDict("a", a=int)
             if sys.version_info >= (3, 13):  # pragma: >=3.13 cover
@@ -1608,7 +1610,9 @@ class Checker:
                         _annotations(elt.elts[1:])
                     else:
                         _non_annotation(elt)
-            _non_annotations(node.args[2:])
+                _non_annotations(node.args[2:])
+            else:
+                _non_annotations(node.args[1:])
 
             # NamedTuple("a", a=int)
             if sys.version_info >= (3, 15):  # pragma: >=3.15 cover
