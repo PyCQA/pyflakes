@@ -1,3 +1,8 @@
+4.0.3 (2026-10-07)
+
+- A few performance improvements
+- Fix handling of unconventional ``NamedTuple`` / ``TypedDict`` argument 1.
+
 4.0.2 (2026-10-03)
 
 - Fix for ``lazy`` import of ``Literal`` considered eager
