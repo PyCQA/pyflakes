@@ -797,6 +797,13 @@ class TestTypeAnnotations(TestCase):
         TypedDict("TD", {"k": (y := "V"), y: "V"})
         """)
 
+    def test_typeddict_not_dict(self):
+        self.flakes("""
+        from typing import TypedDict
+        from x import y
+        TypedDict("TD", y)
+        """)
+
     def test_namedtypes_classes(self):
         self.flakes("""
             from typing import TypedDict, NamedTuple
@@ -813,6 +820,14 @@ class TestTypeAnnotations(TestCase):
         x = ("a", int)
         # x isn't unpacked or treated as a type
         NT = NamedTuple("NT", [x])
+        """)
+
+    def test_namedtuple_non_list_args(self):
+        self.flakes("""
+        from typing import NamedTuple
+        from x import y
+
+        NamedTuple("NT", y)
         """)
 
     @skipIf(version_info < (3, 11), 'new in Python 3.11')
