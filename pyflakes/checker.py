@@ -794,9 +794,7 @@ class Checker:
     @property
     def annotationsFutureEnabled(self):
         scope = self.scopeStack[0]
-        if not isinstance(scope, ModuleScope):
-            return False
-        return scope._annotations_future_enabled
+        return isinstance(scope, ModuleScope) and scope._annotations_future_enabled
 
     @annotationsFutureEnabled.setter
     def annotationsFutureEnabled(self, value):
