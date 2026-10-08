@@ -830,8 +830,7 @@ class TestTypeAnnotations(TestCase):
         NamedTuple("NT", y)
         """)
 
-    @skipIf(version_info < (3, 11), 'new in Python 3.11')
-    def test_variadic_generics(self):  # pragma: >=3.11 cover
+    def test_variadic_generics(self):
         self.flakes("""
             from typing import Generic
             from typing import TypeVarTuple

@@ -400,11 +400,11 @@ def baz():
         with self.makeTempFile(source) as sourcePath:
             self.assertHasErrors(
                 sourcePath,
-                ["""\
-%s:8:12: unterminated triple-quoted string literal (detected at line 8)
+                [f"""\
+{sourcePath}:8:12: unterminated triple-quoted string literal (detected at line 8)
     '''quux'''
            ^
-""" % (sourcePath,)])
+"""])
 
     def test_eofSyntaxError(self):
         """
@@ -579,11 +579,7 @@ x = "☃"
 x = "%s"
 """ % SNOWMAN).encode('utf-16')
         with self.makeTempFile(source) as sourcePath:
-            if sys.version_info < (3, 11, 4):  # pragma: <3.11 cover
-                expected = f"{sourcePath}: problem decoding source\n"
-            else:  # pragma: >=3.11 cover
-                expected = f"{sourcePath}:1: source code string cannot contain null bytes\n"  # noqa: E501
-
+            expected = f"{sourcePath}:1: source code string cannot contain null bytes\n"  # noqa: E501
             self.assertHasErrors(sourcePath, [expected])
 
     def test_checkRecursive(self):

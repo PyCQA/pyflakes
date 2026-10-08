@@ -25,7 +25,7 @@ Useful tips:
 
 * Be sure to install it for a version of Python which is compatible
   with your codebase: ``python#.# -m pip install pyflakes`` (for example,
-  ``python3.10 -m pip install pyflakes``)
+  ``python3.15 -m pip install pyflakes``)
 
 * You can also invoke Pyflakes with ``python#.# -m pyflakes .`` if you want
   to run it for a specific python version.
