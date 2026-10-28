@@ -690,7 +690,6 @@ class AnnotationState:
     NONE = 0
     STRING = 1
     BARE = 2
-    STR_AS_TYPE = 3
 
 
 def in_annotation(func):
@@ -745,8 +744,10 @@ class Checker:
         self.root = tree
 
         self.scopeStack = []
-        scope_tp = Checker._ast_node_scope[type(tree)]
 
+        self._running_deferred = False
+
+        scope_tp = Checker._ast_node_scope[type(tree)]
         with self.in_scope(scope_tp):
             for builtin in self.builtIns:
                 self.addBinding(None, Builtin(builtin))
@@ -767,6 +768,8 @@ class Checker:
         self._deferred.append((callable, self.scopeStack[:], self.offset))
 
     def _run_deferred(self):
+        self._running_deferred = True
+
         orig = (self.scopeStack, self.offset)
 
         while self._deferred:
@@ -1055,10 +1058,8 @@ class Checker:
             elif (
                     isinstance(binding, Importation) and
                     binding.is_lazy and
-                    func_depth == 0 and (
-                        self._in_annotation == AnnotationState.NONE or
-                        self._in_annotation == AnnotationState.STR_AS_TYPE
-                    )
+                    func_depth == 0 and
+                    not self._running_deferred
             ):  # pragma: >=3.15 cover
                 self.report(messages.EagerUseOfLazyImport, node, name, binding.source)
 
@@ -1494,7 +1495,7 @@ class Checker:
             self._handle_string_dot_format(node)
 
         def _annotation(n: ast.AST) -> None:
-            with self._enter_annotation(AnnotationState.STR_AS_TYPE):
+            with self._enter_annotation(AnnotationState.BARE):
                 self.handleNode(n, node)
 
         def _annotations(nodes: list[ast.AST]) -> None:
@@ -2070,7 +2071,7 @@ class Checker:
         if node.value:
             # If the annotation is `TypeAlias`, handle the *value* as an annotation.
             if _is_typing(node.annotation, 'TypeAlias', self.scopeStack):
-                with self._enter_annotation(AnnotationState.STR_AS_TYPE):
+                with self._enter_annotation(AnnotationState.BARE):
                     self.handleNode(node.value, node)
             else:
                 self.handleNode(node.value, node)
