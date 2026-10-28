@@ -1,3 +1,9 @@
+4.1.0 (2026-10-28)
+
+- Drop support for EOL python 3.10
+- Significant performance improvements
+- Fix handling of ``Literal`` and ``Annotated`` for lazy imports
+
 4.0.3 (2026-10-07)
 
 - A few performance improvements
