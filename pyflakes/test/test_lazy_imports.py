@@ -80,7 +80,9 @@ class Test(TestCase):  # pragma: >=3.15 cover
         {y for _ in [...]}        # evaluated comprehensions
         {0: y for _ in [...]}     # evaluated comprehensions
 
-        ''', *([m.EagerUseOfLazyImport] * 8))
+        @y
+        def u(): pass
+        ''', *([m.EagerUseOfLazyImport] * 9))
 
     def test_lazy_imports_eager_use_in_type_alias(self):
         self.flakes('''
@@ -101,4 +103,12 @@ class Test(TestCase):  # pragma: >=3.15 cover
         lazy from typing import Literal
 
         type A = Literal[int]
+        ''')
+
+    def test_literal_annotated_not_considered_eager(self):
+        self.flakes('''
+        lazy from x import y
+        from typing import Literal, Annotated
+        x: Literal[y]
+        z: Annotated[int, y]
         ''')
